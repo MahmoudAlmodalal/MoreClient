@@ -1,34 +1,8 @@
 import type { NextConfig } from "next";
 
-// ─── Content Security Policy ──────────────────────────────────────────────────
-const CSP = [
-  "default-src 'self'",
-  "script-src 'self' 'unsafe-inline' https://clerk.moreclient.com https://*.clerk.accounts.dev",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: https://*.r2.cloudflarestorage.com https://img.clerk.com",
-  "font-src 'self'",
-  [
-    "connect-src 'self'",
-    "https://inn.gs",
-    "https://api.inngest.com",
-    "wss://*.pusher.com https://*.pusher.com",
-    "https://api.pinecone.io",
-    "https://api.stripe.com",
-    "https://clerk.moreclient.com",
-    "https://*.clerk.accounts.dev",
-    "https://*.upstash.io",
-  ].join(" "),
-  "frame-src https://js.stripe.com https://hooks.stripe.com",
-  "worker-src 'none'",
-  "object-src 'none'",
-  "base-uri 'self'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-  "upgrade-insecure-requests",
-].join("; ");
-
+// CSP is handled per-request via src/middleware.ts (nonce-based, strict-dynamic).
+// Only static, non-nonce headers live here.
 const securityHeaders = [
-  { key: "Content-Security-Policy", value: CSP },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "X-XSS-Protection", value: "1; mode=block" },
@@ -63,7 +37,7 @@ const nextConfig: NextConfig = {
         headers: [
           {
             key: "Cache-Control",
-            value: "public, s-maxage=300, stale-while-revalidate=60",
+            value: "public, s-maxage=60, stale-while-revalidate=60",
           },
         ],
       },

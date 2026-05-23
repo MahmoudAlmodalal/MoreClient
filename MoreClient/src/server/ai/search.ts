@@ -59,7 +59,16 @@ export async function semanticSearch(query: SearchQuery): Promise<SearchResult[]
   if (type === "talent") {
     const talents = await prisma.talent.findMany({
       where: { id: { in: resultIds }, status: "active", deletedAt: null },
-      select: { id: true, handle: true, displayName: true, headline: true, avatarUrl: true, country: true, hourlyRate: true },
+      select: {
+        id: true,
+        handle: true,
+        displayName: true,
+        headline: true,
+        avatarUrl: true,
+        country: true,
+        hourlyRate: true,
+        featuredUntil: true,
+      },
     });
     metadataMap = new Map(talents.map((t) => [t.id, t as unknown as Record<string, unknown>]));
   } else {
@@ -83,6 +92,18 @@ export async function semanticSearch(query: SearchQuery): Promise<SearchResult[]
       };
     })
     .filter((r): r is SearchResult => r !== null);
+
+  // Featured-first: active featured talent surfaces before non-featured results.
+  if (type === "talent") {
+    const now = Date.now();
+    results.sort((a, b) => {
+      const af = (a.metadata.featuredUntil as Date | string | null);
+      const bf = (b.metadata.featuredUntil as Date | string | null);
+      const aFeatured = af && new Date(af as string).getTime() > now ? 1 : 0;
+      const bFeatured = bf && new Date(bf as string).getTime() > now ? 1 : 0;
+      return bFeatured - aFeatured || b.score - a.score;
+    });
+  }
 
   logger.info({ query: q, type, resultCount: results.length }, "semantic search complete");
   return results;

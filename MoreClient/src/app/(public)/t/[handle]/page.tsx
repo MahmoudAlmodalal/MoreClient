@@ -1,66 +1,107 @@
-export const revalidate = 300; // 5-minute ISR
+export const runtime = "edge";
+export const revalidate = 60;
 
 import { notFound } from "next/navigation";
-import { prisma } from "@/server/core/db";
-import { ReviewRepo } from "@/server/reviews/repo";
 import type { Metadata } from "next";
 
 interface PageProps {
   params: Promise<{ handle: string }>;
 }
 
-async function getTalentProfile(handle: string) {
-  return prisma.talent.findFirst({
-    where: {
-      handle,
-      status: "active",
-      deletedAt: null,
-      searchVisibility: "public",
-    },
-    select: {
-      id: true,
-      handle: true,
-      displayName: true,
-      headline: true,
-      bio: true,
-      country: true,
-      avatarUrl: true,
-      hourlyRate: true,
-      currency: true,
-      availability: true,
-      yearsExperience: true,
-      verificationStatus: true,
-      featuredUntil: true,
-      createdAt: true,
-      skills: {
-        select: {
-          level: true,
-          yearsExp: true,
-          skill: { select: { slug: true, nameEn: true, nameAr: true, category: true } },
-        },
-      },
-      portfolio: {
-        select: { id: true, title: true, description: true, mediaUrls: true, url: true },
-        take: 6,
-        orderBy: { createdAt: "desc" },
-      },
-      experience: {
-        select: { id: true, company: true, title: true, startDate: true, endDate: true, description: true },
-        orderBy: { startDate: "desc" },
-      },
-      languages: { select: { locale: true, proficiency: true } },
-    },
-  });
+interface SkillEntry {
+  level: string;
+  yearsExp: number | null;
+  skill: { slug: string; nameEn: string; nameAr: string; category: string };
+}
+
+interface PortfolioItem {
+  id: string;
+  title: string;
+  description: string | null;
+  mediaUrls: string[];
+  url: string | null;
+}
+
+interface ExperienceItem {
+  id: string;
+  company: string;
+  title: string;
+  startDate: string;
+  endDate: string | null;
+  description: string | null;
+}
+
+interface LanguageEntry {
+  locale: string;
+  proficiency: string;
+}
+
+interface Review {
+  id: string;
+  rating: number;
+  comment: string | null;
+  reviewerType: string;
+  createdAt: string;
+}
+
+interface TalentProfile {
+  id: string;
+  handle: string;
+  displayName: string;
+  headline: string | null;
+  bio: string | null;
+  country: string | null;
+  avatarUrl: string | null;
+  hourlyRate: number | null;
+  currency: string;
+  availability: string;
+  yearsExperience: number | null;
+  verificationStatus: string;
+  featuredUntil: string | null;
+  createdAt: string;
+  skills: SkillEntry[];
+  portfolio: PortfolioItem[];
+  experience: ExperienceItem[];
+  languages: LanguageEntry[];
+}
+
+interface ProfileApiResponse {
+  talent: TalentProfile;
+  reviews: Review[];
+  avgRating: number;
+  reviewCount: number;
+}
+
+async function getProfile(handle: string): Promise<ProfileApiResponse | null> {
+  const base =
+    process.env.NEXT_PUBLIC_APP_URL ??
+    (process.env.REPLIT_DEV_DOMAIN
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+      : "http://localhost:5000");
+
+  try {
+    const res = await fetch(`${base}/api/v1/profiles/${handle}`, {
+      next: { revalidate: 60 },
+    });
+    if (res.status === 404) return null;
+    if (!res.ok) throw new Error(`Profile API returned ${res.status}`);
+    return res.json() as Promise<ProfileApiResponse>;
+  } catch {
+    return null;
+  }
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { handle } = await params;
-  const talent = await getTalentProfile(handle);
-  if (!talent) return { title: "Profile not found" };
+  const data = await getProfile(handle);
+  if (!data) return { title: "Profile not found" };
 
+  const { talent } = data;
   const title = `${talent.displayName} — clientMORE`;
   const description =
-    talent.headline ?? talent.bio?.slice(0, 160) ?? `${talent.displayName}'s talent profile on clientMORE`;
+    talent.headline ??
+    talent.bio?.slice(0, 160) ??
+    `${talent.displayName}'s talent profile on clientMORE`;
 
   return {
     title,
@@ -89,8 +130,9 @@ const AVAILABILITY_BADGE: Record<string, { label: string; color: string }> = {
   unavailable: { label: "Unavailable", color: "bg-gray-100 text-gray-600" },
 };
 
-function formatDateRange(start: Date, end: Date | null): string {
-  const fmt = (d: Date) => d.toLocaleDateString("en-US", { year: "numeric", month: "short" });
+function formatDateRange(start: string, end: string | null): string {
+  const fmt = (d: string) =>
+    new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short" });
   return end ? `${fmt(start)} – ${fmt(end)}` : `${fmt(start)} – Present`;
 }
 
@@ -113,25 +155,13 @@ function StarRating({ rating }: { rating: number }) {
 
 export default async function TalentPublicProfilePage({ params }: PageProps) {
   const { handle } = await params;
+  const data = await getProfile(handle);
 
-  const [talent, reviewData] = await Promise.all([
-    getTalentProfile(handle),
-    (async () => {
-      // Will be populated after talent id is known; pre-fetch a placeholder
-      return null;
-    })(),
-  ]);
+  if (!data) notFound();
 
-  if (!talent) notFound();
+  const { talent, reviews, avgRating, reviewCount } = data;
 
-  const [{ items: reviews, avgRating, reviewCount }] = await Promise.all([
-    ReviewRepo.listByTarget(talent.id, "talent", { limit: 5 }).then(async (r) => {
-      const agg = await ReviewRepo.aggregateRating(talent.id);
-      return { ...r, avgRating: agg.avg, reviewCount: agg.count };
-    }),
-  ]);
-
-  const isFeatured = talent.featuredUntil && talent.featuredUntil > new Date();
+  const isFeatured = talent.featuredUntil && new Date(talent.featuredUntil) > new Date();
   const avail = AVAILABILITY_BADGE[talent.availability] ?? AVAILABILITY_BADGE.unavailable;
 
   return (
@@ -304,7 +334,9 @@ export default async function TalentPublicProfilePage({ params }: PageProps) {
             <span className="flex items-center gap-1.5">
               <StarRating rating={avgRating} />
               <span className="font-semibold text-gray-900">{avgRating.toFixed(1)}</span>
-              <span className="text-gray-500 text-sm">({reviewCount} review{reviewCount !== 1 ? "s" : ""})</span>
+              <span className="text-gray-500 text-sm">
+                ({reviewCount} review{reviewCount !== 1 ? "s" : ""})
+              </span>
             </span>
           </div>
           <div className="space-y-4">
@@ -313,7 +345,7 @@ export default async function TalentPublicProfilePage({ params }: PageProps) {
                 <div className="flex items-center justify-between mb-2">
                   <StarRating rating={review.rating} />
                   <span className="text-xs text-gray-400">
-                    {review.createdAt.toLocaleDateString("en-US", {
+                    {new Date(review.createdAt).toLocaleDateString("en-US", {
                       year: "numeric",
                       month: "short",
                     })}
@@ -335,7 +367,10 @@ export default async function TalentPublicProfilePage({ params }: PageProps) {
       <section className="border-t border-gray-200 pt-6 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <p className="text-gray-500 text-sm">
           Member since{" "}
-          {talent.createdAt.toLocaleDateString("en-US", { year: "numeric", month: "long" })}
+          {new Date(talent.createdAt).toLocaleDateString("en-US", {
+            year: "numeric",
+            month: "long",
+          })}
         </p>
         <a
           href="/sign-up"

@@ -71,26 +71,65 @@ export const gdprExport = inngest.createFunction(
     });
 
     await step.run("notify-user", async () => {
-      // Generate a 72-hour signed download URL for the exported archive.
-      if (r2) {
-        try {
-          const downloadUrl = await getSignedUrl(
-            r2,
-            new GetObjectCommand({ Bucket: BUCKET, Key: key }),
-            { expiresIn: 72 * 60 * 60 }, // 72 hours
-          );
-          // Phase 6 will wire Resend to email this URL to the principal.
-          // For now: log the signed URL so it can be retrieved from admin logs.
-          logger.info(
-            { principalId, key, downloadUrl: downloadUrl.slice(0, 80) + "…" },
-            "GDPR export ready — signed download URL generated (email delivery pending Phase 6)",
-          );
-        } catch {
-          logger.warn({ principalId, key }, "failed to generate GDPR export signed URL");
-        }
-      } else {
+      if (!r2) {
         logger.warn({ principalId, key }, "R2 not configured; GDPR export signed URL skipped");
+        return;
       }
+
+      let downloadUrl: string | null = null;
+      try {
+        downloadUrl = await getSignedUrl(
+          r2,
+          new GetObjectCommand({ Bucket: BUCKET, Key: key }),
+          { expiresIn: 72 * 60 * 60 }, // 72 hours
+        );
+      } catch {
+        logger.warn({ principalId, key }, "failed to generate GDPR export signed URL");
+        return;
+      }
+
+      // Resolve user email from Clerk
+      let userEmail: string | null = null;
+      try {
+        const { createClerkClient } = await import("@clerk/nextjs/server");
+        const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
+        const user = await clerk.users.getUser(clerkUserId);
+        userEmail = user.emailAddresses[0]?.emailAddress ?? null;
+      } catch {
+        logger.warn({ clerkUserId }, "could not fetch user email from Clerk for GDPR export");
+      }
+
+      if (userEmail) {
+        const resendKey = process.env.RESEND_API_KEY;
+        if (resendKey) {
+          try {
+            const { Resend } = await import("resend");
+            const resend = new Resend(resendKey);
+            await resend.emails.send({
+              from: "noreply@clientmore.com",
+              to: userEmail,
+              subject: "Your clientMORE data export is ready",
+              html: `
+                <p>Hello,</p>
+                <p>Your data export is ready. You can download it using the link below within 72 hours:</p>
+                <p><a href="${downloadUrl}">Download your data</a></p>
+                <p>If you did not request this export, please contact support.</p>
+                <p>— clientMORE Team</p>
+              `,
+            });
+            logger.info({ principalId, userEmail }, "GDPR export email sent via Resend");
+          } catch {
+            logger.warn({ principalId, userEmail }, "Resend delivery failed for GDPR export");
+          }
+        } else {
+          logger.warn({ principalId }, "RESEND_API_KEY not configured; GDPR export email skipped");
+        }
+      }
+
+      logger.info(
+        { principalId, key, hasEmail: !!userEmail },
+        "GDPR export ready — signed download URL generated",
+      );
     });
 
     return { principalId, key };

@@ -7,7 +7,7 @@ import { prisma } from "@/server/core/db";
 import { loadPrompt, interpolate } from "./prompts/index";
 import { logger } from "@/server/core/logger";
 import { AppError } from "@/server/core/errors";
-import { scanUserInput, wrapUserContent } from "./guards";
+import { scanUserInput, wrapUserContent, filterAiOutput } from "./guards";
 import type { PrincipalContext } from "@/server/core/auth";
 import { z } from "zod";
 
@@ -131,10 +131,27 @@ export async function createChatStream(
       .catch(() => {});
   }
 
-  // Layer 4: filter output for reverse injection before streaming
-  // NOTE: streaming responses are filtered on the client; for safety we mark
-  // the response with a no-store header so injected content never reaches caches.
-  return new Response(textStream as unknown as ReadableStream, {
+  // Layer 4: filter each streamed chunk server-side for reverse injection patterns.
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder();
+  const outputFilterStream = new TransformStream<Uint8Array, Uint8Array>({
+    transform(chunk, controller) {
+      const text = decoder.decode(chunk, { stream: true });
+      const filtered = filterAiOutput(text);
+      controller.enqueue(encoder.encode(filtered));
+    },
+    flush(controller) {
+      const remaining = decoder.decode();
+      if (remaining) {
+        controller.enqueue(encoder.encode(filterAiOutput(remaining)));
+      }
+    },
+  });
+
+  const rawStream = textStream as unknown as ReadableStream<Uint8Array>;
+  const filteredStream = rawStream.pipeThrough(outputFilterStream);
+
+  return new Response(filteredStream, {
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-store",

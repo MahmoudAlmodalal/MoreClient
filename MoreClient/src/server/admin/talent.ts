@@ -83,6 +83,10 @@ export async function adminVerifyTalent(
     data: { verificationStatus: decision },
   });
   await writeAudit(auditCtx, `talent.verification.${decision}`, "talent", id);
+  await inngest.send({
+    name: "verification/status-changed",
+    data: { principalType: "talent", principalId: id, decision },
+  });
   await prisma.adminActivity.create({
     data: { id: generateId(), adminId: auditCtx.actorId, action: `talent.verification.${decision}`, payload: { id } },
   });
@@ -137,4 +141,66 @@ export async function adminBanTalent(
     data: { id: generateId(), adminId: auditCtx.actorId, action: "talent.banned", payload: { id, reason } },
   });
   return talent;
+}
+
+// ─── Bulk operations ───────────────────────────────────────────────────────────
+
+export const bulkTalentActionSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(500),
+  action: z.enum(["suspend", "ban", "verify", "reject"]),
+  reason: z.string().max(500).optional(),
+});
+
+export type BulkTalentActionInput = z.infer<typeof bulkTalentActionSchema>;
+
+export async function adminBulkTalentAction(input: BulkTalentActionInput, auditCtx: AuditContext) {
+  const reason = input.reason ?? `Bulk ${input.action} by admin`;
+  const results: Array<{ id: string; ok: boolean; error?: string }> = [];
+
+  for (const id of input.ids) {
+    try {
+      switch (input.action) {
+        case "suspend":
+          await adminSuspendTalent(id, reason, auditCtx);
+          break;
+        case "ban":
+          await adminBanTalent(id, reason, auditCtx);
+          break;
+        case "verify":
+          await adminVerifyTalent(id, "verified", auditCtx);
+          break;
+        case "reject":
+          await adminVerifyTalent(id, "rejected", auditCtx);
+          break;
+      }
+      results.push({ id, ok: true });
+    } catch (err) {
+      results.push({ id, ok: false, error: (err as Error).message });
+    }
+  }
+
+  return { action: input.action, total: input.ids.length, succeeded: results.filter((r) => r.ok).length, results };
+}
+
+/** Fetch the full filtered talent set for CSV export (capped). */
+export async function adminExportTalent(query: Omit<ListTalentQuery, "cursor" | "limit">) {
+  const { status, verificationStatus, country, q } = query;
+  const where: Prisma.TalentWhereInput = {
+    deletedAt: null,
+    ...(status ? { status } : {}),
+    ...(verificationStatus ? { verificationStatus } : {}),
+    ...(country ? { country } : {}),
+    ...(q ? { OR: [{ displayName: { contains: q, mode: "insensitive" } }, { handle: { contains: q, mode: "insensitive" } }] } : {}),
+  };
+
+  return prisma.talent.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    take: 5000,
+    select: {
+      id: true, handle: true, displayName: true, country: true, status: true,
+      verificationStatus: true, planCode: true, hourlyRate: true, availability: true,
+      payoutsEnabled: true, createdAt: true,
+    },
+  });
 }

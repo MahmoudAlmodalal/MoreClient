@@ -189,6 +189,8 @@ model Company {
   stripeCustomerId   String?            @unique
   planCode           String             @default("free")
   featuredUntil      DateTime?
+  notifyEmail        Boolean            @default(true)
+  notifyDigest       Boolean            @default(true)
   suspendedAt        DateTime?
   suspendedReason    String?
   createdAt          DateTime           @default(now())
@@ -241,6 +243,8 @@ model Talent {
   planCode             String             @default("free")
   featuredUntil        DateTime?
   searchVisibility     SearchVisibility   @default(public)
+  notifyEmail          Boolean            @default(true)
+  notifyDigest         Boolean            @default(true)
   suspendedAt          DateTime?
   suspendedReason      String?
   profileEmbeddingId   String?
@@ -691,4 +695,39 @@ model PlatformDailyMetrics {
   aiCostCents        Int
   activeTalent       Int
   activeCompanies    Int
+}
+
+// ─── Notifications & API Keys ────────────────────────────────────────────────
+
+model Notification {
+  id            String        @id @db.Uuid
+  principalType PrincipalType
+  principalId   String        @db.Uuid
+  eventType     String
+  actorType     SenderType?
+  actorId       String?
+  title         String
+  body          String?
+  data          Json?
+  linkUrl       String?
+  readAt        DateTime?
+  createdAt     DateTime      @default(now())
+
+  @@index([principalType, principalId, createdAt(sort: Desc)])
+  @@index([principalType, principalId, readAt])
+}
+
+model ApiKey {
+  id            String        @id @db.Uuid
+  principalType PrincipalType
+  principalId   String        @db.Uuid
+  keyPrefix     String
+  keyHash       String
+  name          String
+  lastUsedAt    DateTime?
+  revokedAt     DateTime?
+  createdAt     DateTime      @default(now())
+
+  @@index([keyPrefix])
+  @@index([principalType, principalId])
 }

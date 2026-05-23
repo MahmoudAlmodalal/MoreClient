@@ -17,6 +17,12 @@ const translationsEn = {
   builtInGaza: "Built in Gaza · Deployed Globally",
   logout: "Logout",
 
+  // Notifications
+  notifications: "Notifications",
+  markAllRead: "Mark all read",
+  noNotifications: "No notifications yet",
+  unread: "unread",
+
   // General Status
   active: "Active",
   inactive: "Inactive",
@@ -281,6 +287,12 @@ const translationsAr: Partial<Translations> = {
   adminPanel: "لوحة تحكم نصيح",
   builtInGaza: "صُنع في غزة · وُزّع عالمياً",
   logout: "تسجيل الخروج",
+
+  // Notifications
+  notifications: "الإشعارات",
+  markAllRead: "تعليم الكل كمقروء",
+  noNotifications: "لا توجد إشعارات بعد",
+  unread: "غير مقروء",
 
   // General Status
   active: "نشط",

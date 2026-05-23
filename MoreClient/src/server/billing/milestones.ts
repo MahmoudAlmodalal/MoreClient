@@ -62,6 +62,11 @@ export async function fundMilestone(
     },
   });
 
+  await inngest.send({
+    name: "milestone/funded",
+    data: { milestoneId, contractId, talentId: contract.talentId, amountCents },
+  });
+
   logger.info({ milestoneId, paymentIntentId: paymentIntent.id, amountCents }, "milestone funded");
   return { clientSecret: paymentIntent.client_secret!, paymentIntentId: paymentIntent.id };
 }

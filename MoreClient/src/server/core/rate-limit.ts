@@ -18,6 +18,7 @@ const limiters = {
   jobPost: createRatelimiter(50, "1 d"),
   aiMatch: createRatelimiter(5, "1 d"),
   aiChat: createRatelimiter(50, "1 d"),
+  apiKey: createRatelimiter(60, "1 m"),
 } as const;
 
 type LimiterKey = keyof typeof limiters;

@@ -7,7 +7,16 @@ import { scanMessage } from "@/inngest/functions/messaging";
 import { rollupDailyAnalytics } from "@/inngest/functions/analytics";
 import { syncSubscriptionFn, reconcileCommissions } from "@/inngest/functions/billing";
 import { triageReport } from "@/inngest/functions/moderation";
-import { weeklyDigest } from "@/inngest/functions/notifications";
+import {
+  weeklyDigest,
+  notifyNewProposal,
+  notifyContractSigned,
+  notifyMilestoneFunded,
+  notifyMilestoneReleased,
+  notifyMessageReceived,
+  notifyVerification,
+  notifyAccountSuspended,
+} from "@/inngest/functions/notifications";
 import { gdprExport, gdprDelete } from "@/inngest/functions/gdpr";
 import { scanUploadedFile } from "@/inngest/functions/uploads";
 
@@ -25,6 +34,13 @@ export const { GET, POST, PUT } = serve({
     reconcileCommissions,
     triageReport,
     weeklyDigest,
+    notifyNewProposal,
+    notifyContractSigned,
+    notifyMilestoneFunded,
+    notifyMilestoneReleased,
+    notifyMessageReceived,
+    notifyVerification,
+    notifyAccountSuspended,
     gdprExport,
     gdprDelete,
     scanUploadedFile,

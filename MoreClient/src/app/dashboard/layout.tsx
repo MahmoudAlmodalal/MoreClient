@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
+import { NotificationBell } from "@/components/notification-bell";
 import {
   LayoutDashboard,
   FileText,
@@ -81,6 +82,9 @@ export default function DashboardLayout({
             <Languages className="h-4 w-4 text-purple-400" />
             <span>{language === "en" ? "العربية (AR)" : "English (EN)"}</span>
           </button>
+
+          {/* Notification Bell */}
+          <NotificationBell />
 
           {/* Quick Status Light */}
           <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400 ring-1 ring-inset ring-emerald-500/20">

@@ -117,8 +117,75 @@ export async function adminVerifyCompany(
     data: { verificationStatus: decision },
   });
   await writeAudit(auditCtx, `company.verification.${decision}`, "company", id);
+  await inngest.send({
+    name: "verification/status-changed",
+    data: { principalType: "company", principalId: id, decision },
+  });
   await prisma.adminActivity.create({
     data: { id: generateId(), adminId: auditCtx.actorId, action: `company.verification.${decision}`, payload: { id } },
   });
   return company;
+}
+
+// ─── Bulk operations ───────────────────────────────────────────────────────────
+
+export const bulkCompanyActionSchema = z.object({
+  ids: z.array(z.string().uuid()).min(1).max(500),
+  action: z.enum(["suspend", "unsuspend", "ban", "verify", "reject"]),
+  reason: z.string().max(500).optional(),
+});
+
+export type BulkCompanyActionInput = z.infer<typeof bulkCompanyActionSchema>;
+
+export async function adminBulkCompanyAction(input: BulkCompanyActionInput, auditCtx: AuditContext) {
+  const reason = input.reason ?? `Bulk ${input.action} by admin`;
+  const results: Array<{ id: string; ok: boolean; error?: string }> = [];
+
+  for (const id of input.ids) {
+    try {
+      switch (input.action) {
+        case "suspend":
+          await adminSuspendCompany(id, reason, auditCtx);
+          break;
+        case "unsuspend":
+          await adminUnsuspendCompany(id, auditCtx);
+          break;
+        case "ban":
+          await adminBanCompany(id, reason, auditCtx);
+          break;
+        case "verify":
+          await adminVerifyCompany(id, "verified", auditCtx);
+          break;
+        case "reject":
+          await adminVerifyCompany(id, "rejected", auditCtx);
+          break;
+      }
+      results.push({ id, ok: true });
+    } catch (err) {
+      results.push({ id, ok: false, error: (err as Error).message });
+    }
+  }
+
+  return { action: input.action, total: input.ids.length, succeeded: results.filter((r) => r.ok).length, results };
+}
+
+/** Fetch the full filtered company set for CSV export (capped). */
+export async function adminExportCompanies(query: Omit<ListCompaniesQuery, "cursor" | "limit">) {
+  const { status, verificationStatus, q } = query;
+  const where: Prisma.CompanyWhereInput = {
+    deletedAt: null,
+    ...(status ? { status } : {}),
+    ...(verificationStatus ? { verificationStatus } : {}),
+    ...(q ? { OR: [{ name: { contains: q, mode: "insensitive" } }, { slug: { contains: q, mode: "insensitive" } }] } : {}),
+  };
+
+  return prisma.company.findMany({
+    where,
+    orderBy: { createdAt: "desc" },
+    take: 5000,
+    select: {
+      id: true, name: true, slug: true, country: true, status: true,
+      verificationStatus: true, planCode: true, createdAt: true,
+    },
+  });
 }

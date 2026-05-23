@@ -41,6 +41,17 @@ export const updateJobSchema = z
     { message: "budgetMin must be ≤ budgetMax", path: ["budgetMin"] },
   );
 
+// Accept skillIds as a repeated query param or a comma-separated string.
+const skillIdsQuery = z
+  .union([z.string(), z.array(z.string())])
+  .optional()
+  .transform((v) => {
+    if (v === undefined) return undefined;
+    const arr = Array.isArray(v) ? v : v.split(",");
+    return arr.map((s) => s.trim()).filter(Boolean);
+  })
+  .pipe(z.array(z.string().uuid()).max(20).optional());
+
 export const listJobsQuerySchema = z.object({
   cursor: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
@@ -50,6 +61,13 @@ export const listJobsQuerySchema = z.object({
   budgetMin: z.coerce.number().int().positive().optional(),
   budgetMax: z.coerce.number().int().positive().optional(),
   skillId: z.string().uuid().optional(),
+  skillIds: skillIdsQuery,
+  remote: z
+    .union([z.boolean(), z.enum(["true", "false"])])
+    .optional()
+    .transform((v) => (typeof v === "string" ? v === "true" : v)),
+  durationMin: z.coerce.number().int().positive().optional(),
+  durationMax: z.coerce.number().int().positive().optional(),
   q: z.string().max(200).optional(),
   companyId: z.string().uuid().optional(),
 });

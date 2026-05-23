@@ -1,9 +1,23 @@
 import { auth } from "@clerk/nextjs/server";
+import { headers } from "next/headers";
 import type { Company, CompanyUser, Talent, PlatformAdmin } from "@prisma/client";
 import { prisma } from "./db";
 import { AppError } from "./errors";
 import { companyRoleAtLeast, adminRoleAtLeast } from "./rbac";
+import { resolvePrincipalFromApiKey, API_KEY_PREFIX } from "@/server/apikeys/service";
 import type { CompanyRole, AdminRole } from "@prisma/client";
+
+/** Extract a `Bearer mc_…` API key token from the request, if present. */
+async function readApiKeyBearer(): Promise<string | null> {
+  try {
+    const authHeader = (await headers()).get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) return null;
+    const token = authHeader.slice("Bearer ".length).trim();
+    return token.startsWith(API_KEY_PREFIX) ? token : null;
+  } catch {
+    return null;
+  }
+}
 
 // ─── Context Types ────────────────────────────────────────────────────────────
 
@@ -38,6 +52,13 @@ export type PrincipalContext = CompanyContext | TalentContext | AdminOnlyContext
  * Returns null if the user is not authenticated.
  */
 export async function resolvePrincipal(): Promise<PrincipalContext | null> {
+  // Third-party API key authentication takes precedence over the Clerk session.
+  // The resolver enforces the per-key rate limit and throws on excess.
+  const bearer = await readApiKeyBearer();
+  if (bearer) {
+    return resolvePrincipalFromApiKey(bearer);
+  }
+
   let session: Awaited<ReturnType<typeof auth>>;
   try {
     session = await auth();

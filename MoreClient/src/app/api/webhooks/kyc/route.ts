@@ -3,6 +3,7 @@ import { createHmac, timingSafeEqual } from "crypto";
 import { prisma } from "@/server/core/db";
 import { logger } from "@/server/core/logger";
 import { toProblemJson, AppError } from "@/server/core/errors";
+import { inngest } from "@/inngest/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -64,6 +65,10 @@ export async function POST(request: Request) {
       else if (status === "failed" || status === "declined") verificationStatus = "rejected";
 
       if (verificationStatus !== "pending") {
+        const matches = await prisma.talent.findMany({
+          where: { kycReference: referenceId },
+          select: { id: true },
+        });
         await prisma.talent.updateMany({
           where: { kycReference: referenceId },
           data: {
@@ -71,6 +76,12 @@ export async function POST(request: Request) {
             kycProvider: "persona",
           },
         });
+        for (const { id } of matches) {
+          await inngest.send({
+            name: "verification/status-changed",
+            data: { principalType: "talent", principalId: id, decision: verificationStatus },
+          });
+        }
         logger.info({ referenceId, verificationStatus }, "talent kyc status updated");
       }
     }

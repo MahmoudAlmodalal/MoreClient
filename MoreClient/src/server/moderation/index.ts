@@ -145,6 +145,38 @@ export async function decideReport(
   return { report: updatedReport, action: modAction };
 }
 
+/**
+ * Apply an automated moderation action (e.g. repeat-offender auto-suspend) to a
+ * company or talent target. Updates status, records a ModerationAction, and emits
+ * the `admin/action-taken` event so the affected principal is notified.
+ */
+export async function autoModerateTarget(
+  targetType: "company" | "talent",
+  targetId: string,
+  action: "suspend" | "ban",
+  reason: string,
+): Promise<void> {
+  const data = { status: action === "ban" ? "banned" : "suspended", suspendedAt: new Date(), suspendedReason: reason } as const;
+  if (targetType === "company") {
+    await prisma.company.update({ where: { id: targetId }, data });
+  } else {
+    await prisma.talent.update({ where: { id: targetId }, data });
+  }
+
+  await prisma.moderationAction.create({
+    data: {
+      id: generateId(),
+      targetType,
+      targetId,
+      action,
+      reason,
+      performedBy: "system-automation",
+    },
+  });
+
+  await inngest.send({ name: "admin/action-taken", data: { action, targetType, targetId, reason } });
+}
+
 async function applyModerationAction(
   report: Report,
   input: DecideModerationInput,

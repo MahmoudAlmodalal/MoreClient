@@ -52,6 +52,38 @@ export async function buildTalentText(talentId: string): Promise<string> {
   return parts.filter(Boolean).join("\n");
 }
 
+/**
+ * Build the Pinecone metadata used for talent search filters. Pinecone supports
+ * strings, numbers, booleans, and string arrays — so skills/languages are arrays
+ * of ids/locales and hourlyRate is numeric. (featured/availability staleness is
+ * tolerated; the Postgres fetch step re-checks volatile fields at query time.)
+ */
+export async function buildTalentMetadata(talentId: string): Promise<Record<string, unknown>> {
+  const talent = await prisma.talent.findUnique({
+    where: { id: talentId },
+    select: {
+      country: true,
+      availability: true,
+      hourlyRate: true,
+      verificationStatus: true,
+      skills: { select: { skillId: true } },
+      languages: { select: { locale: true } },
+    },
+  });
+  if (!talent) throw new Error(`Talent ${talentId} not found`);
+
+  const metadata: Record<string, unknown> = {
+    type: "talent",
+    country: talent.country,
+    availability: talent.availability,
+    verificationStatus: talent.verificationStatus,
+    skills: talent.skills.map((s) => s.skillId),
+    languages: talent.languages.map((l) => l.locale),
+  };
+  if (talent.hourlyRate != null) metadata.hourlyRate = talent.hourlyRate;
+  return metadata;
+}
+
 export async function buildJobText(jobId: string): Promise<string> {
   const job = await prisma.job.findUnique({
     where: { id: jobId },
@@ -102,16 +134,13 @@ export async function embedAndUpsertTalent(talentId: string): Promise<{ embedded
   });
 
   const embedding = (response.embeddings as number[][])[0];
+  const metadata = await buildTalentMetadata(talentId);
 
   await ns.upsert([
     {
       id: talentId,
       values: embedding,
-      metadata: {
-        type: "talent",
-        country: "",
-        availability: "",
-      },
+      metadata: metadata as Parameters<typeof ns.upsert>[0][number]["metadata"],
     },
   ]);
 

@@ -3,7 +3,30 @@ import { prisma } from "@/server/core/db";
 import { logger } from "@/server/core/logger";
 import { loadPrompt, interpolate } from "./prompts/index";
 import { generateId } from "@/server/core/ids";
+import { getKeywordBlocklist } from "@/server/core/feature-flags";
 import type { ModerationStatus } from "@prisma/client";
+
+/** Create the system auto-report opened when moderation blocks a message. */
+async function openAutoReport(messageId: string, reason: string): Promise<void> {
+  await prisma.report.create({
+    data: {
+      id: generateId(),
+      reporterType: "system",
+      reporterId: "ai-moderation",
+      targetType: "message",
+      targetMessageId: messageId,
+      category: "inappropriate",
+      description: `Auto-flagged by AI moderation: ${reason}`,
+      status: "open",
+    },
+  });
+}
+
+/** Find the first configured blocklist term present in the message body. */
+function matchBlocklistTerm(body: string, terms: string[]): string | null {
+  const lower = body.toLowerCase();
+  return terms.find((term) => lower.includes(term)) ?? null;
+}
 
 interface ModerationDecision {
   decision: "approved" | "flagged" | "blocked";
@@ -23,6 +46,28 @@ export async function moderateMessage(messageId: string): Promise<ModerationDeci
   if (!message) {
     logger.warn({ messageId }, "message not found for moderation");
     return null;
+  }
+
+  // Step 0: admin-configured keyword blocklist (cheap, deterministic, runs first).
+  try {
+    const blocklist = await getKeywordBlocklist();
+    if (blocklist) {
+      const hit = matchBlocklistTerm(message.body, blocklist.terms);
+      if (hit) {
+        const blocked = blocklist.action === "block";
+        const status: ModerationStatus = blocked ? "blocked" : "flagged";
+        const reason = `Matched blocked keyword "${hit}"`;
+        await prisma.message.update({
+          where: { id: messageId },
+          data: { moderationStatus: status, moderationReason: reason },
+        });
+        if (blocked) await openAutoReport(messageId, reason);
+        logger.info({ messageId, hit, action: blocklist.action }, "keyword blocklist matched");
+        return { decision: status, confidence: 1, reason, categories: ["keyword_blocklist"] };
+      }
+    }
+  } catch (err) {
+    logger.warn({ messageId, err }, "keyword blocklist check failed");
   }
 
   // Step 1: OpenAI omni-moderation
@@ -102,18 +147,7 @@ export async function moderateMessage(messageId: string): Promise<ModerationDeci
 
   // Auto-open a Report if the message is blocked
   if (decision.decision === "blocked") {
-    await prisma.report.create({
-      data: {
-        id: generateId(),
-        reporterType: "system",
-        reporterId: "ai-moderation",
-        targetType: "message",
-        targetMessageId: messageId,
-        category: "inappropriate",
-        description: `Auto-flagged by AI moderation: ${decision.reason}`,
-        status: "open",
-      },
-    });
+    await openAutoReport(messageId, decision.reason);
   }
 
   logger.info({ messageId, decision: decision.decision, confidence: decision.confidence }, "moderation complete");

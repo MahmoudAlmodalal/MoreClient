@@ -79,9 +79,18 @@ export class JobRepo {
     if (query.country) where.country = query.country;
     if (query.engagementType) where.engagementType = query.engagementType;
     if (query.companyId) where.companyId = query.companyId;
+    if (typeof query.remote === "boolean") where.remote = query.remote;
     if (query.budgetMin) where.budgetMax = { gte: query.budgetMin };
     if (query.budgetMax) where.budgetMin = { lte: query.budgetMax };
-    if (query.skillId) where.requiredSkills = { some: { skillId: query.skillId } };
+    if (query.durationMin || query.durationMax) {
+      where.durationWeeks = {
+        ...(query.durationMin ? { gte: query.durationMin } : {}),
+        ...(query.durationMax ? { lte: query.durationMax } : {}),
+      };
+    }
+    // Support both a single skillId and a multi-select skillIds[].
+    const skillIds = query.skillIds?.length ? query.skillIds : query.skillId ? [query.skillId] : [];
+    if (skillIds.length) where.requiredSkills = { some: { skillId: { in: skillIds } } };
     if (query.q) {
       where.OR = [
         { title: { contains: query.q, mode: "insensitive" } },

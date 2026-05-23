@@ -106,13 +106,25 @@ const isPublicRoute = createRouteMatcher([
   "/api/webhooks/(.*)",
   "/api/inngest",
   "/api/v1/profiles/(.*)",
+  "/api/v1/notifications/unsubscribe",
 ]);
 
 const hasClerkConfig = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
+/**
+ * `/api/v1/*` requests carrying `Authorization: Bearer mc_…` authenticate via an
+ * API key in the Node-runtime handler (Prisma is unavailable in edge middleware),
+ * so they must skip Clerk's sign-in gate here. We only sniff the header.
+ */
+function isApiKeyRequest(request: NextRequest): boolean {
+  if (!request.nextUrl.pathname.startsWith("/api/v1/")) return false;
+  const authHeader = request.headers.get("authorization");
+  return !!authHeader?.startsWith("Bearer mc_");
+}
+
 const authProxy = hasClerkConfig
   ? clerkMiddleware(async (auth, request) => {
-      const isPublic = isPublicRoute(request);
+      const isPublic = isPublicRoute(request) || isApiKeyRequest(request);
       if (!isPublic) {
         await auth.protect();
       }

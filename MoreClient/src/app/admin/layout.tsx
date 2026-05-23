@@ -7,34 +7,30 @@ import { useLanguage } from "@/components/language-provider";
 import { NotificationBell } from "@/components/notification-bell";
 import {
   LayoutDashboard,
-  FileText,
-  MessageSquareShare,
-  Settings as SettingsIcon,
+  Users,
   Eye,
   LogOut,
   Menu,
   X,
   Languages,
   Activity,
-  ShieldAlert
+  ShieldAlert,
+  ArrowLeft
 } from "lucide-react";
 
-export default function DashboardLayout({
+export default function SuperAdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const { language, setLanguage, t, isRtl, companyName, companyLogo } = useLanguage();
+  const { language, setLanguage, t, isRtl, companyLogo } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
   const navigation = [
-    { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
-    { name: t("files"), href: "/dashboard/files", icon: FileText },
-    { name: t("handoffs"), href: "/dashboard/handoffs", icon: MessageSquareShare },
-    { name: t("settings"), href: "/dashboard/settings", icon: SettingsIcon },
-    { name: t("widgetPreview"), href: "/widget", icon: Eye, target: "_blank" },
     { name: t("superAdminTitle"), href: "/admin", icon: ShieldAlert },
+    { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
+    { name: t("widgetPreview"), href: "/widget", icon: Eye, target: "_blank" },
   ];
 
   const handleLanguageToggle = () => {
@@ -63,9 +59,9 @@ export default function DashboardLayout({
             />
             <div>
               <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-1.5">
-                {companyName}
+                clientMORE
                 <span className="inline-flex items-center rounded-md bg-purple-500/10 px-1.5 py-0.5 text-xs font-medium text-purple-400 ring-1 ring-inset ring-purple-500/20">
-                  {t("adminPanel")}
+                  {t("superAdminTitle")}
                 </span>
               </h1>
               <p className="text-[10px] text-gray-500 hidden sm:block">
@@ -76,6 +72,15 @@ export default function DashboardLayout({
         </div>
 
         <div className="flex items-center gap-4">
+          {/* Back button */}
+          <Link
+            href="/dashboard"
+            className="flex items-center gap-2 rounded-lg border border-[#1f1f2e] bg-[#0d0d15] px-3 py-1.5 text-xs font-medium text-purple-400 hover:bg-purple-900/10 transition-colors"
+          >
+            <ArrowLeft className={`h-4 w-4 ${isRtl ? "rotate-180" : ""}`} />
+            <span>{t("dashboard")}</span>
+          </Link>
+
           {/* Language Switcher */}
           <button
             onClick={handleLanguageToggle}
@@ -89,9 +94,9 @@ export default function DashboardLayout({
           <NotificationBell />
 
           {/* Quick Status Light */}
-          <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400 ring-1 ring-inset ring-emerald-500/20">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="hidden xs:inline">{t("connected")}</span>
+          <div className="flex items-center gap-1.5 rounded-full bg-purple-500/10 px-2.5 py-1 text-xs font-medium text-purple-400 ring-1 ring-inset ring-purple-500/20">
+            <span className="h-1.5 w-1.5 rounded-full bg-purple-400 animate-pulse" />
+            <span className="hidden xs:inline">Sys Admin</span>
           </div>
         </div>
       </header>
@@ -126,7 +131,7 @@ export default function DashboardLayout({
           <div className="mt-auto border-t border-[#1f1f2e] pt-4">
             <div className="flex items-center gap-2 px-2 text-xs text-gray-500">
               <Activity className="h-4 w-4 text-purple-500 animate-pulse" />
-              <span>clientMORE v1.0.0</span>
+              <span>SuperAdmin Console v1.0.0</span>
             </div>
           </div>
         </aside>
@@ -137,7 +142,7 @@ export default function DashboardLayout({
             <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />
             <div className={`fixed inset-y-0 ${isRtl ? "right-0" : "left-0"} z-50 w-full max-w-xs bg-[#07070b] p-6 shadow-xl`}>
               <div className="flex items-center justify-between mb-8">
-                <h2 className="text-lg font-bold text-white">{t("adminPanel")}</h2>
+                <h2 className="text-lg font-bold text-white">{t("superAdminTitle")}</h2>
                 <button
                   type="button"
                   className="rounded-md p-1.5 text-gray-400 hover:bg-[#1a1a26] hover:text-white"

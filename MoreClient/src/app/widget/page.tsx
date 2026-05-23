@@ -212,7 +212,7 @@ export default function WidgetPage() {
 
           {/* Close Widget Button */}
           <button
-            onClick={() => window.parent.postMessage("naseh-close-widget", "*")}
+            onClick={() => window.parent.postMessage("clientmore-close-widget", "*")}
             className="rounded-md p-1 text-gray-400 hover:bg-[#1f1f2e] hover:text-white transition-colors cursor-pointer"
             title="Close chat"
           >

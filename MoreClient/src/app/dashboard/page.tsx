@@ -411,7 +411,7 @@ export default function DashboardPage() {
                   rows={4}
                   value={answerInput}
                   onChange={(e) => setAnswerInput(e.target.value)}
-                  placeholder="Type the correct response for Naseh to learn..."
+                  placeholder="Type the correct response for clientMORE to learn..."
                   className="w-full rounded-xl border border-[#1f1f2e] bg-[#07070b] p-3 text-sm text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
                 />
               </div>

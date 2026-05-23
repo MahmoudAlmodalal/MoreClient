@@ -1,15 +1,15 @@
 (function () {
-  if (document.getElementById("naseh-chat-widget-container")) return;
+  if (document.getElementById("clientmore-chat-widget-container")) return;
 
   // 1. Create a container wrapper
   const container = document.createElement("div");
-  container.id = "naseh-chat-widget-container";
+  container.id = "clientmore-chat-widget-container";
   container.style.cssText = "position: fixed; bottom: 20px; right: 20px; z-index: 999999; font-family: sans-serif;";
 
   // 2. Create keyframe animation for a premium floating glow pulse
   const style = document.createElement("style");
   style.innerHTML = `
-    @keyframes naseh-pulse-glow {
+    @keyframes clientmore-pulse-glow {
       0% {
         box-shadow: 0 0 0 0px rgba(139, 92, 246, 0.6), 0 4px 20px rgba(139, 92, 246, 0.4);
       }
@@ -20,15 +20,15 @@
         box-shadow: 0 0 0 0px rgba(139, 92, 246, 0), 0 4px 20px rgba(139, 92, 246, 0.4);
       }
     }
-    #naseh-chat-widget-button {
-      animation: naseh-pulse-glow 2s infinite;
+    #clientmore-chat-widget-button {
+      animation: clientmore-pulse-glow 2s infinite;
     }
   `;
   document.head.appendChild(style);
 
   // 3. Create the floating action button (FAB)
   const button = document.createElement("button");
-  button.id = "naseh-chat-widget-button";
+  button.id = "clientmore-chat-widget-button";
   button.style.cssText = `
     width: 60px;
     height: 60px;
@@ -91,7 +91,7 @@
 
   // 4. Create the Iframe Chat Window
   const iframe = document.createElement("iframe");
-  iframe.id = "naseh-chat-widget-iframe";
+  iframe.id = "clientmore-chat-widget-iframe";
   iframe.src = origin + "/widget?company=default";
   
   // Style iframe with hidden state by default (scaled down, zero opacity)
@@ -146,7 +146,7 @@
 
   // Listen to postMessage event from inside widget to close it
   window.addEventListener("message", (event) => {
-    if (event.data === "naseh-close-widget") {
+    if (event.data === "clientmore-close-widget") {
       if (isOpen) toggleWidget();
     }
   });

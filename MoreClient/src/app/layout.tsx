@@ -10,9 +10,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "clientMORE — Bilingual Talent Marketplace",
-  description:
-    "The bilingual (Arabic + English) talent marketplace connecting companies with top talent across MENA. AI-powered matching, in-platform messaging, and secure escrow payments.",
+  title: "clientMORE — B2B AI Customer Support Agent",
+  description: "B2B AI agent that replaces human support costs, learns from documents, speaks Arabic & English, and gets smarter with every conversation.",
 };
 
 export default function RootLayout({

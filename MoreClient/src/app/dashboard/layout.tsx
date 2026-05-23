@@ -116,11 +116,11 @@ export default function DashboardLayout({
             })}
           </nav>
 
-          {/* Footer Logo of Naseh */}
+          {/* Footer */}
           <div className="mt-auto border-t border-[#1f1f2e] pt-4">
             <div className="flex items-center gap-2 px-2 text-xs text-gray-500">
               <Activity className="h-4 w-4 text-purple-500 animate-pulse" />
-              <span>Naseh Support v1.0.0</span>
+              <span>clientMORE v1.0.0</span>
             </div>
           </div>
         </aside>

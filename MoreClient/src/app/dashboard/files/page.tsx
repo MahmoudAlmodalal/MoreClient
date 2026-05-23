@@ -33,7 +33,7 @@ export default function FilesPage() {
   const [files, setFiles] = useState<IngestedFile[]>([
     {
       id: "1",
-      name: "naseh_company_faq_2026.pdf",
+      name: "clientmore_company_faq_2026.pdf",
       size: "2.4 MB",
       type: "pdf",
       chunks: 48,

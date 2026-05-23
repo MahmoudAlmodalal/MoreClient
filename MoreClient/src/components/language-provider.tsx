@@ -13,7 +13,7 @@ const translationsEn = {
   handoffs: "Handoff Queue",
   settings: "Settings & Profile",
   widgetPreview: "Widget Live Preview",
-  adminPanel: "Naseh Admin",
+  adminPanel: "clientMORE Admin",
   builtInGaza: "Built in Gaza · Deployed Globally",
   logout: "Logout",
 
@@ -61,7 +61,7 @@ const translationsEn = {
 
   // Files Ingestion Page
   filesTitle: "Knowledge Base Ingestion",
-  filesSub: "Upload PDFs, DOCX, or TXT documents. Naseh converts them to Markdown, chunks, and embeds them into ChromaDB.",
+  filesSub: "Upload PDFs, DOCX, or TXT documents. clientMORE converts them to Markdown, chunks, and embeds them into ChromaDB.",
   dropzoneTitle: "Drag & drop files here, or click to browse",
   dropzoneSub: "Supports PDF, DOCX, TXT (Max 20MB)",
   fileListTitle: "Parsed Documents",
@@ -93,7 +93,7 @@ const translationsEn = {
   activeChat: "Active chat with {name}",
 
   // Settings & Tenant Config Page
-  settingsTitle: "Naseh Control Panel",
+  settingsTitle: "clientMORE Control Panel",
   settingsSub: "Customize bot behavior, active integrations, and manage your B2B subscription.",
   tenantSection: "Tenant & Bot Profile",
   companyName: "Company Name",
@@ -140,13 +140,13 @@ const translationsEn = {
   downgradeToPro: "Switch to Pro",
 
   // Chat Widget
-  widgetGreeting: "Hello! I am Naseh, your AI support advisor. How can I help you today?",
+  widgetGreeting: "Hello! I am clientMORE, your AI support advisor. How can I help you today?",
   widgetGreetingAr: "مرحباً! أنا نصيح، مستشارك الذكي للدعم الفني. كيف يمكنني مساعدتك اليوم؟",
   widgetPlaceholder: "Ask a question about our services...",
   widgetInputPlaceholderAr: "اكتب سؤالك هنا عن خدماتنا...",
-  aiSearching: "Naseh is retrieving info...",
+  aiSearching: "clientMORE is retrieving info...",
   aiSearchingAr: "نصيح يبحث في قاعدة المعرفة...",
-  widgetTriggerMessage: "Chat with Naseh",
+  widgetTriggerMessage: "Chat with clientMORE",
   widgetEscalated: "You have been connected to a human agent. We will respond shortly.",
   widgetEscalatedAr: "تم تحويلك إلى موظف الدعم البشري. سنرد عليك قريباً.",
   botBadge: "AI Agent",
@@ -359,9 +359,9 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [language, setLanguage] = useState<Language>("en");
 
   // Global settings mock state shared between dashboard pages and widget
-  const [companyName, setCompanyName] = useState("Naseh Corp");
-  const [botName, setBotName] = useState("Naseh AI");
-  const [companyLogo, setCompanyLogo] = useState("https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80");
+  const [companyName, setCompanyName] = useState("clientMORE");
+  const [botName, setBotName] = useState("clientMORE");
+  const [companyLogo, setCompanyLogo] = useState("/clientmore-logo.jpeg");
   const [subscriptionPlan, setSubscriptionPlan] = useState<"pro" | "ultra">("pro");
   const [usedMessages, setUsedMessages] = useState(328);
 

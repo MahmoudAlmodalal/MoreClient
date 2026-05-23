@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useLanguage } from "@/components/language-provider";
+import { apiGet, apiUpload, apiSend, type FileOut, type UploadResponse } from "@/lib/api";
 import {
   UploadCloud,
   File,
@@ -12,13 +13,13 @@ import {
 } from "lucide-react";
 
 interface IngestedFile {
-  id: string;
+  id: number;
   name: string;
   size: string;
   type: string;
   chunks: number;
   date: string;
-  status: "Completed" | "Processing" | "Failed";
+  status: string;
 }
 
 export default function FilesPage() {
@@ -28,35 +29,25 @@ export default function FilesPage() {
   const [processingStep, setProcessingStep] = useState("");
   const [uploadProgress, setUploadProgress] = useState(0);
 
-  const [files, setFiles] = useState<IngestedFile[]>([
-    {
-      id: "1",
-      name: "clientmore_company_faq_2026.pdf",
-      size: "2.4 MB",
-      type: "pdf",
-      chunks: 48,
-      date: "2026-05-18",
-      status: "Completed"
-    },
-    {
-      id: "2",
-      name: "product_shipping_guidelines.docx",
-      size: "1.1 MB",
-      type: "docx",
-      chunks: 22,
-      date: "2026-05-20",
-      status: "Completed"
-    },
-    {
-      id: "3",
-      name: "returns_policy_v2.txt",
-      size: "340 KB",
-      type: "txt",
-      chunks: 12,
-      date: "2026-05-22",
-      status: "Completed"
+  const [files, setFiles] = useState<IngestedFile[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadFiles = async () => {
+    try {
+      const rows = await apiGet<FileOut[]>("/api/files");
+      setFiles(rows);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load files");
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
+
+  useEffect(() => {
+    loadFiles();
+  }, []);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -74,20 +65,21 @@ export default function FilesPage() {
     setDragActive(false);
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      simulateFileUpload(e.dataTransfer.files[0].name, e.dataTransfer.files[0].size);
+      uploadFile(e.dataTransfer.files[0]);
     }
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      simulateFileUpload(e.target.files[0].name, e.target.files[0].size);
+      uploadFile(e.target.files[0]);
     }
   };
 
-  const simulateFileUpload = (fileName: string, sizeBytes: number) => {
+  const uploadFile = async (file: globalThis.File) => {
+    setError(null);
     setUploading(true);
     setUploadProgress(0);
-    
+
     const steps = [
       "Reading file contents...",
       "Converting to clean Markdown format...",
@@ -98,45 +90,42 @@ export default function FilesPage() {
 
     setProcessingStep(steps[0]);
 
-    // Animate progress bar
+    // Cosmetic progress animation while the real request is in flight.
+    // Caps at 90% so the bar finishes only once the upload resolves.
     const interval = setInterval(() => {
       setUploadProgress(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setTimeout(() => {
-            const sizeString = sizeBytes > 1024 * 1024
-              ? `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`
-              : `${(sizeBytes / 1024).toFixed(0)} KB`;
-
-            const newFile: IngestedFile = {
-              id: Date.now().toString(),
-              name: fileName,
-              size: sizeString,
-              type: fileName.split(".").pop() || "txt",
-              chunks: Math.floor(Math.random() * 25) + 5,
-              date: new Date().toISOString().split("T")[0],
-              status: "Completed"
-            };
-
-            setFiles(prevFiles => [newFile, ...prevFiles]);
-            setUploading(false);
-          }, 600);
-          return 100;
-        }
-
-        const nextProgress = prev + 10;
-        
-        // Progressively update text stages
+        const nextProgress = Math.min(prev + 10, 90);
         const stepIndex = Math.min(Math.floor(nextProgress / 20), steps.length - 1);
         setProcessingStep(steps[stepIndex]);
-
         return nextProgress;
       });
     }, 400);
+
+    try {
+      await apiUpload<UploadResponse>("/api/upload", file);
+      setUploadProgress(100);
+      // Re-fetch so the real chunk count / status from the backend shows.
+      await loadFiles();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not process file");
+    } finally {
+      clearInterval(interval);
+      setUploading(false);
+      setUploadProgress(0);
+    }
   };
 
-  const handleDeleteFile = (id: string) => {
-    setFiles(prev => prev.filter(f => f.id !== id));
+  const handleDeleteFile = async (id: number) => {
+    const prev = files;
+    // Optimistic removal.
+    setFiles(prevFiles => prevFiles.filter(f => f.id !== id));
+    try {
+      await apiSend("/api/files/" + id, "DELETE");
+    } catch (err) {
+      // Restore on failure.
+      setFiles(prev);
+      setError(err instanceof Error ? err.message : "Could not delete file");
+    }
   };
 
   return (
@@ -146,6 +135,13 @@ export default function FilesPage() {
         <h2 className="text-2xl font-bold tracking-tight text-white">{t("filesTitle")}</h2>
         <p className="mt-1 text-sm text-gray-400">{t("filesSub")}</p>
       </div>
+
+      {error && (
+        <div className="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">
+          <AlertCircle className="h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
       {/* RAG Pipeline visual info banner */}
       <div className="rounded-xl border border-purple-500/10 bg-[#0d0d15] p-5 flex flex-col md:flex-row items-center gap-4">
@@ -221,7 +217,12 @@ export default function FilesPage() {
           <p className="text-xs text-gray-500 mt-0.5">{t("fileListSub")}</p>
         </div>
 
-        {files.length === 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-12 text-center text-gray-500">
+            <Database className="h-8 w-8 mb-2 animate-pulse" />
+            <p className="text-sm">Loading knowledge bases...</p>
+          </div>
+        ) : files.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-center text-gray-500">
             <AlertCircle className="h-8 w-8 mb-2" />
             <p className="text-sm">No knowledge bases ingested yet. Upload files to get started.</p>
@@ -250,8 +251,20 @@ export default function FilesPage() {
                     <td className="px-4 py-4 font-mono font-semibold text-purple-400">{file.chunks}</td>
                     <td className="px-4 py-4 text-gray-500">{file.date}</td>
                     <td className="px-4 py-4">
-                      <span className="inline-flex items-center rounded-md bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-400 ring-1 ring-inset ring-emerald-500/20">
-                        {t("completed")}
+                      <span
+                        className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${
+                          file.status === "Failed"
+                            ? "bg-red-500/10 text-red-400 ring-red-500/20"
+                            : file.status === "Processing"
+                            ? "bg-amber-500/10 text-amber-400 ring-amber-500/20"
+                            : "bg-emerald-500/10 text-emerald-400 ring-emerald-500/20"
+                        }`}
+                      >
+                        {file.status === "Failed"
+                          ? t("failed")
+                          : file.status === "Processing"
+                          ? t("processing")
+                          : t("completed")}
                       </span>
                     </td>
                     <td className="px-4 py-4 text-center">

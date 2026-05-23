@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useLanguage } from "@/components/language-provider";
+import { apiGet, apiSend, type HandoffOut } from "@/lib/api";
 import {
   MessageSquare,
   Send,
@@ -11,30 +12,22 @@ import {
   CheckCheck,
   User,
   ShieldAlert,
-  Bot
+  Bot,
+  BookPlus
 } from "lucide-react";
 
-interface ChatMessage {
-  id: string;
-  role: "user" | "assistant" | "agent";
-  content: string;
-  time: string;
-}
+// The backend HandoffOut shape (from @/lib/api) is the source of truth for a
+// ticket. `id` is a number, `channel` is the raw conversation channel
+// (e.g. "whatsapp" | "telegram" | "web"), and `metadata` is a free-form dict.
+type HandoffTicket = HandoffOut;
 
-interface HandoffTicket {
-  id: string;
-  user: string;
-  channel: "Telegram" | "WhatsApp" | "Widget";
-  reason: "low_confidence" | "user_requested" | "keyword_triggered";
-  language: "en" | "ar";
-  timeAgo: string;
-  unreplied: boolean;
-  messages: ChatMessage[];
-  metadata: {
-    platformInfo?: string;
-    phoneNumber?: string;
-    username?: string;
-  };
+// Channel filter chips use display-cased names; map a raw backend channel to
+// one of those buckets so filtering and the channel icon keep working.
+function channelKey(channel: string): "Telegram" | "WhatsApp" | "Widget" {
+  const c = (channel || "").toLowerCase();
+  if (c.includes("whatsapp")) return "WhatsApp";
+  if (c.includes("telegram")) return "Telegram";
+  return "Widget";
 }
 
 export default function HandoffsPage() {
@@ -42,106 +35,95 @@ export default function HandoffsPage() {
   const [activeTab, setActiveTab] = useState<"all" | "Telegram" | "WhatsApp" | "Widget">("all");
   const [unrepliedOnly, setUnrepliedOnly] = useState(false);
 
-  const [tickets, setTickets] = useState<HandoffTicket[]>([
-    {
-      id: "1",
-      user: "+972 59-912-3456",
-      channel: "WhatsApp",
-      reason: "low_confidence",
-      language: "en",
-      timeAgo: "5 min ago",
-      unreplied: true,
-      metadata: {
-        phoneNumber: "+972 59-912-3456",
-        platformInfo: "Twilio Sandbox API"
-      },
-      messages: [
-        { id: "m1", role: "user", content: "Hi, do you deliver products directly inside Gaza during the current blockade?", time: "10:20 AM" },
-        { id: "m2", role: "assistant", content: "I don't have enough information to answer that question. Would you like to speak with a human agent?", time: "10:20 AM" },
-        { id: "m3", role: "user", content: "Yes please, connect me.", time: "10:21 AM" }
-      ]
-    },
-    {
-      id: "2",
-      user: "@mahmoud_al",
-      channel: "Telegram",
-      reason: "keyword_triggered",
-      language: "ar",
-      timeAgo: "12 min ago",
-      unreplied: true,
-      metadata: {
-        username: "@mahmoud_al",
-        platformInfo: "Telegram Bot API v21.3"
-      },
-      messages: [
-        { id: "m4", role: "user", content: "أريد تقديم شكوى رسمية بخصوص سوء الخدمة الفنية", time: "10:13 AM" },
-        { id: "m5", role: "assistant", content: "تم تحويلك إلى موظف الدعم البشري. سنرد عليك قريباً.", time: "10:13 AM" }
-      ]
-    },
-    {
-      id: "3",
-      user: "Client Session #3892",
-      channel: "Widget",
-      reason: "user_requested",
-      language: "en",
-      timeAgo: "1 hour ago",
-      unreplied: false,
-      metadata: {
-        platformInfo: "Chrome 124.0.0 / Linux Workspace"
-      },
-      messages: [
-        { id: "m6", role: "user", content: "Is it possible to custom brand the widget?", time: "9:15 AM" },
-        { id: "m7", role: "assistant", content: "Yes, you can edit company logo, name and bot name from Settings page.", time: "9:16 AM" },
-        { id: "m8", role: "user", content: "Can I use custom CSS fonts too? Talk to human.", time: "9:17 AM" },
-        { id: "m9", role: "agent", content: "Sure, we support custom CSS! Let me know if you need docs.", time: "9:20 AM" }
-      ]
-    }
-  ]);
-
-  const [selectedTicketId, setSelectedTicketId] = useState<string>("1");
+  const [tickets, setTickets] = useState<HandoffTicket[]>([]);
+  const [selectedTicketId, setSelectedTicketId] = useState<number | null>(null);
   const [replyText, setReplyText] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
+
+  const loadTickets = useCallback(async () => {
+    try {
+      setError(null);
+      const data = await apiGet<HandoffOut[]>("/api/handoffs?channel=");
+      setTickets(data);
+      // Auto-select the first ticket (keep current selection if still present).
+      setSelectedTicketId(prev =>
+        prev !== null && data.some(d => d.id === prev) ? prev : (data[0]?.id ?? null)
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load handoffs");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadTickets();
+  }, [loadTickets]);
 
   const activeTicket = tickets.find(t => t.id === selectedTicketId);
 
   // Filters
   const filteredTickets = tickets.filter(ticket => {
-    const matchesTab = activeTab === "all" || ticket.channel === activeTab;
+    const matchesTab = activeTab === "all" || channelKey(ticket.channel) === activeTab;
     const matchesUnreplied = !unrepliedOnly || ticket.unreplied;
     return matchesTab && matchesUnreplied;
   });
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!replyText.trim() || !selectedTicketId) return;
+    if (!replyText.trim() || selectedTicketId === null) return;
 
-    setTickets(prev => prev.map(t => {
-      if (t.id === selectedTicketId) {
-        return {
-          ...t,
-          unreplied: false, // Agent replied
-          messages: [
-            ...t.messages,
-            {
-              id: Date.now().toString(),
-              role: "agent",
-              content: replyText,
-              time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            }
-          ]
-        };
-      }
-      return t;
-    }));
-
+    const content = replyText;
     setReplyText("");
+
+    try {
+      const updated = await apiSend<HandoffOut>(
+        "/api/handoffs/" + selectedTicketId + "/reply",
+        "POST",
+        { content }
+      );
+      setTickets(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send reply");
+      // Restore the unsent text so the agent can retry.
+      setReplyText(content);
+    }
   };
 
-  const handleResolve = (id: string) => {
-    setTickets(prev => prev.filter(t => t.id !== id));
-    // Auto-select another ticket if available
+  // Teach the bot from this handoff: take the customer's last question and the
+  // agent's last reply and persist+embed them via /api/learn (with the handoff id
+  // as provenance). Next time the same question is asked, RAG retrieves this Q&A.
+  const handleAddToKb = async (ticket: HandoffTicket) => {
+    const question = [...ticket.messages].reverse().find(m => m.role === "user")?.content;
+    const answer = [...ticket.messages].reverse().find(m => m.role === "agent")?.content;
+    if (!question || !answer) return;
+    try {
+      setError(null);
+      await apiSend("/api/learn", "POST", {
+        question,
+        answer,
+        source_handoff_id: ticket.id,
+      });
+      setToast(t("addedToKb"));
+      setTimeout(() => setToast(null), 3000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to add to knowledge base");
+    }
+  };
+
+  const handleResolve = async (id: number) => {
+    try {
+      await apiSend("/api/handoffs/" + id + "/resolve", "POST");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to resolve handoff");
+      return;
+    }
     const remaining = tickets.filter(t => t.id !== id);
-    if (remaining.length > 0) {
-      setSelectedTicketId(remaining[0].id);
+    setTickets(remaining);
+    if (selectedTicketId === id) {
+      setSelectedTicketId(remaining[0]?.id ?? null);
     }
   };
 
@@ -183,8 +165,27 @@ export default function HandoffsPage() {
         </label>
       </div>
 
+      {/* Inline error banner (non-blocking) */}
+      {error && (
+        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs font-semibold text-red-400">
+          {error}
+        </div>
+      )}
+
+      {/* Success toast (e.g. "added to knowledge base") */}
+      {toast && (
+        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs font-semibold text-emerald-400">
+          {toast}
+        </div>
+      )}
+
       {/* Conversation Workspace Grid */}
-      {filteredTickets.length === 0 ? (
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl border border-[#1f1f2e] bg-[#0d0d15]">
+          <MessageSquare className="h-12 w-12 text-gray-500 mb-2 animate-pulse" />
+          <p className="text-sm font-semibold text-gray-400">{t("loading")}</p>
+        </div>
+      ) : filteredTickets.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl border border-[#1f1f2e] bg-[#0d0d15]">
           <MessageSquare className="h-12 w-12 text-gray-500 mb-2" />
           <p className="text-sm font-semibold text-gray-400">{t("noHandoffs")}</p>
@@ -207,9 +208,9 @@ export default function HandoffsPage() {
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-white flex items-center gap-2">
-                      {ticket.channel === "WhatsApp" && <Smartphone className="h-4 w-4 text-emerald-400" />}
-                      {ticket.channel === "Telegram" && <SendHorizontal className="h-4 w-4 text-blue-400" />}
-                      {ticket.channel === "Widget" && <Globe className="h-4 w-4 text-purple-400" />}
+                      {channelKey(ticket.channel) === "WhatsApp" && <Smartphone className="h-4 w-4 text-emerald-400" />}
+                      {channelKey(ticket.channel) === "Telegram" && <SendHorizontal className="h-4 w-4 text-blue-400" />}
+                      {channelKey(ticket.channel) === "Widget" && <Globe className="h-4 w-4 text-purple-400" />}
                       {ticket.user}
                     </span>
                     <span className="text-[10px] text-gray-500">{ticket.timeAgo}</span>
@@ -254,12 +255,28 @@ export default function HandoffsPage() {
                   </p>
                 </div>
 
-                <button
-                  onClick={() => handleResolve(activeTicket.id)}
-                  className="rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 text-xs font-bold text-white transition-colors"
-                >
-                  {t("resolveHandoff")}
-                </button>
+                <div className="flex items-center gap-2">
+                  {(() => {
+                    const hasAgentReply = activeTicket.messages.some(m => m.role === "agent");
+                    return (
+                      <button
+                        onClick={() => handleAddToKb(activeTicket)}
+                        disabled={!hasAgentReply}
+                        title={hasAgentReply ? undefined : "Reply as an agent first, then teach the bot."}
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed px-3 py-1.5 text-xs font-bold text-white transition-colors"
+                      >
+                        <BookPlus className="h-3.5 w-3.5" />
+                        {t("addToKb")}
+                      </button>
+                    );
+                  })()}
+                  <button
+                    onClick={() => handleResolve(activeTicket.id)}
+                    className="rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 text-xs font-bold text-white transition-colors"
+                  >
+                    {t("resolveHandoff")}
+                  </button>
+                </div>
               </div>
 
               {/* Chat Messages Log */}

@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useSyncExternalStore } from "react";
+import React, { useEffect, useState, useSyncExternalStore } from "react";
 import { useLanguage } from "@/components/language-provider";
+import { apiGet, apiSend, type AnalyticsResponse } from "@/lib/api";
 import {
   MessageSquare,
   DollarSign,
@@ -23,14 +24,8 @@ import {
   Cell
 } from "recharts";
 
-interface UnansweredItem {
-  id: string;
-  question: string;
-  channel: "Telegram" | "WhatsApp" | "Widget";
-  language: "en" | "ar";
-  confidence: number;
-  timeAgo: string;
-}
+// Matches AnalyticsResponse["unanswered"][number] from the backend.
+type UnansweredItem = AnalyticsResponse["unanswered"][number];
 
 const subscribeToClientReady = () => () => {};
 const getClientReady = () => true;
@@ -44,57 +39,63 @@ export default function DashboardPage() {
     getServerReady
   );
 
-  // States for interactive Q&A injector
-  const [unansweredQuestions, setUnansweredQuestions] = useState<UnansweredItem[]>([
-    {
-      id: "1",
-      question: "Do you offer offline setups for schools in rural areas?",
-      channel: "Telegram",
-      language: "en",
-      confidence: 0.28,
-      timeAgo: "15 min ago"
-    },
-    {
-      id: "2",
-      question: "كيف يمكنني تفعيل خيار الدفع بالتقسيط لخدمتكم؟",
-      channel: "WhatsApp",
-      language: "ar",
-      confidence: 0.15,
-      timeAgo: "42 min ago"
-    },
-    {
-      id: "3",
-      question: "Can we export analytics data to PDF reports weekly?",
-      channel: "Widget",
-      language: "en",
-      confidence: 0.32,
-      timeAgo: "2 hours ago"
-    },
-    {
-      id: "4",
-      question: "هل يوجد خصم خاص للشركات الناشئة في غزة وفلسطين؟",
-      channel: "Telegram",
-      language: "ar",
-      confidence: 0.22,
-      timeAgo: "5 hours ago"
-    }
-  ]);
+  // States for interactive Q&A injector + live analytics from the backend.
+  const [unansweredQuestions, setUnansweredQuestions] = useState<UnansweredItem[]>([]);
+  const [kpis, setKpis] = useState<AnalyticsResponse["kpis"]>({
+    total_questions: 0,
+    deflection_rate: 0,
+    cost_savings: 0,
+    feedback_score: 0
+  });
+  const [topQuestions, setTopQuestions] = useState<AnalyticsResponse["top_questions"]>([]);
+  const [channelDistribution, setChannelDistribution] = useState<
+    AnalyticsResponse["channel_distribution"]
+  >([]);
 
   const [selectedQuestion, setSelectedQuestion] = useState<UnansweredItem | null>(null);
   const [answerInput, setAnswerInput] = useState("");
   const [toastMessage, setToastMessage] = useState("");
+
+  // Fetch real analytics on mount; on failure, keep graceful zero/empty defaults.
+  useEffect(() => {
+    let active = true;
+    apiGet<AnalyticsResponse>("/api/analytics")
+      .then((data) => {
+        if (!active) return;
+        setKpis(data.kpis);
+        setTopQuestions(data.top_questions);
+        setChannelDistribution(data.channel_distribution);
+        setUnansweredQuestions(data.unanswered);
+      })
+      .catch(() => {
+        /* graceful fallback: leave zeros/empty arrays in place */
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleInjectAnswer = (item: UnansweredItem) => {
     setSelectedQuestion(item);
     setAnswerInput("");
   };
 
-  const submitInjectedAnswer = (e: React.FormEvent) => {
+  const submitInjectedAnswer = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!answerInput.trim() || !selectedQuestion) return;
 
-    // Simulate training RAG / approving answer
-    setUnansweredQuestions(prev => prev.filter(q => q.id !== selectedQuestion.id));
+    const item = selectedQuestion;
+    try {
+      // Teach the bot: persist + embed the approved answer into the KB.
+      await apiSend("/api/learn", "POST", {
+        question: item.question,
+        answer: answerInput.trim()
+      });
+    } catch {
+      /* best-effort: still drop it from the queue so the agent isn't blocked */
+    }
+
+    setUnansweredQuestions((prev) => prev.filter((q) => q.id !== item.id));
     setSelectedQuestion(null);
     setToastMessage(t("saved"));
 
@@ -103,11 +104,11 @@ export default function DashboardPage() {
     }, 3000);
   };
 
-  // KPI calculations
+  // KPI cards bound to live values.
   const stats = [
     {
       name: t("kpiTotalQuestions"),
-      value: "2,450",
+      value: kpis.total_questions.toLocaleString(),
       change: "+12.5%",
       icon: MessageSquare,
       color: "from-blue-500/10 to-indigo-500/10 border-blue-500/30",
@@ -115,7 +116,7 @@ export default function DashboardPage() {
     },
     {
       name: t("kpiDeflectionRate"),
-      value: "82.4%",
+      value: `${(kpis.deflection_rate * 100).toFixed(1)}%`,
       change: "+3.2%",
       icon: CheckCircle,
       color: "from-purple-500/10 to-violet-500/10 border-purple-500/30",
@@ -123,7 +124,7 @@ export default function DashboardPage() {
     },
     {
       name: t("kpiCostSavings"),
-      value: "$4,900",
+      value: `$${kpis.cost_savings}`,
       change: "+$620",
       icon: DollarSign,
       color: "from-emerald-500/10 to-green-500/10 border-emerald-500/30",
@@ -131,7 +132,7 @@ export default function DashboardPage() {
     },
     {
       name: t("kpiFeedbackScore"),
-      value: "4.72 / 5",
+      value: `${kpis.feedback_score} / 5`,
       change: "+0.15",
       icon: ThumbsUp,
       color: "from-amber-500/10 to-orange-500/10 border-amber-500/30",
@@ -139,20 +140,14 @@ export default function DashboardPage() {
     }
   ];
 
-  // Recharts Chart Data
-  const repeatedQuestionsData = [
-    { name: isRtl ? "سياسة الاسترجاع" : "Refund Policy", count: 185 },
-    { name: isRtl ? "ترقية الاشتراك" : "Upgrade Plan", count: 120 },
-    { name: isRtl ? "إلغاء الحساب" : "Cancel Account", count: 95 },
-    { name: isRtl ? "دعم اللغة العربية" : "Arabic Support", count: 74 },
-    { name: isRtl ? "الربط التقني" : "Integration Setup", count: 48 }
-  ];
+  // Recharts data, sourced from the backend ([{name,count}] and [{name,value}]).
+  const repeatedQuestionsData = topQuestions;
 
-  const sourceShareData = [
-    { name: t("channelWidget"), value: 1320, color: "#8b5cf6" },
-    { name: t("channelWhatsapp"), value: 780, color: "#10b981" },
-    { name: t("channelTelegram"), value: 350, color: "#3b82f6" }
-  ];
+  const pieColors = ["#8b5cf6", "#10b981", "#3b82f6", "#f59e0b", "#ef4444"];
+  const sourceShareData = channelDistribution.map((slice, i) => ({
+    ...slice,
+    color: pieColors[i % pieColors.length]
+  }));
 
   if (!isClient) {
     return (
@@ -345,9 +340,9 @@ export default function DashboardPage() {
                     </td>
                     <td className="px-4 py-4">
                       <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${
-                        item.channel === "Telegram"
+                        item.channel.toLowerCase() === "telegram"
                           ? "bg-blue-500/10 text-blue-400 ring-1 ring-inset ring-blue-500/20"
-                          : item.channel === "WhatsApp"
+                          : item.channel.toLowerCase() === "whatsapp"
                           ? "bg-emerald-500/10 text-emerald-400 ring-1 ring-inset ring-emerald-500/20"
                           : "bg-purple-500/10 text-purple-400 ring-1 ring-inset ring-purple-500/20"
                       }`}>

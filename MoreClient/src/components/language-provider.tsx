@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { apiGet, type SettingsOut } from "@/lib/api";
 
 type Language = "en" | "ar";
 
@@ -90,6 +91,8 @@ const translationsEn = {
   replyPlaceholder: "Type your message to send back to the user...",
   sendReply: "Send Message",
   resolveHandoff: "Resolve & Close Session",
+  addToKb: "Add to Knowledge Base",
+  addedToKb: "Added to knowledge base — the bot will answer this next time.",
   lowConfidence: "Low AI Confidence",
   userRequested: "User Requested Human",
   keywordTriggered: "Keyword Escalate",
@@ -393,6 +396,8 @@ const translationsAr: Partial<Translations> = {
   replyPlaceholder: "اكتب رسالتك لإرسالها مباشرة إلى المستخدم...",
   sendReply: "إرسال الرسالة",
   resolveHandoff: "حل المشكلة وإغلاق الجلسة",
+  addToKb: "أضف إلى قاعدة المعرفة",
+  addedToKb: "تمت الإضافة إلى قاعدة المعرفة — سيجيب البوت على هذا في المرة القادمة.",
   lowConfidence: "ثقة منخفضة للذكاء الاصطناعي",
   userRequested: "طلب المستخدم التحدث مع بشري",
   keywordTriggered: "كلمة مفتاحية استدعت التدخل",
@@ -684,6 +689,38 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       html.classList.remove("rtl");
     }
   }, [isRtl, language]);
+
+  // Hydrate the shared config state from the backend on mount. Keeps the
+  // existing mock defaults as a fallback if the fetch fails (offline/dev).
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const s = await apiGet<SettingsOut>("/api/settings");
+        if (cancelled) return;
+        setCompanyName(s.companyName);
+        setBotName(s.botName);
+        setCompanyLogo(s.companyLogo);
+        setBotTone(s.botTone);
+        setSystemPromptExtra(s.systemPromptExtra);
+        setTelegramToken(s.telegramToken ?? "");
+        setIsTelegramActive(s.isTelegramActive);
+        setTwilioSid(s.twilioSid ?? "");
+        setTwilioToken(s.twilioToken ?? "");
+        setTwilioNumber(s.twilioNumber ?? "");
+        setIsWhatsappActive(s.isWhatsappActive);
+        if (s.subscriptionPlan === "pro" || s.subscriptionPlan === "ultra") {
+          setSubscriptionPlan(s.subscriptionPlan);
+        }
+        setUsedMessages(s.usedMessages);
+      } catch {
+        /* keep mock defaults when the backend is unreachable */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const t = (key: keyof Translations, variables?: Record<string, string | number>): string => {
     const dict = language === "ar" ? translationsAr : translationsEn;

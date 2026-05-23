@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useSyncExternalStore } from "react";
+import React, { useEffect, useState, useSyncExternalStore } from "react";
 import { useLanguage } from "@/components/language-provider";
+import { apiSend, type SettingsOut } from "@/lib/api";
 import {
   Bot,
   SendHorizontal,
@@ -58,6 +59,7 @@ export default function SettingsPage() {
 
   const [saving, setSaving] = useState(false);
   const [successToast, setSuccessToast] = useState(false);
+  const [errorToast, setErrorToast] = useState(false);
 
   // Dynamic host origin states & Clipboard helpers
   const currentOrigin = useSyncExternalStore(
@@ -82,6 +84,12 @@ export default function SettingsPage() {
   // Local mirror states for logo preview
   const [logoInput, setLogoInput] = useState(companyLogo);
   const [uploadMode, setUploadMode] = useState(true);
+
+  // Keep the local logo mirror in sync once the provider hydrates from backend.
+  useEffect(() => {
+    setLogoInput(companyLogo);
+  }, [companyLogo]);
+
   const [dragActive, setDragActive] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
 
@@ -144,19 +152,58 @@ export default function SettingsPage() {
     setUploadError(null);
   };
 
-  const handleSave = (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    setErrorToast(false);
 
-    setTimeout(() => {
-      setCompanyLogo(logoInput);
-      setSaving(false);
+    // Build a camelCase payload of the editable fields (logo from the local
+    // mirror, which holds the freshly uploaded/typed value).
+    const payload = {
+      companyName,
+      botName,
+      companyLogo: logoInput,
+      botTone,
+      systemPromptExtra,
+      telegramToken,
+      isTelegramActive,
+      twilioSid,
+      twilioToken,
+      twilioNumber,
+      isWhatsappActive,
+      subscriptionPlan,
+    };
+
+    try {
+      const saved = await apiSend<SettingsOut>("/api/settings", "PUT", payload);
+
+      // Reflect the persisted values back into the shared context so the
+      // widget and other pages pick them up immediately.
+      setCompanyName(saved.companyName);
+      setBotName(saved.botName);
+      setCompanyLogo(saved.companyLogo);
+      setBotTone(saved.botTone);
+      setSystemPromptExtra(saved.systemPromptExtra);
+      setTelegramToken(saved.telegramToken ?? "");
+      setIsTelegramActive(saved.isTelegramActive);
+      setTwilioSid(saved.twilioSid ?? "");
+      setTwilioToken(saved.twilioToken ?? "");
+      setTwilioNumber(saved.twilioNumber ?? "");
+      setIsWhatsappActive(saved.isWhatsappActive);
+      if (saved.subscriptionPlan === "pro" || saved.subscriptionPlan === "ultra") {
+        setSubscriptionPlan(saved.subscriptionPlan);
+      }
+
       setSuccessToast(true);
-
-      setTimeout(() => {
-        setSuccessToast(false);
-      }, 3000);
-    }, 800);
+      setTimeout(() => setSuccessToast(false), 3000);
+    } catch {
+      // On failure, still mirror the logo locally so the preview is consistent.
+      setCompanyLogo(logoInput);
+      setErrorToast(true);
+      setTimeout(() => setErrorToast(false), 3000);
+    } finally {
+      setSaving(false);
+    }
   };
 
   const limit = subscriptionPlan === "pro" ? 500 : 1500;
@@ -168,6 +215,11 @@ export default function SettingsPage() {
       {successToast && (
         <div className="fixed top-4 right-4 z-50 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg animate-in fade-in slide-in-from-top-4 duration-200">
           {t("saved")}
+        </div>
+      )}
+      {errorToast && (
+        <div className="fixed top-4 right-4 z-50 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg animate-in fade-in slide-in-from-top-4 duration-200">
+          {language === "ar" ? "فشل حفظ الإعدادات. حاول مرة أخرى." : "Failed to save settings. Please try again."}
         </div>
       )}
 

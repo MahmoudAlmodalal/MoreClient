@@ -1,39 +1,13 @@
-modules = ["nodejs-20", "postgresql-16"]
-[agent]
-expertMode = true
-stack = "BEST_EFFORT_FALLBACK"
+modules = ["nodejs-20", "python-3.11"]
+run = "bash start.sh"
 
 [nix]
 channel = "stable-25_05"
-
-[workflows]
-runButton = "Project"
-
-[[workflows.workflow]]
-name = "Project"
-mode = "parallel"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Start application"
-
-[[workflows.workflow]]
-name = "Start application"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd MoreClient && npm run dev -- -p 5000"
-waitForPort = 5000
-
-[workflows.workflow.metadata]
-outputType = "webview"
 
 [[ports]]
 localPort = 5000
 externalPort = 80
 
-[postMerge]
-path = "scripts/post-merge.sh"
-timeoutMs = 120000
+[[ports]]
+localPort = 8000
+externalPort = 8000

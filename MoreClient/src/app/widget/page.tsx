@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useLanguage } from "@/components/language-provider";
+import { apiSend, type ChatResponse } from "@/lib/api";
 import {
   Send,
   Bot,
@@ -27,6 +28,8 @@ export default function WidgetPage() {
   } = useLanguage();
 
   const messageIdRef = useRef(1);
+  // One stable session id per widget mount — drives backend conversation memory.
+  const sessionId = useRef<string>(crypto.randomUUID());
   const greetingText = language === "ar" ? t("widgetGreetingAr") : t("widgetGreeting");
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -84,7 +87,7 @@ export default function WidgetPage() {
     "التحدث مع الدعم البشري 👥"
   ];
 
-  const sendMessage = (text: string) => {
+  const sendMessage = async (text: string) => {
     if (!text.trim()) return;
 
     const userMessage: Message = {
@@ -97,64 +100,44 @@ export default function WidgetPage() {
     setMessages(prev => [...prev, userMessage]);
     setLoading(true);
 
-    // Simulate RAG / Fallback strategy
-    setTimeout(() => {
-      let botResponse = "";
-      const query = text.toLowerCase();
-
-      if (isEscalated) {
-        // Human agent handles it
-        botResponse = language === "ar"
-          ? "مرحباً، أقرأ محادثتك وسأقوم بحل المشكلة فوراً."
-          : "Hello, I am reviewing your chat history and will resolve this issue immediately.";
-        
-        setMessages(prev => [
-          ...prev,
-          {
-            id: nextMessageId(),
-            sender: "human",
-            text: botResponse,
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }
-        ]);
-        setLoading(false);
-        return;
-      }
-
-      // Simple RAG Matching Strategy simulation
-      if (query.includes("refund") || query.includes("استرجاع") || query.includes("ترجيع")) {
-        botResponse = language === "ar"
-          ? "تنص سياستنا على إمكانية استرداد الأموال بالكامل في غضون 14 يوماً من الشراء. يرجى التوجه لصفحة الفواتير لطلب الاسترجاع."
-          : "Our policy allows a full refund within 14 days of purchase. Please head to your billing dashboard page to request a cancellation.";
-      } else if (query.includes("upgrade") || query.includes("ترقية") || query.includes("اشتراك")) {
-        botResponse = language === "ar"
-          ? "يمكنك ترقية اشتراكك في أي وقت من الإعدادات. نوفر الباقة الاحترافية (Pro) مقابل $500 والباقة القصوى (Ultra) مقابل $1500."
-          : "You can upgrade your subscription anytime. We offer the Pro Tier for $500/month and the Ultra Tier for $1500/month directly in settings.";
-      } else if (query.includes("arabic") || query.includes("عربي") || query.includes("english") || query.includes("إنجليزي")) {
-        botResponse = language === "ar"
-          ? "نعم، أنا ناطق باللغتين العربية والإنجليزية بطلاقة! سأجيبك دائماً بنفس لغة سؤالك."
-          : "Yes, I am fully bilingual in English and Arabic. I will always respond using the same language you write in.";
-      } else if (query.includes("human") || query.includes("دعم") || query.includes("بشري") || query.includes("agent")) {
-        triggerEscalation();
-        return;
-      } else {
-        // Fallback strategy: trigger low confidence escalate prompt
-        botResponse = language === "ar"
-          ? "عذراً، لا تتوفر لدي معلومات كافية للإجابة على هذا السؤال. هل تريد التحدث مع موظف دعم بشري؟"
-          : "I don't have enough information to answer that question. Would you like to speak with a human support agent?";
-      }
+    try {
+      // Real backend brain: persists the turn, runs RAG, and decides escalation.
+      // Language is detected server-side, so we don't send it.
+      const resp = await apiSend<ChatResponse>("/api/chat", "POST", {
+        session_id: sessionId.current,
+        message: text,
+        channel: "web"
+      });
 
       setMessages(prev => [
         ...prev,
         {
           id: nextMessageId(),
-          sender: "bot",
-          text: botResponse,
+          sender: resp.sender === "human" ? "human" : "bot",
+          text: resp.reply,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
+
+      if (resp.escalate) {
+        setIsEscalated(true);
+      }
+    } catch {
+      // Graceful degradation — surface a bilingual connection error.
+      setMessages(prev => [
+        ...prev,
+        {
+          id: nextMessageId(),
+          sender: "bot",
+          text: language === "ar"
+            ? "عذراً، أواجه مشكلة في الاتصال حالياً. يرجى المحاولة مرة أخرى."
+            : "Sorry, I'm having trouble connecting right now. Please try again.",
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }
+      ]);
+    } finally {
       setLoading(false);
-    }, 1200);
+    }
   };
 
   const handleSend = (e: React.FormEvent) => {
@@ -167,24 +150,6 @@ export default function WidgetPage() {
   const handleSuggestionClick = (suggestionText: string) => {
     const cleanText = suggestionText.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').trim();
     sendMessage(cleanText);
-  };
-
-  const triggerEscalation = () => {
-    setIsEscalated(true);
-    setLoading(true);
-
-    setTimeout(() => {
-      setMessages(prev => [
-        ...prev,
-        {
-          id: nextMessageId(),
-          sender: "bot",
-          text: language === "ar" ? t("widgetEscalatedAr") : t("widgetEscalated"),
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-        }
-      ]);
-      setLoading(false);
-    }, 800);
   };
 
   return (
@@ -282,23 +247,6 @@ export default function WidgetPage() {
                   </div>
                 </div>
 
-                {/* Escalation options below bubble if needed */}
-                {!isUser && msg.text.includes("speak with a human") && !isEscalated && (
-                  <button
-                    onClick={triggerEscalation}
-                    className="mt-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-3.5 py-1.5 text-[10px] font-bold text-white hover:brightness-110 shadow-md shadow-purple-600/20 transition-all active:scale-95 cursor-pointer"
-                  >
-                    Yes, connect to Human Agent
-                  </button>
-                )}
-                {!isUser && msg.text.includes("التحدث مع موظف") && !isEscalated && (
-                  <button
-                    onClick={triggerEscalation}
-                    className="mt-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-3.5 py-1.5 text-[10px] font-bold text-white hover:brightness-110 shadow-md shadow-purple-600/20 transition-all active:scale-95 cursor-pointer"
-                  >
-                    نعم، حولني للموظف البشري
-                  </button>
-                )}
               </div>
             </div>
           );
@@ -325,6 +273,16 @@ export default function WidgetPage() {
           <div className="flex items-center gap-2 text-xs text-gray-500 italic max-w-xs mr-auto ml-1.5">
             <div className="h-2 w-2 rounded-full bg-purple-500 animate-ping" />
             <span>{language === "ar" ? t("aiSearchingAr") : t("aiSearching")}</span>
+          </div>
+        )}
+
+        {/* Escalation banner — shown once the backend hands off to a human */}
+        {isEscalated && (
+          <div className="flex items-center gap-2 rounded-xl border border-indigo-500/25 bg-indigo-950/20 px-3.5 py-2 text-[10px] font-semibold text-indigo-200 animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <User className="h-3.5 w-3.5 text-indigo-400 animate-pulse shrink-0" />
+            <span className="text-left rtl:text-right">
+              {language === "ar" ? t("widgetEscalatedAr") : t("widgetEscalated")}
+            </span>
           </div>
         )}
 

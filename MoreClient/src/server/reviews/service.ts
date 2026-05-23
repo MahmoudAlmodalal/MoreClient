@@ -85,7 +85,7 @@ export class ReviewService {
     opts: { cursor?: string; limit?: number } = {},
   ) {
     const result = await ReviewRepo.listByTarget(targetId, targetType, opts);
-    const agg = await ReviewRepo.aggregateRating(targetId);
+    const agg = await ReviewRepo.aggregateRating(targetId, targetType);
     return { ...result, avgRating: Math.round(agg.avg * 10) / 10, reviewCount: agg.count };
   }
 }

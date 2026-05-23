@@ -166,7 +166,6 @@ async function main() {
     await prisma.planCatalog.upsert({
       where: { code: plan.code },
       create: {
-        id: randomUUID(),
         ...plan,
         features: plan.features as object,
       },

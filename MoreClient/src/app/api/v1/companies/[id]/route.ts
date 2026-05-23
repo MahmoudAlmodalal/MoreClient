@@ -17,7 +17,7 @@ export async function GET(
     if (ctx.type !== "company") throw new AppError("FORBIDDEN", "Company account required", 403);
 
     // Enforce that the caller belongs to the requested company
-    if (ctx.company.id !== id && ctx.type !== "admin") {
+    if (ctx.company.id !== id) {
       throw new AppError("FORBIDDEN", "Access denied", 403);
     }
 

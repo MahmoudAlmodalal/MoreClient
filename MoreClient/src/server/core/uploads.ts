@@ -1,4 +1,5 @@
 import { AppError } from "./errors";
+import { generateId } from "./ids";
 
 // ─── File type detection ──────────────────────────────────────────────────────
 
@@ -59,7 +60,9 @@ export function maxFileSizeForPlan(planCode: string): number {
 // ─── Password-protected PDF detection ────────────────────────────────────────
 
 export function isPasswordProtectedPdf(buffer: Uint8Array): boolean {
-  const text = Buffer.from(buffer.slice(0, 2048)).toString("latin1");
+  // The `/Encrypt` trailer entry can appear anywhere in the file, not just the
+  // first 2 KB — scan the whole buffer we were given.
+  const text = Buffer.from(buffer).toString("latin1");
   return text.includes("/Encrypt");
 }
 
@@ -69,12 +72,37 @@ export function hasMacroSignature(filename: string): boolean {
   return /\.(docm|xlsm|pptm|xlam|dotm)$/i.test(filename);
 }
 
+/**
+ * Detect macro-bearing OOXML (Office) documents by content rather than just
+ * filename. OOXML files are ZIP archives; a renamed `.docx` that actually
+ * contains a VBA project still carries a `vbaProject.bin` (or `vbaData.xml`)
+ * entry whose name appears in the ZIP local-file/central-directory headers.
+ */
+export function hasMacroContent(buffer: Uint8Array): boolean {
+  // Only ZIP-based containers can carry an OOXML VBA project.
+  const isZip =
+    buffer.length >= 4 &&
+    buffer[0] === 0x50 &&
+    buffer[1] === 0x4b &&
+    buffer[2] === 0x03 &&
+    buffer[3] === 0x04;
+  if (!isZip) return false;
+  const text = Buffer.from(buffer).toString("latin1");
+  return text.includes("vbaProject.bin") || text.includes("vbaData.xml");
+}
+
 // ─── Main validation ──────────────────────────────────────────────────────────
 
 export interface UploadValidationOptions {
   planCode?: string;
   allowedCategories?: Array<keyof typeof ALLOWED_MIME_TYPES>;
   maxSizeBytes?: number;
+  /**
+   * The true byte size of the object. Provide this when `buffer` is only a
+   * sample (head+tail) of the file so the size cap is enforced against the
+   * real size rather than the sampled length.
+   */
+  actualSizeBytes?: number;
 }
 
 export function validateUpload(
@@ -88,8 +116,8 @@ export function validateUpload(
     throw new AppError("UNPROCESSABLE", "File type not allowed", 422);
   }
 
-  // 2. Macro-enabled Office check
-  if (hasMacroSignature(filename)) {
+  // 2. Macro-enabled Office check — by filename AND by ZIP/OOXML content
+  if (hasMacroSignature(filename) || hasMacroContent(buffer)) {
     throw new AppError("UNPROCESSABLE", "Macro-enabled Office files are not allowed", 422);
   }
 
@@ -112,9 +140,10 @@ export function validateUpload(
     }
   }
 
-  // 5. Size cap
+  // 5. Size cap (use the real object size when the buffer is only a sample)
   const maxBytes = opts.maxSizeBytes ?? (opts.planCode ? maxFileSizeForPlan(opts.planCode) : 5 * 1024 * 1024);
-  if (buffer.length > maxBytes) {
+  const effectiveSize = opts.actualSizeBytes ?? buffer.length;
+  if (effectiveSize > maxBytes) {
     const mb = Math.round(maxBytes / (1024 * 1024));
     throw new AppError("UNPROCESSABLE", `File exceeds the ${mb} MB size limit for your plan`, 422);
   }
@@ -146,9 +175,8 @@ const MIME_TO_EXT: Record<string, string> = {
  */
 export function quarantineKey(principalId: string, mime: string): string {
   const ext = MIME_TO_EXT[mime] ?? "bin";
-  const timestamp = Date.now();
-  const rand = Math.random().toString(36).slice(2, 10);
-  return `quarantine/${principalId}/${timestamp}-${rand}.${ext}`;
+  // Rename to an unguessable id (no original filename, no predictable counter).
+  return `quarantine/${principalId}/${generateId()}.${ext}`;
 }
 
 /**

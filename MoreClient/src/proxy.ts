@@ -10,23 +10,38 @@ function generateNonce(): string {
   return btoa(String.fromCharCode(...bytes));
 }
 
-function buildCsp(nonce: string): string {
+/**
+ * Build the CSP header.
+ *
+ * - On dynamic (authenticated) routes we pass a per-request `nonce` and use
+ *   `'strict-dynamic'` with NO `'unsafe-inline'` — a genuinely strict policy.
+ *   The nonce must be propagated to the request headers (see `cspResponse`) so
+ *   Next.js applies it to its own scripts; otherwise strict-dynamic blocks them.
+ * - On public, CDN-cacheable routes (`/t/[handle]`, marketing) we cannot use a
+ *   per-request nonce: a cached HTML page would carry a stale nonce that no
+ *   longer matches the response CSP. There we fall back to a static
+ *   `'unsafe-inline'` script policy so the page stays cacheable.
+ */
+function buildCsp(nonce: string | null): string {
   const isDev = process.env.NODE_ENV === "development";
 
-  const scriptSrc = [
-    `'nonce-${nonce}'`,
-    "'strict-dynamic'",
-    "'unsafe-inline'",
-    "https://clerk.moreclient.com",
-    "https://*.clerk.accounts.dev",
-    isDev ? "'unsafe-eval'" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+  const scriptSrc = nonce
+    ? [
+        `'nonce-${nonce}'`,
+        "'strict-dynamic'",
+        isDev ? "'unsafe-eval'" : "",
+      ]
+    : [
+        "'self'",
+        "'unsafe-inline'",
+        "https://clerk.moreclient.com",
+        "https://*.clerk.accounts.dev",
+        isDev ? "'unsafe-eval'" : "",
+      ];
 
   return [
     "default-src 'self'",
-    `script-src ${scriptSrc}`,
+    `script-src ${scriptSrc.filter(Boolean).join(" ")}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https://*.r2.cloudflarestorage.com https://img.clerk.com",
     "font-src 'self'",
@@ -51,14 +66,25 @@ function buildCsp(nonce: string): string {
   ].join("; ");
 }
 
-function withCsp(request: NextRequest, response: NextResponse): NextResponse {
-  const nonce = generateNonce();
-  const csp = buildCsp(nonce);
+/**
+ * Produce the response with the appropriate CSP. For dynamic routes the nonce
+ * is written to BOTH the forwarded request headers (so Next.js nonces its
+ * scripts) and the response header. Public routes get a static, cacheable CSP.
+ */
+function cspResponse(request: NextRequest, useNonce: boolean): NextResponse {
+  if (useNonce) {
+    const nonce = generateNonce();
+    const csp = buildCsp(nonce);
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set("x-nonce", nonce);
+    requestHeaders.set("Content-Security-Policy", csp);
+    const response = NextResponse.next({ request: { headers: requestHeaders } });
+    response.headers.set("Content-Security-Policy", csp);
+    return response;
+  }
 
-  const requestHeaders = new Headers(request.headers);
-  requestHeaders.set("x-nonce", nonce);
-
-  response.headers.set("Content-Security-Policy", csp);
+  const response = NextResponse.next();
+  response.headers.set("Content-Security-Policy", buildCsp(null));
   return response;
 }
 
@@ -66,6 +92,7 @@ function withCsp(request: NextRequest, response: NextResponse): NextResponse {
 
 const isPublicRoute = createRouteMatcher([
   "/",
+  "/welcome",
   "/t/(.*)",
   "/for-companies(.*)",
   "/for-talent(.*)",
@@ -85,13 +112,15 @@ const hasClerkConfig = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
 
 const authProxy = hasClerkConfig
   ? clerkMiddleware(async (auth, request) => {
-      if (!isPublicRoute(request)) {
+      const isPublic = isPublicRoute(request);
+      if (!isPublic) {
         await auth.protect();
       }
-      const response = NextResponse.next();
-      return withCsp(request, response);
+      // Public routes stay CDN-cacheable (static CSP); protected routes get a
+      // strict per-request nonce CSP.
+      return cspResponse(request, !isPublic);
     })
-  : (request: NextRequest) => withCsp(request, NextResponse.next());
+  : (request: NextRequest) => cspResponse(request, !isPublicRoute(request));
 
 export const proxy = authProxy;
 

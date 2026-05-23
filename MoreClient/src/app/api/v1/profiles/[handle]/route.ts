@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/core/db";
 import { ReviewRepo } from "@/server/reviews/repo";
 
-export const dynamic = "force-dynamic";
+// Public, cacheable profile endpoint. Runs on Node (Prisma is not Edge-safe);
+// the consuming page at /t/[handle] is the Edge-rendered surface. The CDN
+// caches this response for 60s (see Cache-Control below + next.config.ts).
 
 export async function GET(
   _req: NextRequest,
@@ -65,13 +67,20 @@ export async function GET(
 
   const [reviewPage, agg] = await Promise.all([
     ReviewRepo.listByTarget(talent.id, "talent", { limit: 5 }),
-    ReviewRepo.aggregateRating(talent.id),
+    ReviewRepo.aggregateRating(talent.id, "talent"),
   ]);
 
-  return NextResponse.json({
-    talent,
-    reviews: reviewPage.items,
-    avgRating: agg.avg,
-    reviewCount: agg.count,
-  });
+  return NextResponse.json(
+    {
+      talent,
+      reviews: reviewPage.items,
+      avgRating: agg.avg,
+      reviewCount: agg.count,
+    },
+    {
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=60",
+      },
+    },
+  );
 }

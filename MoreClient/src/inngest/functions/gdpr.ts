@@ -150,34 +150,65 @@ export const gdprDelete = inngest.createFunction(
       clerkUserId: string;
     };
 
-    // 1. Delete Stripe customer
-    await step.run("delete-stripe-customer", async () => {
+    // 1. Delete Stripe customer (company) or Connect account (talent)
+    await step.run("delete-stripe", async () => {
       const stripeKey = process.env.STRIPE_SECRET_KEY;
       if (!stripeKey) return;
       const { default: Stripe } = await import("stripe");
-      const stripe = new Stripe(stripeKey, { apiVersion: "2024-12-18.acacia" });
+      const stripe = new Stripe(stripeKey, { apiVersion: "2025-02-24.acacia" });
 
-      let customerId: string | null = null;
       if (principalType === "company") {
-        const company = await prisma.company.findUnique({ where: { id: principalId }, select: { stripeCustomerId: true } });
-        customerId = company?.stripeCustomerId ?? null;
-      }
-      if (customerId) {
-        await stripe.customers.del(customerId).catch((e: unknown) => logger.warn({ e }, "stripe customer delete failed"));
+        const company = await prisma.company.findUnique({
+          where: { id: principalId },
+          select: { stripeCustomerId: true },
+        });
+        if (company?.stripeCustomerId) {
+          await stripe.customers
+            .del(company.stripeCustomerId)
+            .catch((e: unknown) => logger.warn({ e }, "stripe customer delete failed"));
+        }
+      } else {
+        // Talent has no customer; it has a Stripe Connect (Express) account.
+        const talent = await prisma.talent.findUnique({
+          where: { id: principalId },
+          select: { stripeAccountId: true },
+        });
+        if (talent?.stripeAccountId) {
+          await stripe.accounts
+            .del(talent.stripeAccountId)
+            .catch((e: unknown) => logger.warn({ e }, "stripe connect account delete failed"));
+        }
       }
     });
 
-    // 2. Delete Pinecone vectors
+    // 2. Delete Pinecone vectors. Vectors live in shared namespaces keyed by
+    //    record id (talent profiles under "talent" keyed by talentId; job
+    //    postings under "jobs" keyed by jobId), NOT a per-principal namespace.
     await step.run("delete-pinecone-vectors", async () => {
       try {
-        const { getPineconeIndex } = await import("@/server/core/ai/pinecone");
+        const { getPineconeIndex, PINECONE_NAMESPACES: PN } = await import(
+          "@/server/core/ai/pinecone"
+        );
         const index = getPineconeIndex();
         if (!index) return;
-        const ns = index.namespace(principalId);
-        await ns.deleteAll();
-        logger.info({ principalId }, "pinecone vectors deleted");
-      } catch {
-        logger.warn({ principalId }, "pinecone delete failed or not configured");
+
+        if (principalType === "talent") {
+          await index.namespace(PN.talent).deleteMany([principalId]);
+          logger.info({ principalId }, "pinecone talent vector deleted");
+        } else {
+          // Company: remove every job vector belonging to the company.
+          const jobs = await prisma.job.findMany({
+            where: { companyId: principalId },
+            select: { id: true },
+          });
+          const jobIds = jobs.map((j) => j.id);
+          if (jobIds.length > 0) {
+            await index.namespace(PN.jobs).deleteMany(jobIds);
+          }
+          logger.info({ principalId, count: jobIds.length }, "pinecone job vectors deleted");
+        }
+      } catch (e) {
+        logger.warn({ principalId, e }, "pinecone delete failed or not configured");
       }
     });
 
@@ -200,12 +231,14 @@ export const gdprDelete = inngest.createFunction(
       }
     });
 
-    // 4. Hard-delete from Postgres (cascade)
+    // 4. Hard-delete from Postgres (relations cascade via schema onDelete).
+    //    Do NOT swallow errors here: a failed cascade would otherwise leave
+    //    orphaned rows silently. Let it throw so Inngest retries/surfaces it.
     await step.run("hard-delete-postgres", async () => {
       if (principalType === "talent") {
-        await prisma.talent.delete({ where: { id: principalId } }).catch(() => {});
+        await prisma.talent.delete({ where: { id: principalId } });
       } else {
-        await prisma.company.delete({ where: { id: principalId } }).catch(() => {});
+        await prisma.company.delete({ where: { id: principalId } });
       }
       logger.info({ principalType, principalId }, "postgres hard-delete complete");
     });

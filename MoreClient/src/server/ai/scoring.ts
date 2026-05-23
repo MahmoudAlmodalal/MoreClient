@@ -1,4 +1,5 @@
 import { requireOpenAI } from "@/server/core/ai/openai";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/server/core/db";
 import { logger } from "@/server/core/logger";
 import { loadPrompt, interpolate } from "./prompts/index";
@@ -129,7 +130,7 @@ export async function scoreProposal(proposalId: string): Promise<ScoringResult |
     where: { id: proposalId },
     data: {
       aiScore: result.score,
-      aiReasons: result as unknown as Record<string, unknown>,
+      aiReasons: result as unknown as Prisma.InputJsonValue,
     },
   });
 

@@ -15,8 +15,8 @@ export async function GET(
     const { id } = await params;
     const ctx = await requirePrincipal();
 
-    // Talent can only read their own private profile; companies can read any talent
-    if (ctx.type === "talent" && ctx.talent.id !== id && ctx.type !== "admin") {
+    // Talent can only read their own private profile; companies/admins can read any talent
+    if (ctx.type === "talent" && ctx.talent.id !== id) {
       throw new AppError("FORBIDDEN", "Access denied", 403);
     }
 

@@ -15,8 +15,10 @@ export async function POST(request: Request) {
 
     const principalType = ctx.type;
     const principalId = ctx.type === "company" ? ctx.company.id : ctx.talent.id;
+    // Talent has no stripeCustomerId column; checkout resolves/creates the
+    // customer via Stripe metadata, so pass null for the talent case.
     const stripeCustomerId =
-      ctx.type === "company" ? ctx.company.stripeCustomerId : ctx.talent.stripeCustomerId ?? null;
+      ctx.type === "company" ? ctx.company.stripeCustomerId : null;
 
     const result = await createCheckoutSession(principalType, principalId, stripeCustomerId, input);
     return NextResponse.json(result);

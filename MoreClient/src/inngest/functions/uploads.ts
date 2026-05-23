@@ -9,7 +9,8 @@ import { CopyObjectCommand, DeleteObjectCommand, GetObjectCommand } from "@aws-s
  *
  * Flow:
  *   1. File lands in `quarantine/{principalId}/...`
- *   2. This function fetches the first 4 KB for MIME sniffing + validation
+ *   2. This function samples the head (magic bytes) AND tail (ZIP central
+ *      directory / PDF trailer) for MIME sniffing + validation
  *   3. On pass: COPY to `uploads/{principalId}/...`, DELETE from quarantine
  *   4. On fail: DELETE from quarantine, emit rejection event
  *
@@ -34,25 +35,46 @@ export const scanUploadedFile = inngest.createFunction(
       }
 
       try {
-        // Fetch the first 4 KB for MIME sniffing
-        const response = await r2.send(
+        const HEAD = 64 * 1024; // 64 KB — magic bytes + most PDF /Encrypt dicts
+        const TAIL = 64 * 1024; // 64 KB — ZIP central directory + PDF trailer
+
+        async function readRange(range: string): Promise<Uint8Array> {
+          const res = await r2!.send(
+            new GetObjectCommand({ Bucket: BUCKET, Key: quarantineKeyStr, Range: range }),
+          );
+          const parts: Uint8Array[] = [];
+          if (res.Body) {
+            for await (const chunk of res.Body as AsyncIterable<Uint8Array>) parts.push(chunk);
+          }
+          return Buffer.concat(parts.map((p) => Buffer.from(p)));
+        }
+
+        // Head sample (also exposes ContentRange → true object size).
+        const headRes = await r2.send(
           new GetObjectCommand({
             Bucket: BUCKET,
             Key: quarantineKeyStr,
-            Range: "bytes=0-4095",
+            Range: `bytes=0-${HEAD - 1}`,
           }),
         );
-
-        const chunks: Uint8Array[] = [];
-        if (response.Body) {
-          const stream = response.Body as AsyncIterable<Uint8Array>;
-          for await (const chunk of stream) {
-            chunks.push(chunk);
-          }
+        const headParts: Uint8Array[] = [];
+        if (headRes.Body) {
+          for await (const chunk of headRes.Body as AsyncIterable<Uint8Array>) headParts.push(chunk);
         }
-        const header = chunks.length > 0 ? chunks[0] : new Uint8Array(0);
+        const head = Buffer.concat(headParts.map((p) => Buffer.from(p)));
 
-        validateUpload(header, declaredFilename, mime, { planCode });
+        // ContentRange looks like "bytes 0-65535/123456" — the suffix is the size.
+        const totalSize = Number(headRes.ContentRange?.split("/")[1] ?? head.length);
+
+        // Tail sample for end-of-file structures (skip if the file fits in HEAD).
+        let sample = head;
+        if (totalSize > HEAD) {
+          const tailStart = Math.max(HEAD, totalSize - TAIL);
+          const tail = await readRange(`bytes=${tailStart}-${totalSize - 1}`);
+          sample = Buffer.concat([head, tail]);
+        }
+
+        validateUpload(sample, declaredFilename, mime, { planCode, actualSizeBytes: totalSize });
         return { passed: true, reason: null };
       } catch (err) {
         const reason = err instanceof Error ? err.message : "validation failed";

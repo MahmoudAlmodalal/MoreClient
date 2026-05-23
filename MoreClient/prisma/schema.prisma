@@ -348,7 +348,7 @@ model Job {
   updatedAt      DateTime       @updatedAt
   deletedAt      DateTime?
 
-  company        Company    @relation(fields: [companyId], references: [id])
+  company        Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
   requiredSkills JobSkill[]
   proposals      Proposal[]
   contract       Contract?
@@ -398,8 +398,8 @@ model Proposal {
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
-  job    Job    @relation(fields: [jobId], references: [id])
-  talent Talent @relation(fields: [talentId], references: [id])
+  job    Job    @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  talent Talent @relation(fields: [talentId], references: [id], onDelete: Cascade)
 
   @@unique([jobId, talentId])
   @@index([talentId, createdAt(sort: Desc)])
@@ -424,9 +424,9 @@ model Contract {
   cancelledAt     DateTime?
   createdAt       DateTime       @default(now())
 
-  company    Company     @relation(fields: [companyId], references: [id])
-  talent     Talent      @relation(fields: [talentId], references: [id])
-  job        Job         @relation(fields: [jobId], references: [id])
+  company    Company     @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  talent     Talent      @relation(fields: [talentId], references: [id], onDelete: Cascade)
+  job        Job         @relation(fields: [jobId], references: [id], onDelete: Cascade)
   milestones Milestone[]
   reviews    Review[]
 
@@ -500,7 +500,7 @@ model Review {
   comment      String?
   createdAt    DateTime   @default(now())
 
-  contract Contract @relation(fields: [contractId], references: [id])
+  contract Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
 
   @@index([targetType, targetId, createdAt(sort: Desc)])
 }

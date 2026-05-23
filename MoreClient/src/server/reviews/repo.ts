@@ -72,9 +72,10 @@ export class ReviewRepo {
 
   static async aggregateRating(
     targetId: string,
+    targetType: "talent" | "company_user",
   ): Promise<{ avg: number; count: number }> {
     const result = await prisma.review.aggregate({
-      where: { targetId },
+      where: { targetId, targetType },
       _avg: { rating: true },
       _count: { rating: true },
     });

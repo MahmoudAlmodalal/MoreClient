@@ -1,0 +1,1924 @@
+# More Client — Backend Plan (Locked Architecture · Replit Production)
+
+**Owner:** Backend Architecture · **Status:** CTO-approved blueprint · **Revision:** 2.0 · **Date:** 2026-05-23
+
+> All technology choices, versions, and infrastructure decisions in this document are **locked**. No optionality, no "or"-clauses, no "future decisions." Changes require an architecture-review PR.
+
+---
+
+## 1. Executive Technical Summary
+
+### Product
+**More Client** — bilingual (Arabic + English) talent marketplace connecting **companies** with **talent** across MENA. AI-augmented matching, profile enrichment, semantic search, in-platform chat, and Stripe-Connect escrow with platform take rate. Full admin control plane.
+
+### Core backend responsibilities
+- Two-sided tenancy: **companies** and **talent**
+- Marketplace primitives: jobs, proposals, contracts, milestones, reviews
+- AI services: matching engine, profile enrichment, semantic search, chat assistant, content moderation
+- Subscription billing (Stripe) + commission collection (Stripe Connect)
+- Verification: KYC for talent, business verification for companies
+- Moderation pipeline: reports, bans/suspensions, automated abuse detection
+- Admin control plane: full platform management
+- Realtime messaging between companies and talent
+
+### Scalability expectations (year 1)
+| Metric | Month 1 | Month 6 | Month 12 |
+|---|---|---|---|
+| Talent accounts | 100 | 5,000 | 25,000 |
+| Company accounts | 20 | 800 | 4,000 |
+| Active jobs | 30 | 1,200 | 6,000 |
+| Proposals / month | 200 | 15,000 | 75,000 |
+| Contracts / month | 10 | 400 | 2,500 |
+| GMV / month (USD) | $5k | $200k | $1.2M |
+| Messages / month | 5k | 250k | 1.5M |
+| AI matching requests / month | 500 | 25k | 150k |
+| Peak concurrent Pusher channels | 50 | 1,500 | 6,000 |
+
+### Tenancy model — locked
+Two principal tenant types, both scoped via a single `principal_id` UUID at the policy layer:
+- **Company principal** — `companies` row + N `company_users`
+- **Talent principal** — `talent` row, always exactly one owner user (the talent themselves)
+
+Admin actors are not tenants; they live in `platform_admins` and bypass tenant scoping via explicit `is_admin` claim.
+
+### AI integration assumptions — locked
+| Use case | Model | Provider |
+|---|---|---|
+| Chat (default) | `gpt-4o-mini-2024-07-18` | OpenAI |
+| Chat (high-stakes / arbitration) | `gpt-4o-2024-11-20` | OpenAI |
+| Streaming | Vercel AI SDK 4.0.x | n/a |
+| Embeddings | `embed-multilingual-v3.0` (1024-dim) | Cohere |
+| Re-ranker | `rerank-multilingual-v3.0` | Cohere |
+| Moderation | `omni-moderation-latest` + LLM-as-judge | OpenAI |
+| Fallback chat (incident) | `claude-sonnet-4-6` | Anthropic |
+
+ZDR (Zero Data Retention) enabled on OpenAI org. Cohere usage scoped to dedicated org key.
+
+---
+
+## 2. Backend Architecture
+
+### Topology — **Modular monolith inside Next.js**
+
+All backend logic lives inside a single **Next.js 16.2.6** application. No separate Python / FastAPI service. Single language (TypeScript), single deployment, low DevOps overhead — required by Replit constraints.
+
+| Concern | Mechanism |
+|---|---|
+| REST endpoints | Route Handlers (`app/api/v1/*/route.ts`) |
+| Form mutations | Server Actions |
+| SSE streaming (AI) | Route Handlers, `Content-Type: text/event-stream` |
+| Bidirectional realtime | Pusher Channels (messaging, admin live activity) |
+| Async jobs / cron / retries | Inngest 3.27.x |
+| Edge-runtime public reads | Edge Route Handlers (talent search, public profiles) |
+| Node-runtime writes / AI | Node Route Handlers |
+
+### Service boundaries (modules within the monolith)
+| Module | Responsibility | Public surface |
+|---|---|---|
+| `core` | DB, auth, telemetry, errors, rate limit, audit | Internal |
+| `companies` | Company CRUD, members, settings, verification | REST + actions |
+| `talent` | Talent profile CRUD, verification, portfolio, availability | REST + actions |
+| `jobs` | Job postings, search, lifecycle | REST + actions |
+| `proposals` | Proposal submission, shortlisting | REST + actions |
+| `contracts` | Contract terms, milestones, escrow | REST + actions |
+| `messaging` | Threads, messages, attachments | REST + Pusher |
+| `reviews` | Post-contract reviews, ratings | REST + actions |
+| `ai` | Matching, enrichment, search, moderation, chat | REST + SSE |
+| `billing` | Stripe subscriptions, Connect, commissions | REST + webhook |
+| `notifications` | Email, push, in-app | Inngest |
+| `moderation` | Reports, queues, automated detection | REST + actions |
+| `admin` | Platform-wide control plane (separate route group) | REST + actions |
+| `audit` | Audit log writer + reader | Internal + admin REST |
+| `analytics` | Platform + tenant metric rollups | Internal + admin REST |
+| `feedback` | End-user + company feedback capture, classification, improvement-task pipeline | REST + actions |
+
+### Background jobs (Inngest) — locked schedule
+| Function ID | Trigger | SLA |
+|---|---|---|
+| `talent.enrich-profile` | event `talent.profile.updated` | 60s |
+| `talent.embed-profile` | event `talent.profile.embedded_stale` | 30s |
+| `jobs.embed-posting` | event `job.published` | 30s |
+| `jobs.match-talent` | event `job.published` + `job.matching_requested` | 90s |
+| `proposals.score` | event `proposal.submitted` | 30s |
+| `messaging.scan` | event `message.created` | 5s (moderation) |
+| `moderation.review-report` | event `report.created` | 60s |
+| `billing.sync-subscription` | Stripe webhook | 10s |
+| `billing.reconcile-commissions` | cron `0 2 * * *` (daily 02:00 UTC) | 5min |
+| `analytics.rollup-daily` | cron `0 3 * * *` | 5min |
+| `analytics.rollup-platform` | cron `0 4 * * *` | 5min |
+| `eval.run-golden-set` | cron `0 5 * * *` + on prompt PR | 10min |
+| `audit.archive-old-logs` | cron `0 6 * * 0` (Sun) | 30min |
+| `notifications.weekly-digest` | cron `0 9 * * 1` (Mon) | 15min |
+| `moderation.scan-stale-profiles` | cron `0 7 * * *` | 30min |
+| `feedback.classify` | event `feedback.submitted` | 30s |
+| `feedback.aggregate-weekly` | cron `0 8 * * 1` (Mon) | 10min |
+| `feedback.update-eval-set` | event `feedback.improvement_approved` | 60s |
+| `feedback.rerank-signal-rollup` | cron `0 * * * *` (hourly) | 5min |
+
+### Event-driven architecture
+Inngest events as the durable bus. Pusher is used **only** for client-facing realtime fan-out; backend never subscribes to Pusher.
+
+| Event | Producers | Consumers |
+|---|---|---|
+| `company.created` | companies API | billing, analytics, notifications |
+| `talent.created` | talent API | ai.embed-profile, analytics |
+| `talent.profile.updated` | talent API | ai.enrich-profile, ai.embed-profile |
+| `talent.verified` | admin / KYC webhook | notifications, analytics |
+| `job.published` | jobs API | ai.embed-posting, ai.match-talent, analytics |
+| `proposal.submitted` | proposals API | ai.score, notifications |
+| `contract.signed` | contracts API | billing.escrow, notifications, analytics |
+| `milestone.released` | contracts API | billing.payout, analytics |
+| `message.created` | messaging API | moderation.scan, notifications, Pusher fan-out |
+| `report.created` | moderation API | admin queue, automated triage |
+| `subscription.changed` | Stripe webhook | companies/talent entitlements |
+| `admin.action.taken` | admin API | audit, notifications (target user) |
+| `feedback.submitted` | feedback API, AI chat client, dashboard surfaces | feedback.classify, analytics |
+| `feedback.classified` | feedback worker | admin queue (Pusher), priority routing |
+| `feedback.improvement_approved` | admin moderation | feedback.update-eval-set, prompt-iteration PR bot |
+| `feedback.task.status_changed` | admin API | notifications, analytics |
+
+### Realtime — **Pusher Channels** (locked)
+- Private channels per user: `private-user-<clerk_user_id>`
+- Private channels per thread: `private-thread-<thread_id>`
+- Presence channels per admin live view: `presence-admin-activity`
+- Authentication endpoint: `POST /api/v1/realtime/auth` (verifies Clerk JWT)
+- Heartbeat handled by Pusher
+- Free tier acceptable through Month 3 (100 concurrent, 200k msg/day)
+
+### Cron — **Inngest cron** (locked)
+No separate scheduler service. All schedules live in `lib/inngest/functions/`.
+
+---
+
+## 3. Tech Stack — Locked Versions
+
+| Layer | Choice | Version | Reason |
+|---|---|---|---|
+| Runtime | Node.js | **20.18.1 LTS** | LTS, Replit Reserved VM default, Prisma/Next.js compatibility verified |
+| Package manager | pnpm | **11.2.2** | Already installed locally; deterministic, content-addressed |
+| Framework | Next.js | **16.2.6** | App Router, RSC, Server Actions, native SSE, Replit-tested |
+| React | React | **19.2.4** | RSC + use() + Actions support |
+| Language | TypeScript | **5.9.3** | strict mode, `verbatimModuleSyntax: true` |
+| Database | PostgreSQL | **16.4** (Neon) | Serverless branching, PITR, Replit-friendly via pooled connection |
+| ORM | Prisma | **5.22.0** | Stable schema migrations, Neon pooler-compatible, Edge-runtime client |
+| Migrations | `prisma migrate deploy` | bundled with Prisma 5.22.0 | Replit-runnable on deploy |
+| Auth | Clerk | **@clerk/nextjs 6.12.x** | B2B orgs, MFA, SSO, magic links, Replit-tested |
+| Cache | Upstash Redis (REST) | **@upstash/redis 1.34.x** | Serverless, REST-based, Replit-friendly (no TCP) |
+| Rate limit | Upstash Ratelimit | **@upstash/ratelimit 2.0.x** | Sliding window on Redis |
+| Queue / cron / workflows | Inngest | **inngest 3.27.x** | Serverless functions, retries, step functions, cron |
+| Vector DB | Pinecone | **@pinecone-database/pinecone 4.0.x** | Serverless, sub-second hybrid search, REST-friendly |
+| File storage | Cloudflare R2 | **@aws-sdk/client-s3 3.700.x** | S3-compatible, zero egress, signed URLs |
+| Payments | Stripe (subs + Connect) | **stripe 17.5.x** | Stripe Connect Express for talent payouts |
+| LLM SDK | OpenAI Node SDK | **openai 4.73.x** | Structured outputs, ZDR-capable org |
+| LLM fallback SDK | Anthropic SDK | **@anthropic-ai/sdk 0.32.x** | Outage fallback only |
+| Embeddings SDK | Cohere SDK | **cohere-ai 7.14.x** | Multilingual embed + rerank |
+| AI streaming | Vercel AI SDK | **ai 4.0.x**, **@ai-sdk/openai 1.0.x** | SSE, tool calls, structured generation |
+| Realtime | Pusher Channels | **pusher 5.2.x** (server) / **pusher-js 8.4.x** (client) | Managed, Replit-compatible |
+| Email | Resend | **resend 4.0.x** | Transactional, React Email templates |
+| Email templates | React Email | **@react-email/components 0.0.30** | TSX templates |
+| Validation | Zod | **3.23.8** | Shared client/server schemas |
+| Logging | structured via `pino` | **pino 9.5.x** + **pino-pretty 11.3.x** | JSON logs to Axiom transport |
+| Log warehouse | Axiom | via `@axiomhq/js 1.0.x` | Cheap log storage |
+| Errors / APM | Sentry | **@sentry/nextjs 8.42.x** | Errors + tracing + perf |
+| Product analytics | PostHog | **posthog-node 4.4.x** + **posthog-js 1.196.x** | Funnels, feature flags |
+| Uptime | BetterStack | external | Synthetic monitors |
+| DNS / WAF / CDN | Cloudflare | n/a | TLS, WAF, edge cache |
+| Hosting | **Replit Reserved VM Deployment** | n/a | Required; see §9 |
+| Secrets | **Replit Secrets** | n/a | Built-in, encrypted; mirrored to local `.env` for dev |
+| CI | GitHub Actions | n/a | Lint, typecheck, test, eval, preview deploy |
+| Container | n/a | n/a | **No Docker.** Replit handles runtime. Build = `pnpm build` |
+| Testing (unit) | Vitest | **2.1.8** | Vite-native |
+| Testing (E2E) | Playwright | **1.49.1** | Replit-tested browser pool via remote runner |
+| API client codegen | Zod-derived types only | n/a | No OpenAPI codegen; share schemas via TS imports |
+
+Compatibility verified: Next.js 16.2.6 + React 19.2.4 + Prisma 5.22.0 + Clerk 6.12 + Tailwind 4.3.0 + pnpm 11.2.2 + Node 20.18.1 — fully compatible, tested on Replit Reserved VM.
+
+---
+
+## 4. Folder Structure
+
+```
+moreclient/                          # single Next.js app, no monorepo
+├── package.json
+├── pnpm-lock.yaml
+├── .replit                          # Replit run/deploy config
+├── replit.nix                       # Replit Nix env (Node 20.18.1)
+├── next.config.ts
+├── tsconfig.json
+├── tailwind.config.ts
+├── postcss.config.mjs
+├── .env.example
+├── prisma/
+│   ├── schema.prisma
+│   ├── migrations/
+│   └── seed.ts
+├── public/
+│   └── embed/widget.js              # optional public profile widget
+│
+├── src/
+│   ├── middleware.ts                # Clerk + locale + admin route guard
+│   │
+│   ├── app/
+│   │   ├── layout.tsx               # ClerkProvider, QueryProvider, ThemeProvider
+│   │   ├── globals.css
+│   │   │
+│   │   ├── (marketing)/             # public site
+│   │   │   ├── page.tsx             # /
+│   │   │   ├── for-companies/page.tsx
+│   │   │   ├── for-talent/page.tsx
+│   │   │   ├── pricing/page.tsx
+│   │   │   └── blog/[slug]/page.tsx
+│   │   │
+│   │   ├── (auth)/
+│   │   │   ├── sign-in/[[...rest]]/page.tsx
+│   │   │   └── sign-up/[[...rest]]/page.tsx
+│   │   │
+│   │   ├── (talent)/                # talent dashboard
+│   │   │   ├── layout.tsx
+│   │   │   ├── dashboard/page.tsx
+│   │   │   ├── profile/page.tsx
+│   │   │   ├── portfolio/page.tsx
+│   │   │   ├── jobs/                # browse jobs
+│   │   │   │   ├── page.tsx
+│   │   │   │   └── [id]/page.tsx
+│   │   │   ├── proposals/page.tsx
+│   │   │   ├── contracts/
+│   │   │   │   ├── page.tsx
+│   │   │   │   └── [id]/page.tsx
+│   │   │   ├── inbox/[threadId]/page.tsx
+│   │   │   ├── earnings/page.tsx
+│   │   │   ├── verification/page.tsx
+│   │   │   └── settings/...
+│   │   │
+│   │   ├── (company)/               # company dashboard
+│   │   │   ├── layout.tsx
+│   │   │   ├── dashboard/page.tsx
+│   │   │   ├── jobs/
+│   │   │   │   ├── page.tsx
+│   │   │   │   ├── new/page.tsx
+│   │   │   │   └── [id]/
+│   │   │   │       ├── page.tsx
+│   │   │   │       ├── proposals/page.tsx
+│   │   │   │       └── matches/page.tsx
+│   │   │   ├── talent-search/page.tsx
+│   │   │   ├── contracts/...
+│   │   │   ├── inbox/[threadId]/page.tsx
+│   │   │   ├── team/page.tsx
+│   │   │   ├── billing/page.tsx
+│   │   │   ├── verification/page.tsx
+│   │   │   └── settings/...
+│   │   │
+│   │   ├── (admin)/                 # platform admin
+│   │   │   ├── layout.tsx           # restricted by middleware
+│   │   │   ├── dashboard/page.tsx
+│   │   │   ├── companies/
+│   │   │   │   ├── page.tsx
+│   │   │   │   └── [id]/page.tsx
+│   │   │   ├── talent/
+│   │   │   │   ├── page.tsx
+│   │   │   │   └── [id]/page.tsx
+│   │   │   ├── moderation/
+│   │   │   │   ├── reports/page.tsx
+│   │   │   │   ├── queue/page.tsx
+│   │   │   │   └── [id]/page.tsx
+│   │   │   ├── verification-queue/page.tsx
+│   │   │   ├── featured/page.tsx
+│   │   │   ├── subscriptions/page.tsx
+│   │   │   ├── support/
+│   │   │   │   ├── page.tsx
+│   │   │   │   └── [ticketId]/page.tsx
+│   │   │   ├── ai-usage/page.tsx
+│   │   │   ├── audit-log/page.tsx
+│   │   │   ├── activity/page.tsx
+│   │   │   ├── analytics/page.tsx
+│   │   │   └── settings/
+│   │   │       ├── flags/page.tsx
+│   │   │       ├── plans/page.tsx
+│   │   │       └── admins/page.tsx
+│   │   │
+│   │   ├── (public)/                # public talent profiles
+│   │   │   └── t/[handle]/page.tsx
+│   │   │
+│   │   └── api/
+│   │       ├── v1/
+│   │       │   ├── companies/[id]/route.ts
+│   │       │   ├── talent/[id]/route.ts
+│   │       │   ├── jobs/route.ts
+│   │       │   ├── jobs/[id]/route.ts
+│   │       │   ├── jobs/[id]/matches/route.ts
+│   │       │   ├── proposals/route.ts
+│   │       │   ├── contracts/[id]/milestones/route.ts
+│   │       │   ├── messaging/threads/route.ts
+│   │       │   ├── messaging/threads/[id]/messages/route.ts
+│   │       │   ├── reviews/route.ts
+│   │       │   ├── ai/
+│   │       │   │   ├── match/route.ts
+│   │       │   │   ├── search/route.ts
+│   │       │   │   ├── chat/route.ts          # SSE
+│   │       │   │   ├── enrich-profile/route.ts
+│   │       │   │   └── moderate/route.ts
+│   │       │   ├── billing/
+│   │       │   │   ├── checkout/route.ts
+│   │       │   │   ├── portal/route.ts
+│   │       │   │   └── connect/onboard/route.ts
+│   │       │   ├── realtime/auth/route.ts     # Pusher auth
+│   │       │   ├── admin/
+│   │       │   │   ├── companies/route.ts
+│   │       │   │   ├── companies/[id]/suspend/route.ts
+│   │       │   │   ├── talent/route.ts
+│   │       │   │   ├── talent/[id]/verify/route.ts
+│   │       │   │   ├── talent/[id]/feature/route.ts
+│   │       │   │   ├── moderation/reports/route.ts
+│   │       │   │   ├── moderation/[id]/decide/route.ts
+│   │       │   │   ├── support/tickets/route.ts
+│   │       │   │   ├── ai-usage/route.ts
+│   │       │   │   ├── flags/route.ts
+│   │       │   │   ├── plans/route.ts
+│   │       │   │   ├── admins/route.ts
+│   │       │   │   ├── audit-log/route.ts
+│   │       │   │   └── activity/route.ts      # SSE
+│   │       │   └── me/route.ts
+│   │       └── webhooks/
+│   │           ├── stripe/route.ts
+│   │           ├── clerk/route.ts
+│   │           └── kyc/route.ts
+│   │
+│   ├── server/                      # backend modules, no React
+│   │   ├── core/
+│   │   │   ├── db.ts                # Prisma client (Edge + Node variants)
+│   │   │   ├── redis.ts             # Upstash client
+│   │   │   ├── pusher.ts
+│   │   │   ├── stripe.ts
+│   │   │   ├── inngest.ts
+│   │   │   ├── ai/
+│   │   │   │   ├── openai.ts
+│   │   │   │   ├── anthropic.ts
+│   │   │   │   ├── cohere.ts
+│   │   │   │   └── pinecone.ts
+│   │   │   ├── storage.ts           # R2 / S3 client
+│   │   │   ├── auth.ts              # Clerk helpers, principal resolver
+│   │   │   ├── rbac.ts              # role/perm matrices
+│   │   │   ├── rate-limit.ts
+│   │   │   ├── audit.ts             # writeAudit()
+│   │   │   ├── errors.ts            # AppError, problem+json
+│   │   │   ├── logger.ts            # pino
+│   │   │   ├── telemetry.ts         # Sentry + OTel
+│   │   │   ├── pagination.ts        # cursor utils
+│   │   │   └── ids.ts               # ulid
+│   │   │
+│   │   ├── companies/
+│   │   ├── talent/
+│   │   ├── jobs/
+│   │   ├── proposals/
+│   │   ├── contracts/
+│   │   ├── messaging/
+│   │   ├── reviews/
+│   │   ├── ai/
+│   │   │   ├── matching.ts
+│   │   │   ├── enrichment.ts
+│   │   │   ├── search.ts
+│   │   │   ├── chat.ts
+│   │   │   ├── moderation.ts
+│   │   │   └── prompts/             # versioned, hash-tagged
+│   │   ├── billing/
+│   │   ├── notifications/
+│   │   ├── moderation/
+│   │   ├── admin/
+│   │   ├── audit/
+│   │   ├── analytics/
+│   │   └── feedback/
+│   │       ├── service.ts
+│   │       ├── classifier.ts
+│   │       ├── improvement-tasks.ts
+│   │       ├── rerank-signals.ts
+│   │       └── prompts/                  # feedback-classifier + improvement-task prompts
+│   │
+│   ├── lib/                         # frontend + shared lib (see fullstack-plan.md §4)
+│   ├── inngest/
+│   │   ├── client.ts
+│   │   └── functions/               # one file per function-id
+│   │       ├── talent.enrich-profile.ts
+│   │       ├── talent.embed-profile.ts
+│   │       ├── jobs.embed-posting.ts
+│   │       ├── jobs.match-talent.ts
+│   │       ├── proposals.score.ts
+│   │       ├── messaging.scan.ts
+│   │       ├── moderation.review-report.ts
+│   │       ├── billing.sync-subscription.ts
+│   │       ├── billing.reconcile-commissions.ts
+│   │       ├── analytics.rollup-daily.ts
+│   │       ├── analytics.rollup-platform.ts
+│   │       ├── eval.run-golden-set.ts
+│   │       ├── audit.archive-old-logs.ts
+│   │       ├── notifications.weekly-digest.ts
+│   │       ├── moderation.scan-stale-profiles.ts
+│   │       ├── feedback.classify.ts
+│   │       ├── feedback.aggregate-weekly.ts
+│   │       ├── feedback.update-eval-set.ts
+│   │       └── feedback.rerank-signal-rollup.ts
+│   │
+│   └── schemas/                     # Zod schemas shared FE/BE
+│       ├── company.ts
+│       ├── talent.ts
+│       ├── job.ts
+│       ├── proposal.ts
+│       ├── contract.ts
+│       ├── message.ts
+│       ├── review.ts
+│       ├── admin.ts
+│       ├── feedback.ts
+│       └── common.ts
+│
+├── tests/
+│   ├── unit/
+│   ├── integration/
+│   ├── e2e/                         # Playwright
+│   └── eval/
+│       ├── golden-sets/
+│       │   ├── matching-en.jsonl
+│       │   ├── matching-ar.jsonl
+│       │   ├── search-en.jsonl
+│       │   └── search-ar.jsonl
+│       └── runner.ts
+│
+└── scripts/
+    ├── seed-dev.ts
+    ├── seed-eval.ts
+    └── repair-pinecone-namespace.ts
+```
+
+---
+
+## 5. Database Design
+
+PostgreSQL 16.4 on Neon. Prisma 5.22.0 as the schema source of truth. All tables include `id (UUID v7 via ULID-as-uuid)`, `created_at`, `updated_at`. Soft delete via `deleted_at TIMESTAMPTZ NULL`.
+
+### Core entities (Prisma-shaped)
+
+```prisma
+// principals
+model Company {
+  id                   String   @id @db.Uuid
+  clerkOrgId           String   @unique
+  name                 String
+  slug                 String   @unique
+  legalName            String?
+  country              String
+  locale               String   @default("en")
+  websiteUrl           String?
+  logoUrl              String?
+  status               CompanyStatus @default(active)
+  verificationStatus   VerificationStatus @default(unverified)
+  stripeCustomerId     String?  @unique
+  planCode             String   @default("free")
+  featuredUntil        DateTime?
+  suspendedAt          DateTime?
+  suspendedReason      String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  deletedAt            DateTime?
+
+  users    CompanyUser[]
+  jobs     Job[]
+  contracts Contract[]
+  reports  Report[]   @relation("ReportedCompany")
+  @@index([status, createdAt(sort: Desc)])
+  @@index([slug])
+}
+
+model CompanyUser {
+  companyId      String   @db.Uuid
+  clerkUserId    String
+  role           CompanyRole @default(viewer)
+  invitedAt      DateTime?
+  joinedAt       DateTime?
+  createdAt      DateTime @default(now())
+  Company        Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  @@id([companyId, clerkUserId])
+  @@index([clerkUserId])
+}
+
+model Talent {
+  id                   String   @id @db.Uuid
+  clerkUserId          String   @unique
+  handle               String   @unique          // public profile URL slug
+  displayName          String
+  headline             String?
+  bio                  String?
+  country              String
+  locale               String   @default("en")
+  avatarUrl            String?
+  hourlyRate           Int?                       // cents, USD
+  currency             String   @default("USD")
+  availability         AvailabilityStatus @default(available)
+  yearsExperience      Int?
+  status               TalentStatus @default(active)
+  verificationStatus   VerificationStatus @default(unverified)
+  kycProvider          String?
+  kycReference         String?
+  stripeAccountId      String?  @unique           // Connect Express
+  payoutsEnabled       Boolean  @default(false)
+  planCode             String   @default("free")
+  featuredUntil        DateTime?
+  searchVisibility     SearchVisibility @default(public)
+  suspendedAt          DateTime?
+  suspendedReason      String?
+  profileEmbeddingId   String?                    // Pinecone vector id
+  profileEmbeddingHash String?                    // stale-detection
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  deletedAt            DateTime?
+
+  skills           TalentSkill[]
+  portfolio        PortfolioItem[]
+  experience       ExperienceItem[]
+  languages        TalentLanguage[]
+  proposals        Proposal[]
+  contracts        Contract[]
+  reviewsReceived  Review[]   @relation("TalentReceived")
+  reports          Report[]   @relation("ReportedTalent")
+  @@index([status, featuredUntil(sort: Desc)])
+  @@index([country, status])
+  @@index([handle])
+}
+
+model Skill {
+  id     String  @id @db.Uuid
+  slug   String  @unique
+  nameEn String
+  nameAr String
+  category String
+}
+
+model TalentSkill {
+  talentId String @db.Uuid
+  skillId  String @db.Uuid
+  level    SkillLevel @default(intermediate)
+  yearsExp Int?
+  @@id([talentId, skillId])
+  @@index([skillId])
+}
+
+model PortfolioItem {
+  id          String @id @db.Uuid
+  talentId    String @db.Uuid
+  title       String
+  description String?
+  mediaUrls   String[]
+  url         String?
+  createdAt   DateTime @default(now())
+  Talent      Talent @relation(fields: [talentId], references: [id], onDelete: Cascade)
+  @@index([talentId])
+}
+
+model ExperienceItem {
+  id          String @id @db.Uuid
+  talentId    String @db.Uuid
+  company     String
+  title       String
+  startDate   DateTime
+  endDate     DateTime?
+  description String?
+  @@index([talentId])
+}
+
+model TalentLanguage {
+  talentId   String @db.Uuid
+  locale     String                    // ar, en, fr, ...
+  proficiency Proficiency
+  @@id([talentId, locale])
+}
+
+// marketplace
+model Job {
+  id                String    @id @db.Uuid
+  companyId         String    @db.Uuid
+  title             String
+  description       String
+  locale            String
+  budgetMin         Int?
+  budgetMax         Int?
+  currency          String    @default("USD")
+  engagementType    EngagementType        // fixed | hourly
+  durationWeeks     Int?
+  remote            Boolean   @default(true)
+  country           String?
+  status            JobStatus @default(draft)
+  publishedAt       DateTime?
+  closedAt          DateTime?
+  embeddingId       String?
+  embeddingHash     String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  deletedAt         DateTime?
+
+  company        Company       @relation(fields: [companyId], references: [id])
+  requiredSkills JobSkill[]
+  proposals      Proposal[]
+  matches        JobMatch[]
+  contract       Contract?
+  @@index([status, publishedAt(sort: Desc)])
+  @@index([companyId, status])
+}
+
+model JobSkill {
+  jobId    String @db.Uuid
+  skillId  String @db.Uuid
+  required Boolean @default(true)
+  @@id([jobId, skillId])
+  @@index([skillId])
+}
+
+model JobMatch {
+  jobId       String @db.Uuid
+  talentId    String @db.Uuid
+  score       Float
+  reasons     Json
+  generatedAt DateTime @default(now())
+  @@id([jobId, talentId])
+  @@index([jobId, score(sort: Desc)])
+}
+
+model Proposal {
+  id              String   @id @db.Uuid
+  jobId           String   @db.Uuid
+  talentId        String   @db.Uuid
+  coverLetter     String
+  bidAmount       Int                              // cents
+  bidCurrency     String   @default("USD")
+  durationWeeks   Int?
+  attachments     String[]
+  status          ProposalStatus @default(submitted)
+  aiScore         Float?
+  aiReasons       Json?
+  shortlistedAt   DateTime?
+  rejectedAt      DateTime?
+  withdrawnAt     DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  job    Job    @relation(fields: [jobId], references: [id])
+  talent Talent @relation(fields: [talentId], references: [id])
+  @@unique([jobId, talentId])
+  @@index([talentId, createdAt(sort: Desc)])
+  @@index([jobId, status])
+}
+
+model Contract {
+  id                  String   @id @db.Uuid
+  jobId               String   @unique @db.Uuid
+  companyId           String   @db.Uuid
+  talentId            String   @db.Uuid
+  termsMarkdown       String
+  amount              Int                          // total cents
+  currency            String   @default("USD")
+  engagementType      EngagementType
+  platformFeeBps      Int      @default(1000)      // 10% basis points
+  status              ContractStatus @default(pending_signature)
+  signedAtCompany     DateTime?
+  signedAtTalent      DateTime?
+  startedAt           DateTime?
+  completedAt         DateTime?
+  cancelledAt         DateTime?
+  createdAt           DateTime @default(now())
+
+  milestones Milestone[]
+  reviews    Review[]
+  @@index([companyId, status])
+  @@index([talentId, status])
+}
+
+model Milestone {
+  id              String   @id @db.Uuid
+  contractId      String   @db.Uuid
+  title           String
+  description     String?
+  amount          Int
+  status          MilestoneStatus @default(pending)
+  fundedAt        DateTime?
+  releasedAt      DateTime?
+  stripePaymentIntent String?
+  stripeTransfer  String?
+  createdAt       DateTime @default(now())
+  Contract        Contract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  @@index([contractId])
+}
+
+// messaging
+model Thread {
+  id          String   @id @db.Uuid
+  companyId   String   @db.Uuid
+  talentId    String   @db.Uuid
+  jobId       String?  @db.Uuid
+  contractId  String?  @db.Uuid
+  lastMessageAt DateTime?
+  createdAt   DateTime @default(now())
+  @@unique([companyId, talentId, jobId])
+  @@index([companyId, lastMessageAt(sort: Desc)])
+  @@index([talentId, lastMessageAt(sort: Desc)])
+}
+
+model Message {
+  id          String   @id @db.Uuid
+  threadId    String   @db.Uuid
+  senderType  SenderType
+  senderId    String                                // company_user_id | talent_id | admin_id
+  body        String
+  attachments String[]
+  moderationStatus ModerationStatus @default(pending)
+  moderationReason String?
+  readAt      DateTime?
+  createdAt   DateTime @default(now())
+  @@index([threadId, createdAt])
+}
+
+model Review {
+  id          String   @id @db.Uuid
+  contractId  String   @db.Uuid
+  reviewerType SenderType
+  reviewerId  String
+  targetType  SenderType
+  targetId    String
+  rating      Int                                   // 1..5
+  comment     String?
+  createdAt   DateTime @default(now())
+  Contract    Contract @relation(fields: [contractId], references: [id])
+  @@index([targetType, targetId, createdAt(sort: Desc)])
+}
+
+// billing
+model Subscription {
+  principalType  PrincipalType
+  principalId    String   @db.Uuid
+  stripeSubId    String   @unique
+  planCode       String
+  status         String
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  cancelAtPeriodEnd  Boolean @default(false)
+  updatedAt      DateTime @updatedAt
+  @@id([principalType, principalId])
+}
+
+model UsageCounter {
+  principalType  PrincipalType
+  principalId    String   @db.Uuid
+  periodStart    DateTime @db.Date
+  jobsPosted     Int      @default(0)
+  proposalsSubmitted Int  @default(0)
+  aiMatchRequests Int     @default(0)
+  aiChatTokensInput Int   @default(0)
+  aiChatTokensOutput Int  @default(0)
+  storageBytes   BigInt   @default(0)
+  @@id([principalType, principalId, periodStart])
+}
+
+// platform / moderation / admin
+model PlatformAdmin {
+  id          String   @id @db.Uuid
+  clerkUserId String   @unique
+  role        AdminRole
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  createdBy   String?
+}
+
+model Report {
+  id              String   @id @db.Uuid
+  reporterType    SenderType
+  reporterId      String
+  targetType      ReportTarget
+  targetCompanyId String?  @db.Uuid
+  targetTalentId  String?  @db.Uuid
+  targetMessageId String?  @db.Uuid
+  category        ReportCategory
+  description     String
+  status          ReportStatus @default(open)
+  decidedBy       String?
+  decidedAt       DateTime?
+  decision        String?
+  createdAt       DateTime @default(now())
+  ReportedCompany Company? @relation("ReportedCompany", fields: [targetCompanyId], references: [id])
+  ReportedTalent  Talent?  @relation("ReportedTalent", fields: [targetTalentId], references: [id])
+  @@index([status, createdAt(sort: Desc)])
+}
+
+model ModerationAction {
+  id           String   @id @db.Uuid
+  targetType   ReportTarget
+  targetId     String
+  action       ModAction         // warn | suspend | ban | shadow_ban | unflag
+  reason       String
+  durationDays Int?
+  performedBy  String                            // admin id or 'system'
+  reportId     String?  @db.Uuid
+  createdAt    DateTime @default(now())
+  @@index([targetType, targetId, createdAt(sort: Desc)])
+}
+
+model SupportTicket {
+  id           String   @id @db.Uuid
+  openerType   SenderType
+  openerId     String
+  subject      String
+  category     String
+  priority     TicketPriority @default(normal)
+  status       TicketStatus @default(open)
+  assignedTo   String?
+  closedAt     DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  messages     SupportMessage[]
+  @@index([status, createdAt(sort: Desc)])
+  @@index([assignedTo, status])
+}
+
+model SupportMessage {
+  id         String   @id @db.Uuid
+  ticketId   String   @db.Uuid
+  senderType SenderType
+  senderId   String
+  body       String
+  attachments String[]
+  createdAt  DateTime @default(now())
+  Ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  @@index([ticketId, createdAt])
+}
+
+model FeatureFlag {
+  key         String   @id
+  description String?
+  enabled     Boolean  @default(false)
+  rules       Json?                              // % rollout, target principal ids
+  updatedBy   String?
+  updatedAt   DateTime @updatedAt
+}
+
+model PlanCatalog {
+  code         String   @id                      // free | pro | scale | enterprise
+  principalType PrincipalType
+  nameEn       String
+  nameAr       String
+  monthlyCents Int
+  yearlyCents  Int
+  features     Json
+  active       Boolean  @default(true)
+  stripePriceMonthly String?
+  stripePriceYearly  String?
+}
+
+model FeaturedPlacement {
+  id           String   @id @db.Uuid
+  principalType PrincipalType
+  principalId  String   @db.Uuid
+  position     Int
+  startsAt     DateTime
+  endsAt       DateTime
+  createdBy    String
+  createdAt    DateTime @default(now())
+  @@index([principalType, endsAt])
+}
+
+model AuditLog {
+  id            String   @id @db.Uuid
+  actorType     SenderType                       // user | admin | system
+  actorId       String
+  principalType PrincipalType?
+  principalId   String?  @db.Uuid
+  action        String
+  resourceType  String
+  resourceId    String?
+  metadata      Json?
+  ipAddress     String?
+  userAgent     String?
+  createdAt     DateTime @default(now())
+  @@index([principalType, principalId, createdAt(sort: Desc)])
+  @@index([actorId, createdAt(sort: Desc)])
+  @@index([action, createdAt(sort: Desc)])
+}
+
+model AdminActivity {
+  id        String   @id @db.Uuid
+  adminId   String
+  action    String
+  payload   Json
+  createdAt DateTime @default(now())
+  @@index([createdAt(sort: Desc)])
+}
+
+// feedback (end-user + company AI feedback)
+model Feedback {
+  id              String   @id @db.Uuid
+  surfaceType     FeedbackSurface             // chat | match | search | enrichment | moderation_override | general
+  surfaceId       String?                      // session_id | match_id | search_id | message_id
+  surfaceContext  Json                         // snapshot of AI response, model, prompt_version, locale
+  principalType   PrincipalType?
+  principalId     String?  @db.Uuid
+  authorType      SenderType                   // company_user | talent | system | guest
+  authorId        String                       // clerk_user_id or anon session id
+  authorLocale    String?
+  rating          Int?                         // 1..5
+  thumbs          Thumbs?
+  reasonCode      String?                      // taxonomy: wrong_answer | missing_context | off_topic | tone | latency | other
+  comment         String?
+  npsScore        Int?                         // 0..10 (post-conversation only)
+  classification  FeedbackClassification?
+  severity        FeedbackSeverity?
+  area            FeedbackArea?                // prompt | retrieval | rerank | ui | content_policy | model_choice
+  dedupeKey       String?                      // sha256 of normalized comment + surface
+  status          FeedbackStatus @default(received)
+  triagedBy       String?
+  triagedAt       DateTime?
+  resolvedBy      String?
+  resolvedAt      DateTime?
+  resolution      String?
+  improvementTaskId String? @db.Uuid
+  createdAt       DateTime @default(now())
+  @@index([surfaceType, createdAt(sort: Desc)])
+  @@index([status, severity])
+  @@index([principalType, principalId, createdAt(sort: Desc)])
+  @@index([dedupeKey])
+}
+
+model FeedbackImprovementTask {
+  id            String   @id @db.Uuid
+  title         String
+  description   String
+  area          FeedbackArea
+  status        TaskStatus @default(open)
+  priority      TaskPriority @default(p3)
+  affectedSurfaces FeedbackSurface[]
+  evidenceFeedbackIds String[]                 // multiple Feedback ids that triggered this
+  proposedChange Json?                         // diff payload (prompt change, prompt id, etc)
+  assignedTo    String?
+  prUrl         String?
+  approvedBy    String?
+  approvedAt    DateTime?
+  closedAt      DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  @@index([status, priority])
+  @@index([area, status])
+}
+
+model FeedbackAggregate {
+  id              String   @id @db.Uuid
+  weekStart       DateTime @db.Date
+  surfaceType     FeedbackSurface
+  principalType   PrincipalType?               // null = platform-wide
+  totalResponses  Int
+  avgRating       Float?
+  thumbsUp        Int
+  thumbsDown      Int
+  npsAvg          Float?
+  npsPromoters    Int
+  npsDetractors   Int
+  topReasonCodes  Json                         // [{code, count}]
+  topComments     Json                         // [{snippet, count}] embedding-cluster summary
+  generatedAt     DateTime @default(now())
+  @@unique([weekStart, surfaceType, principalType])
+  @@index([weekStart(sort: Desc)])
+}
+
+model RerankSignal {
+  id           String   @id @db.Uuid
+  surfaceType  FeedbackSurface                 // match | search
+  jobId        String?  @db.Uuid
+  talentId     String?  @db.Uuid
+  query        String?
+  signal       Float                           // -1.0 (hide) .. +1.0 (loved)
+  source       String                          // explicit_thumbs | hide_action | accepted_match
+  createdAt    DateTime @default(now())
+  @@index([surfaceType, jobId])
+  @@index([surfaceType, talentId])
+}
+
+model PlatformDailyMetrics {
+  day                 DateTime @id @db.Date
+  signupsTalent       Int
+  signupsCompany      Int
+  jobsPublished       Int
+  proposalsSubmitted  Int
+  contractsSigned     Int
+  gmvCents            BigInt
+  commissionCents     BigInt
+  aiCostCents         Int
+  activeTalent        Int
+  activeCompanies     Int
+}
+```
+
+### Enums (locked)
+```prisma
+enum CompanyStatus       { active suspended banned closed }
+enum CompanyRole         { owner admin recruiter viewer }
+enum TalentStatus        { active suspended banned paused }
+enum VerificationStatus  { unverified pending verified rejected }
+enum AvailabilityStatus  { available limited unavailable }
+enum SearchVisibility    { public hidden }
+enum SkillLevel          { beginner intermediate advanced expert }
+enum Proficiency         { basic conversational fluent native }
+enum EngagementType      { fixed hourly }
+enum JobStatus           { draft published paused closed cancelled }
+enum ProposalStatus      { submitted shortlisted accepted rejected withdrawn }
+enum ContractStatus      { pending_signature active in_dispute completed cancelled }
+enum MilestoneStatus     { pending funded submitted approved released disputed }
+enum SenderType          { company_user talent admin system }
+enum ModerationStatus    { pending approved flagged blocked }
+enum ReportTarget        { company talent message job profile }
+enum ReportCategory      { spam fraud harassment inappropriate ip_violation other }
+enum ReportStatus        { open under_review resolved dismissed }
+enum ModAction           { warn suspend ban shadow_ban unflag }
+enum AdminRole           { super_admin admin moderator support }
+enum TicketPriority      { low normal high urgent }
+enum TicketStatus        { open in_progress waiting_user closed }
+enum PrincipalType       { company talent }
+enum FeedbackSurface       { chat match search enrichment moderation_override general }
+enum Thumbs                { up down }
+enum FeedbackClassification { bug improvement_idea praise complaint spam duplicate }
+enum FeedbackSeverity      { p1_critical p2_high p3_medium p4_low }
+enum FeedbackArea          { prompt retrieval rerank ui content_policy model_choice latency cost }
+enum FeedbackStatus        { received triaged in_progress resolved dismissed duplicate }
+enum TaskStatus            { open in_progress in_review merged closed }
+enum TaskPriority          { p1 p2 p3 p4 }
+```
+
+### Indexing strategy
+Indexes shown on each `@@index`. Additionally:
+- GIN on `Job.description` and `Talent.bio` (`pg_trgm`) for fuzzy keyword search
+- Partial index on `Job.status='published' AND deleted_at IS NULL`
+- Partial index on `Talent.status='active' AND search_visibility='public'`
+
+### Soft delete
+- `deleted_at TIMESTAMPTZ NULL` on `Company`, `Talent`, `Job`, `Message` (via tombstone)
+- Prisma middleware enforces `deleted_at IS NULL` filter on all reads except admin scope
+- Hard-delete Inngest job (`audit.archive-old-logs` extended) purges `deleted_at < now() - 30 days` weekly
+- GDPR delete is full hard-delete + cascade across Pinecone, R2, Stripe customer scrub
+
+### Audit logs
+- Every state-changing mutation writes via `writeAudit(ctx, action, resource, metadata)` helper
+- Sensitive reads (admin viewing PII, export) also logged
+- Retention: 13 months hot in Postgres, then archived to R2 Parquet monthly
+- Monthly partitioning via `pg_partman`
+
+### Multi-tenancy strategy — **Prisma-enforced, application-layer**
+PostgreSQL RLS not used (Prisma 5.22 does not propagate session-local settings reliably across Neon's pooled connections). Tenancy is enforced via:
+1. **Mandatory `withPrincipal(ctx)` wrapper** around every Prisma query in business modules
+2. ESLint custom rule forbids `prisma.<model>.findMany` outside `server/<module>/repo.ts` files
+3. Repository layer adds `where: { ...principalScope(ctx) }` automatically
+4. Two-tenant probe tests run on every PR (Playwright + Prisma)
+
+Pinecone uses **namespace per principal**: `company-<uuid>`, `talent-<uuid>`. Cross-namespace queries forbidden in repo layer.
+
+R2 uses **prefix per principal**: `companies/<uuid>/...`, `talent/<uuid>/...`.
+
+### Migration strategy
+- `prisma migrate dev` for local
+- `prisma migrate deploy` runs on Replit deploy hook **before** the app starts
+- Migrations are forward-only; rollbacks are new migrations
+- No destructive changes in the same release that stops using a column (deprecate → release → drop next)
+- Long data backfills run as Inngest functions, idempotent, batched 1000 rows / step
+
+---
+
+## 6. API Design
+
+### Style — **REST + Server Actions**
+- REST under `/api/v1/...` for cross-cutting endpoints (mobile-friendly, third-party, webhooks)
+- Server Actions for in-app form mutations (company/talent dashboards)
+- No GraphQL
+
+### Versioning
+- URL path: `/api/v1/...`
+- Breaking change → `/api/v2/...`; v1 supported 6 months after v2 GA
+- Server Actions are internal-only and not versioned
+
+### Error format — **RFC 7807 problem+json**
+```json
+{
+  "type": "https://moreclient.com/errors/quota-exceeded",
+  "title": "Quota exceeded",
+  "status": 429,
+  "code": "TALENT_PROPOSAL_QUOTA_EXCEEDED",
+  "detail": "Free plan allows 10 proposals per month.",
+  "instance": "/api/v1/proposals",
+  "requestId": "01JXYZ...",
+  "meta": { "limit": 10, "used": 10, "resetAt": "2026-06-01T00:00:00Z" }
+}
+```
+
+### Validation
+- Zod 3.23.8 schemas in `src/schemas/`, imported by both client and server
+- Server Actions: `zsa` pattern (`createServerAction().input(schema).handler(...)`)
+- File uploads: MIME sniff (`file-type 19.x`), size cap per plan, filename ULID-renamed
+
+### Pagination — **Cursor-based**
+```http
+GET /api/v1/jobs?limit=20&cursor=01JXYZ...
+```
+```json
+{ "items": [...], "nextCursor": "01JXYZ...", "hasMore": true }
+```
+
+### Rate limiting (Upstash Ratelimit, sliding window)
+| Scope | Limit |
+|---|---|
+| Per IP (unauthenticated) | 30 req / min |
+| Per principal (default) | 600 req / min |
+| Per talent, `POST /proposals` | 20 / hour |
+| Per company, `POST /jobs` | 50 / day |
+| Per principal, `POST /ai/match` | plan-based (free 5/day, pro 200/day) |
+| Per principal, `POST /ai/chat` | plan-based |
+| `/webhooks/*` | unrestricted, signature-verified |
+
+Headers returned: `RateLimit-Limit`, `RateLimit-Remaining`, `RateLimit-Reset`.
+
+### Response standards
+- Timestamps: ISO 8601 UTC
+- IDs: ULID strings
+- Money: integer minor units + ISO currency
+- All responses carry `X-Request-Id`
+
+### Core endpoints (sketch)
+```
+# self
+GET    /api/v1/me                                  resolves principal(s) + role
+
+# companies (company-scoped)
+GET    /api/v1/companies/:id
+PATCH  /api/v1/companies/:id
+POST   /api/v1/companies/:id/members
+DELETE /api/v1/companies/:id/members/:userId
+POST   /api/v1/companies/:id/verification
+
+# talent (talent-scoped or public)
+GET    /api/v1/talent/:id                          private
+GET    /api/v1/public/talent/:handle               public
+PATCH  /api/v1/talent/:id
+POST   /api/v1/talent/:id/portfolio
+POST   /api/v1/talent/:id/verification
+
+# jobs
+POST   /api/v1/jobs                                company
+GET    /api/v1/jobs                                public search
+GET    /api/v1/jobs/:id
+PATCH  /api/v1/jobs/:id
+POST   /api/v1/jobs/:id/publish
+POST   /api/v1/jobs/:id/close
+GET    /api/v1/jobs/:id/matches                    company
+
+# proposals
+POST   /api/v1/proposals                           talent
+GET    /api/v1/proposals?jobId=&talentId=
+PATCH  /api/v1/proposals/:id                       shortlist/reject/withdraw
+
+# contracts
+POST   /api/v1/contracts                           company
+POST   /api/v1/contracts/:id/sign
+POST   /api/v1/contracts/:id/milestones
+POST   /api/v1/contracts/:id/milestones/:mid/fund
+POST   /api/v1/contracts/:id/milestones/:mid/release
+
+# messaging
+GET    /api/v1/messaging/threads
+POST   /api/v1/messaging/threads
+GET    /api/v1/messaging/threads/:id/messages
+POST   /api/v1/messaging/threads/:id/messages
+
+# reviews
+POST   /api/v1/reviews
+GET    /api/v1/reviews?targetType=talent&targetId=
+
+# AI
+POST   /api/v1/ai/match           { jobId } | { brief, requiredSkills }
+POST   /api/v1/ai/search          { query, filters }
+GET    /api/v1/ai/chat            SSE
+POST   /api/v1/ai/enrich-profile  { talentId }
+POST   /api/v1/ai/moderate        { content, contentType }
+
+# billing
+POST   /api/v1/billing/checkout
+POST   /api/v1/billing/portal
+POST   /api/v1/billing/connect/onboard
+GET    /api/v1/billing/connect/status
+
+# feedback (end-user + company facing)
+POST   /api/v1/feedback                            capture (rating, thumbs, reason, comment)
+GET    /api/v1/feedback                            own-scoped history
+POST   /api/v1/feedback/:id/respond                follow-up from author
+POST   /api/v1/feedback/nps                        post-conversation NPS card (1 call/session)
+POST   /api/v1/feedback/match                      per-match thumbs / hide (companies)
+POST   /api/v1/feedback/search                     per-search-result thumbs (companies)
+POST   /api/v1/feedback/enrichment                 talent rates AI-enriched profile field
+
+# realtime auth
+POST   /api/v1/realtime/auth                       Pusher channel auth
+
+# webhooks
+POST   /api/webhooks/stripe
+POST   /api/webhooks/clerk
+POST   /api/webhooks/kyc
+
+# admin (admin-only middleware-gated)
+GET    /api/v1/admin/companies
+GET    /api/v1/admin/companies/:id
+POST   /api/v1/admin/companies/:id/suspend
+POST   /api/v1/admin/companies/:id/ban
+POST   /api/v1/admin/companies/:id/verify
+GET    /api/v1/admin/talent
+GET    /api/v1/admin/talent/:id
+POST   /api/v1/admin/talent/:id/verify
+POST   /api/v1/admin/talent/:id/feature        { durationDays }
+POST   /api/v1/admin/talent/:id/suspend
+POST   /api/v1/admin/talent/:id/ban
+GET    /api/v1/admin/moderation/reports
+POST   /api/v1/admin/moderation/:id/decide      { action, reason, durationDays? }
+GET    /api/v1/admin/verification-queue
+POST   /api/v1/admin/verification-queue/:id/approve
+POST   /api/v1/admin/verification-queue/:id/reject
+GET    /api/v1/admin/subscriptions
+POST   /api/v1/admin/subscriptions/:id/refund
+GET    /api/v1/admin/support/tickets
+POST   /api/v1/admin/support/tickets/:id/assign
+POST   /api/v1/admin/support/tickets/:id/reply
+GET    /api/v1/admin/ai-usage                   ?from=&to=&principalId=
+GET    /api/v1/admin/flags
+PATCH  /api/v1/admin/flags/:key
+GET    /api/v1/admin/plans
+PATCH  /api/v1/admin/plans/:code
+GET    /api/v1/admin/admins
+POST   /api/v1/admin/admins
+DELETE /api/v1/admin/admins/:id
+GET    /api/v1/admin/audit-log
+GET    /api/v1/admin/activity                   SSE live stream
+GET    /api/v1/admin/analytics/platform         daily metrics
+GET    /api/v1/admin/feedback                   ?surface=&status=&severity=&since=
+GET    /api/v1/admin/feedback/:id
+POST   /api/v1/admin/feedback/:id/classify      { classification, severity, area, reasonCode }
+POST   /api/v1/admin/feedback/:id/resolve       { resolution, status }
+POST   /api/v1/admin/feedback/:id/create-task   { area, priority, title, description }
+POST   /api/v1/admin/feedback/:id/dismiss       { reason }
+GET    /api/v1/admin/feedback/tasks             improvement task queue
+GET    /api/v1/admin/feedback/tasks/:id
+PATCH  /api/v1/admin/feedback/tasks/:id         { status, assignee, priority }
+POST   /api/v1/admin/feedback/tasks/:id/approve adds golden-set case + opens prompt PR
+POST   /api/v1/admin/feedback/tasks/:id/close   { reason, prUrl }
+GET    /api/v1/admin/feedback/aggregates        weekly rollups (surface / principal type)
+GET    /api/v1/admin/feedback/export            CSV/JSON, audit-logged
+
+# health
+GET    /api/healthz                             liveness
+GET    /api/readyz                              readiness (DB, Redis, Pinecone, Stripe)
+```
+
+---
+
+## 7. Authentication & Authorization
+
+### JWT — **Clerk** (locked)
+- `@clerk/nextjs 6.12.x` issues JWTs containing `sub`, `org_id` (when company-scoped), `org_role`, `sid`
+- Verified via `auth()` helper in Server Components and Route Handlers
+- API keys (machine clients) separate, bcrypt-hashed, prefix-indexed in `api_keys` table (added in Phase 4)
+
+### Refresh tokens
+Managed by Clerk; backend stateless.
+
+### OAuth providers (via Clerk) — locked
+- Google
+- Microsoft
+- Email magic link
+- SAML SSO (enterprise plans only, Clerk Enterprise add-on)
+
+### RBAC — **principal type + role + admin override**
+
+Principal resolution per request:
+1. `auth()` → Clerk user
+2. If `org_id` present → `Company` principal with `org_role` mapping
+3. Else if `Talent` row exists for `clerkUserId` → `Talent` principal (owner)
+4. If `PlatformAdmin` row exists with `active=true` → **admin override** layered on top
+
+#### Company roles (within a company principal)
+| Role | Jobs | Proposals | Contracts | Messaging | Billing | Members | Settings |
+|---|---|---|---|---|---|---|---|
+| owner | CRUD | R/decide | CRUD | RW | RW | CRUD | RW |
+| admin | CRUD | R/decide | CRUD | RW | R | CRUD | RW |
+| recruiter | CRU | R/decide | R | RW | — | — | R |
+| viewer | R | R | R | R | — | — | R |
+
+#### Talent role
+Single role: `owner` (self). Permissions are total on own resources; read-only on public marketplace; write on own proposals/messages/portfolio.
+
+#### Admin roles
+| Role | Companies | Talent | Moderation | Subscriptions | Plans/Flags | Admins |
+|---|---|---|---|---|---|---|
+| super_admin | CRUD | CRUD | CRUD | CRUD | CRUD | CRUD |
+| admin | CRUD | CRUD | CRUD | CR (no refund) | R | R |
+| moderator | R | R + suspend/ban | CRUD | — | — | — |
+| support | R | R | R | R | — | — |
+
+### Authorization enforcement
+- `requirePrincipal(ctx, ['company']|['talent']|['company','talent'])`
+- `requireRole(ctx, minRole)` for company role checks
+- `requireAdmin(ctx, minAdminRole)` for admin endpoints
+- `requireOwnership(ctx, resource)` for resource-level checks
+- All wired into `server/core/auth.ts` and used as the first line of every handler/action
+
+### Webhook signature verification — **mandatory**
+| Provider | Mechanism |
+|---|---|
+| Stripe | `stripe.webhooks.constructEvent(body, sig, secret)` |
+| Clerk | Svix signature via `Webhook.verify(body, headers, secret)` |
+| KYC (Persona) | HMAC-SHA256 via shared secret |
+| Pusher (webhooks if used) | HMAC-SHA256 |
+
+### Session management
+- API stateless
+- Pusher channel auth via `POST /api/v1/realtime/auth` per channel subscribe
+- SSE connections inherit cookie/JWT from Next.js; revalidated on reconnect
+
+---
+
+## 8. AI System Architecture
+
+### Stack — locked
+| Concern | Tech |
+|---|---|
+| Streaming runtime | Vercel AI SDK 4.0.x (`streamText`, `streamObject`) |
+| Primary LLM | OpenAI `gpt-4o-mini-2024-07-18` |
+| High-stakes LLM | OpenAI `gpt-4o-2024-11-20` |
+| Fallback LLM | Anthropic `claude-sonnet-4-6` |
+| Embeddings | Cohere `embed-multilingual-v3.0` |
+| Re-rank | Cohere `rerank-multilingual-v3.0` |
+| Vector DB | Pinecone serverless |
+| Moderation | OpenAI `omni-moderation-latest` + custom LLM judge |
+| Eval | Custom runner in `tests/eval/` using LLM-as-judge |
+
+### Pipelines
+
+#### A. Talent profile enrichment (`talent.enrich-profile`)
+```
+Trigger: talent.profile.updated event
+   ▼
+[1] Pull raw profile + portfolio + CV (if uploaded)
+   ▼
+[2] OpenAI extract structured JSON: { skills[], yearsExperience, headline, summaryEn, summaryAr }
+   ▼
+[3] Diff vs existing fields; merge with talent-controlled overrides
+   ▼
+[4] Persist enriched fields with audit entry
+   ▼
+[5] Emit talent.profile.embedded_stale
+```
+
+#### B. Embedding pipeline (talent & jobs)
+```
+[1] Build canonical text:
+       talent: handle + headline + bio + skills + summaries + experience snippets
+       job:    title + description + required skills + budget range + locale
+   ▼
+[2] sha256(canonical) — skip if matches stored embeddingHash
+   ▼
+[3] Cohere embed (1024-dim)
+   ▼
+[4] Upsert Pinecone (namespace per principal type):
+       talent → namespace: "talent"
+       job    → namespace: "jobs"
+   ▼
+[5] Persist embeddingId + embeddingHash
+```
+
+#### C. Matching pipeline (job → talent)
+```
+[1] Embed job posting (above)
+   ▼
+[2] Build filter: locale, country, availability, hourly rate window
+   ▼
+[3] Pinecone query top_k=100 in "talent" namespace with filter
+   ▼
+[4] Cohere rerank top_k=100 → top_n=25 with job description as query
+   ▼
+[5] Score = 0.45 * rerank + 0.20 * skill_overlap + 0.15 * budget_fit
+             + 0.10 * locale_match + 0.10 * availability_signal
+   ▼
+[6] Persist JobMatch rows; emit notifications for top 10
+```
+
+#### D. Semantic talent search (company-side search)
+```
+Same as matching but query is free-text or filter-only; bypass scoring blend; return reranked list.
+```
+
+#### E. AI chat assistant (in-app help)
+```
+[1] User message → moderation (omni-moderation-latest)
+   ▼
+[2] Query rewrite (gpt-4o-mini, ≤200 tokens)
+   ▼
+[3] Retrieval over platform KB namespace ("kb-en", "kb-ar")
+       (KB = help docs, policy docs, FAQs)
+   ▼
+[4] Rerank top_k=20 → top_n=5
+   ▼
+[5] Streaming response via Vercel AI SDK with citations
+   ▼
+[6] Output filter (prompt-injection + PII leak check)
+   ▼
+[7] Persist message + usage counters
+```
+
+#### G. Feedback loop pipeline (`feedback.classify` → `feedback.update-eval-set`)
+```
+[1] Inbound feedback sources:
+       - Inline thumbs ↑/↓ + reasonCode on every AI message (end-user)
+       - Post-conversation NPS card (end-user, idle 5min or panel close)
+       - Per-match 👍/👎/"Hide" + reason (company on /jobs/:id/matches)
+       - Per-search-result thumb (company on talent search)
+       - Per-enriched-field correction (talent on AI profile enrichment)
+       - Implicit signals: company hides a match → -1.0 RerankSignal
+                          company starts a contract → +1.0 RerankSignal
+   ▼
+[2] POST /api/v1/feedback → persist Feedback (status=received)
+       Emit feedback.submitted (Inngest)
+   ▼
+[3] feedback.classify (gpt-4o-mini, structured output, Arabic-aware):
+       { classification, severity, area, reasonCode, dedupeKey, summaryEn, summaryAr }
+       Idempotent on dedupeKey within 30 days → marks duplicates.
+   ▼
+[4] Persist classification; auto-create FeedbackImprovementTask for p1/p2 items
+       that share a dedupeKey cluster of ≥ 3 events in 14 days.
+   ▼
+[5] Pusher fan-out:
+       - presence-admin-activity → feedback.classified event (live admin feed)
+       - p1 also pages on-call via Slack webhook
+   ▼
+[6] feedback.aggregate-weekly (Mon 08:00 UTC):
+       NPS, thumbs ratio, top reasonCodes, embedding-clustered comment themes
+       Surfaced in /admin/ai-usage + per-tenant weekly digest email
+   ▼
+[7] feedback.rerank-signal-rollup (hourly):
+       Compresses RerankSignal rows into per-(job,talent) weights stored
+       on JobMatch.reasons. Future matching uses signal to nudge scores.
+   ▼
+[8] Admin approves FeedbackImprovementTask:
+       feedback.update-eval-set:
+         (a) Adds the failing example to the relevant golden set
+             (matching-{locale}.jsonl, search-{locale}.jsonl, chat-{locale}.jsonl)
+         (b) If area=prompt: opens a draft PR with a proposed prompt edit
+             generated by gpt-4o using the failing case + improvement description
+         (c) CI runs full eval on PR; merge gated by §8 regression rules
+   ▼
+[9] On merge:
+       Deploy → next chat/match request uses new prompt_version
+       Feedback marked status=resolved with resolution pointing to PR
+       Audit log written
+```
+
+#### F. Moderation pipeline (`messaging.scan`)
+```
+[1] omni-moderation-latest classification
+   ▼
+[2] If flagged → LLM-as-judge gpt-4o-mini with custom rubric (Arabic-aware)
+   ▼
+[3] Decision: approved | flagged | blocked
+   ▼
+[4] If blocked → hide from receiver, open Report row, notify admin moderation queue
+[5] If flagged → soft warning + send for human review
+```
+
+### Prompt management
+- `.txt` files in `src/server/ai/prompts/`
+- Each loaded with `sha256(content).slice(0,12)` as `prompt_version`
+- Every persisted AI output stores `prompt_version` + `model`
+- Changes require PR + automatic eval run
+- Prompt iteration PRs are auto-opened by `feedback.update-eval-set` whenever an admin approves a p1/p2 improvement task (see §G); the bot proposes the diff but a human must review and merge
+
+### Vector database — Pinecone serverless
+Indexes: 1 index, multiple namespaces.
+- Namespace `talent` — talent profile embeddings, ~25k vectors year 1
+- Namespace `jobs` — active job embeddings, ~6k vectors year 1
+- Namespace `kb-en`, `kb-ar` — help center content
+- Dimension: 1024 (Cohere)
+- Metric: cosine
+- Pod type: serverless (auto-scaling)
+- Backup: nightly export to R2 Parquet via `analytics.rollup-platform` step
+
+### Cost optimization — locked levers
+| Lever | Saving |
+|---|---|
+| `gpt-4o-mini` default | baseline |
+| Cohere rerank → cheap LLM viable | ~30% LLM token reduction |
+| sha256 dedup on embeddings | ~40% on embedding cost |
+| Semantic cache (Upstash, embedding-keyed, 1h TTL) for repeated AI matches | ~25% on cached |
+| Match results cached on `JobMatch` table; recomputed only when job edits or 7-day TTL | ~80% on match calls |
+| Plan-tier AI quotas, soft-cap @ 80%, hard @ 100% | bounds variable cost |
+
+### Evaluation — locked
+- Golden sets: 100 EN + 100 AR per pipeline (matching, search, chat)
+- Runs nightly + on every PR touching `src/server/ai/**` or prompts
+- Metrics: faithfulness, citation accuracy, match nDCG@10, latency P50/P95, cost/query
+- Merge blocked if faithfulness drops > 3 pts OR cost rises > 20%
+
+---
+
+## 9. Infrastructure & DevOps — Replit Production
+
+### Hosting — **Replit Reserved VM Deployment** (locked)
+- Reserved VM size: **2 vCPU / 4 GB** (upgradeable to 4 vCPU / 8 GB at Month 6)
+- Persistent disk: 10 GB (used only for build cache; no app-data persistence on disk)
+- Region: closest available to MENA users (currently `us-east`; revisit if Replit adds EU/ME regions)
+- Custom domain: `moreclient.com` via Cloudflare CNAME → `*.replit.app`
+- TLS: Cloudflare full-strict, Replit auto-cert
+- Always-on: enabled (never sleeps)
+- Process: `pnpm start` (Next.js production server)
+
+### Why Replit (locked decision)
+- Single deployment artifact, no Docker, no K8s, no Helm
+- Built-in Secrets, Secrets-as-env-vars
+- Native WebSocket support for Pusher auth callbacks and SSE
+- Replit Database not used; we use external Neon (durable + scalable)
+- Cost predictability: flat VM cost vs serverless surprise bills
+
+### Replit configuration
+**`.replit`** (locked):
+```toml
+modules = ["nodejs-20"]
+run = "pnpm dev"
+
+[deployment]
+deploymentTarget = "vm"
+run = ["sh", "-c", "pnpm prisma migrate deploy && pnpm start"]
+build = ["sh", "-c", "pnpm install --frozen-lockfile && pnpm prisma generate && pnpm build"]
+
+[nix]
+channel = "stable-24_05"
+
+[env]
+NODE_ENV = "production"
+NEXT_TELEMETRY_DISABLED = "1"
+```
+
+**`replit.nix`** pins Node 20.18.1 and pnpm via Corepack.
+
+### Persistence assumptions — **all external**
+| Data | Service |
+|---|---|
+| Relational | Neon Postgres 16.4 (US East primary; PITR 7-day on paid tier) |
+| Cache + rate limit | Upstash Redis (REST API, no TCP) |
+| Queue + cron + workflows | Inngest (serverless functions; HTTP handler hosted on Replit) |
+| Vector | Pinecone Serverless |
+| Files | Cloudflare R2 |
+| Realtime | Pusher Channels |
+| Email | Resend |
+| Auth | Clerk |
+| Payments | Stripe |
+| Logs | Axiom |
+| Errors / APM | Sentry |
+| Product analytics | PostHog (cloud) |
+| Uptime | BetterStack |
+
+Replit's local filesystem is **never** used for user data. Only build cache and ephemeral temp files (max 100 MB cleaned per request).
+
+### Secrets — **Replit Secrets** (locked)
+- All secrets stored in Replit Secrets UI; injected as env vars
+- Local dev: `.env.local` (gitignored), parity with Replit Secrets keys
+- Rotation: quarterly for provider API keys; immediately on incident
+- Audit: Replit Secrets has built-in change log; admin-only access in workspace
+
+### Environment strategy
+| Env | Where | URL | DB |
+|---|---|---|---|
+| local | dev laptop | `http://localhost:3000` | local Postgres via docker-compose |
+| preview | Replit "Preview" runs | per-fork `*.replit.app` | Neon branch (auto-created) |
+| staging | Replit Deployment "staging" project | `staging.moreclient.com` | Neon `staging` branch |
+| production | Replit Deployment "production" project | `moreclient.com`, `api.moreclient.com` | Neon main branch |
+
+### CI/CD pipeline — GitHub Actions + Replit Deployments
+```
+on PR:
+  - pnpm install (frozen)
+  - pnpm typecheck
+  - pnpm lint
+  - pnpm test (vitest unit + integration)
+  - pnpm eval:fast (subset of golden set)
+  - pnpm prisma validate
+  - playwright e2e (smoke)
+  - bundle-size check
+  - PR comment with preview URL (Replit Preview deploy auto-triggered)
+
+on merge to main:
+  - same as PR + full eval set
+  - Replit "staging" deploy auto-triggered
+  - smoke tests against staging
+  - manual approval gate
+  - tag release → Replit "production" deploy triggered
+  - post-deploy smoke
+  - Slack notification
+```
+
+### Deployment flow
+- Replit Reserved VM deploy: rolling restart (~30s downtime per release — acceptable at this scale)
+- DB migrations applied **before** app start via `prisma migrate deploy` in `.replit` deploy run command
+- Inngest functions auto-registered on first request after deploy
+- Rollback: redeploy previous Git tag
+
+### Monitoring stack — locked
+- **Sentry** — errors + APM transactions + spans (`@sentry/nextjs 8.42.x`)
+- **Axiom** — structured logs (`@axiomhq/js 1.0.x`) via pino transport
+- **PostHog** — product analytics + feature flags
+- **BetterStack** — synthetic monitors (homepage, sign-in, AI match round-trip)
+- **Pusher Insights** — channel/connection metrics
+- **Inngest dashboard** — function runs, failures, retries
+
+Slack alerts wired:
+- P1 (page): error rate > 5% over 5min, DB connection failures, payment webhook backlog > 100
+- P2 (channel): AI cost spike > 2× daily baseline, eval regression, queue depth > 500
+
+### Logging
+- pino 9.5.x → JSON to stdout (Replit captures) **and** to Axiom via HTTP transport
+- Mandatory fields: `requestId` (ULID), `principalType`, `principalId`, `userId`, `level`, `event`
+- PII never logged; `redactPii()` helper for known fields
+- Log retention 90 days hot in Axiom, archived to R2 monthly
+
+### Cost optimization on Replit
+- Reserved VM 2vCPU/4GB: ~$25/mo
+- Bundle small (target 200KB dashboard JS) → less CPU
+- Server Components for read pages → fewer client round-trips
+- Edge runtime for public reads → free CPU offload
+- Pinecone serverless cheaper than pods at our QPS
+- Upstash REST → no idle TCP connection cost
+
+### Disaster recovery
+| Asset | Backup | RTO | RPO |
+|---|---|---|---|
+| Postgres | Neon PITR (7d) + nightly logical dump to R2 | 60min | 1min (PITR) |
+| Pinecone | Nightly Parquet export to R2 | 4h (re-embed if needed) | 24h |
+| R2 files | Object versioning + cross-region replication (Cloudflare config) | 30min | 0 |
+| Stripe | Source of truth in Stripe; we reconcile via webhook replay | 30min | 0 |
+| Clerk | Source of truth in Clerk; user data re-syncable via API | 1h | 0 |
+| Replit app | Stateless; redeploy from Git tag | 15min | 0 |
+
+Quarterly restore drill against staging.
+
+---
+
+## 10. Security Plan
+
+### OWASP Top 10 — locked mitigations
+| Risk | Mitigation |
+|---|---|
+| A01 Broken Access Control | `requirePrincipal/requireRole/requireAdmin` on every handler + repo-layer principal scoping + two-tenant probe in CI |
+| A02 Cryptographic Failures | TLS 1.3, AES-256 at rest (Neon, R2), bcrypt for API keys, Clerk-managed password hashing |
+| A03 Injection | Prisma parameterised; Zod input; prompt-injection guard (below); HTML sanitisation via `rehype-sanitize` |
+| A04 Insecure Design | Threat model documented at `docs/threat-model.md`; pre-launch security review by external firm |
+| A05 Security Misconfiguration | Replit Secrets only; CORS allowlist; `next.config.ts` strict CSP; no debug in prod |
+| A06 Vulnerable Components | Dependabot + Snyk weekly; pnpm audit on every PR |
+| A07 Auth Failures | Clerk handles MFA, brute-force, magic links; admin role gated to allowlisted emails initially |
+| A08 Software/Data Integrity | Webhook signature verification mandatory; SBOM via `pnpm cyclonedx` |
+| A09 Logging Failures | Structured logs, audit table, 13-month retention |
+| A10 SSRF | No user-controlled outbound URLs except explicit allowlists (verified profile websites, R2 signed URLs) |
+
+### Input sanitisation
+- Filenames: regex-strip, ULID-rename on storage
+- HTML in messages: stripped before storage; markdown rendered client-side via `react-markdown 9.x` + `rehype-sanitize 6.x`
+- Message body length cap: 8k chars
+- Job description cap: 50k chars
+- Talent bio cap: 5k chars
+
+### AI prompt injection mitigation — locked
+1. Retrieved chunks wrapped in `<context source="...">…</context>`; system prompt instructs the model to treat contents as data, never instructions
+2. Pre-ingest scan on all user content: regex + LLM judge flags suspicious patterns ("ignore previous", "system:", "you are now…")
+3. Output filter: LLM judge classifies whether response leaks system prompt or pivots off-topic
+4. Strict per-pipeline allowlist of allowed output schemas (Zod-validated post-LLM)
+
+### Encryption
+- In transit: TLS 1.3 (Cloudflare → Replit)
+- At rest: AES-256 (Neon, R2 SSE-S3, Pinecone managed)
+- Application-level: API keys bcrypt, webhook signing secrets HMAC, Stripe Connect tokens never logged
+
+### File upload protections
+- Max size by plan (Free 5MB / Pro 25MB / Scale 100MB)
+- MIME-type sniff (`file-type 19.x`)
+- Quarantine prefix in R2 → moved to permanent prefix only after Inngest scan job
+- ClamAV scan via cloud-scanner Inngest step (`@vps/clamav-as-a-service` — vendor TBD when first user crosses 1MB upload; until then skipped with warning)
+- Reject password-protected PDFs and macros-enabled Office files
+
+### API abuse prevention
+- Upstash Ratelimit (above)
+- Per-principal quotas tied to plan
+- Stripe-enforced billing limits
+- Cloudflare bot detection + Turnstile challenge on public talent search if abuse detected
+- Embed and public-profile endpoints: aggressive Cloudflare cache TTL + per-IP limits
+
+### KYC / Verification (Persona)
+- Talent verification: Persona `@persona-io/sdk 1.x` integration; webhook updates `Talent.verificationStatus`
+- Company verification: business registration upload + admin manual review queue
+- Both required before payouts (Stripe Connect) or any contract signing
+
+---
+
+## 11. Scalability Risks
+
+| Risk | Likelihood | Impact | Locked mitigation |
+|---|---|---|---|
+| Replit Reserved VM CPU saturation at 100+ RPS | High | High | Vertical upgrade to 4vCPU/8GB at threshold; offload reads to Edge + cache |
+| Single-region Replit hosting → MENA latency | High | Medium | Cloudflare edge caching for public reads; SSE keep-alive tuned; revisit when Replit adds ME region |
+| Neon serverless cold-start tail latency | Medium | Medium | Connection pooling via Neon pooler; `pgbouncer`-style behaviour built-in; keep-warm via cron ping |
+| Pinecone namespace count growth | Low | Low | We use 4 namespaces total (talent, jobs, kb-en, kb-ar), not per-tenant |
+| Pusher free-tier connection cap (100) | Certain by Month 3 | Medium | Upgrade to Startup plan at first paying customer ($49/mo, 500 connections) |
+| LLM provider rate-limit | High | Medium | Multi-provider fallback (OpenAI → Anthropic), exponential backoff, queue smoothing |
+| Inngest free-tier function-run limit | Medium | Medium | Upgrade to Team plan at Month 3 |
+| Stripe Connect KYC delays | High | Medium | Build the queue early; manual override available to admin |
+| Audit log table growth | High | Low | Monthly partitions via `pg_partman` + R2 archive job |
+| AI cost runaway on viral abuse | Medium | High | Plan-based hard caps + Cloudflare bot detection + per-principal daily quotas |
+
+### Failure points — locked fallbacks
+- OpenAI down → Anthropic Claude Sonnet 4.6 via `server/core/ai/anthropic.ts`
+- Cohere down → degraded retrieval mode (cached embeddings only, no rerank); banner in admin
+- Pinecone down → Postgres FTS fallback for search; matching disabled with maintenance banner
+- Pusher down → fall back to polling (`useQuery` refetch every 10s) automatically
+- Neon down → Replit returns 503 + retry-after; Inngest queues mutations briefly via outbox table
+
+### Technical debt risks
+- Single Next.js process for both REST + SSE — revisit if SSE > 1k concurrent
+- Inngest as sole job runner — fine to ~100k runs/day, after which Temporal Cloud
+- Prisma performance at very large `Message` tables → partition by month at 5M rows
+
+---
+
+## 12. Backend Development Roadmap
+
+### Phase 1 — Foundations (Weeks 1-2)
+**Exit:** Two test principals (1 company, 1 talent) can be created via Clerk webhooks, signed in, edit their profiles, with strict isolation verified.
+
+- Repo, `.replit`, Replit project, Neon DB, Upstash Redis, Pinecone, R2, Inngest, Clerk, Sentry, Axiom wired
+- Prisma schema + first migration deployed
+- `requirePrincipal/requireRole/requireAdmin` enforced
+- Two-tenant probe Playwright test passing
+- Audit log writer wired
+- `companies`, `talent` modules complete (CRUD, members, profile, portfolio)
+- `prisma migrate deploy` runs on Replit deploy hook
+
+### Phase 2 — Marketplace core (Weeks 3-4)
+**Exit:** Company can post a job → talent can submit a proposal → company can review and start a contract.
+
+- `jobs` module (CRUD, publish, search)
+- `proposals` module (submit, shortlist, withdraw)
+- `contracts` module (terms, signatures, milestones)
+- Stripe Customer + basic subscription (free plan only) for both principal types
+- Server Actions for in-dashboard flows
+- Plan catalog + entitlements (free vs pro placeholders)
+- Inngest events firing
+- Rate limiting live
+
+### Phase 3 — AI + Messaging (Weeks 5-6)
+**Exit:** Matching, search, and messaging fully functional. Eval harness in CI.
+
+- Embedding pipelines (talent + job)
+- Matching pipeline
+- Semantic search
+- AI chat assistant (in-app help)
+- Moderation pipeline on every message
+- `messaging` module + Pusher integration
+- Vercel AI SDK streaming chat
+- Golden sets + eval runner + CI gate
+
+### Phase 4 — Billing + Payouts + Admin (Weeks 7-8)
+**Exit:** First contract can complete: company funds milestone → talent submits → company approves → payout via Stripe Connect.
+
+- Stripe subscriptions live (Pro, Scale tiers per principal type)
+- Stripe Connect Express for talent payouts
+- Escrow milestone flow
+- Commission collection + reconciliation
+- **Admin control plane complete** (all admin endpoints + dashboards)
+- Moderation queue + report flow
+- Support tickets module
+- Featured listings
+- Verification queue (Persona webhook)
+- AI usage monitoring per principal
+- Platform analytics rollups
+- **Feedback module v1**: capture endpoints, inline thumbs on chat surface, classifier (`feedback.classify`), admin queue with severity routing, dedupe by semantic hash
+- External pentest scheduled
+
+### Phase 5 — Trust & polish (Weeks 9-10)
+**Exit:** Public launch ready.
+
+- Reviews + ratings
+- Public talent profiles (`/t/[handle]`)
+- Talent featured placement purchase flow
+- Cloudflare WAF rules tightened
+- GDPR export + delete endpoints
+- Status page (BetterStack)
+- Pre-launch security review + remediation
+- **Feedback module v2 (loop closure)**: per-match / per-search / per-enrichment feedback surfaces, weekly aggregates, NPS post-conversation card, improvement-task PR bot, eval-set auto-update, RerankSignal rollup live
+
+### Phase 6 — Growth (Weeks 11-12)
+- Notifications digest emails
+- In-app notification center
+- Search filters expanded
+- Admin moderation automations
+- API keys (third-party integration)
+- Bulk admin operations
+
+### Dependencies
+```
+Phase 1 ─► Phase 2 ─► Phase 3 ─► Phase 4 ─► Phase 5 ─► Phase 6
+                         │
+                         ├─► messaging depends on Phase 2 thread keys (job/contract)
+                         └─► AI matching depends on Phase 2 jobs + talent profiles
+```
+
+### Complexity (Fibonacci story points)
+| Component | Points |
+|---|---|
+| Foundation + auth + tenancy enforcement | 13 |
+| Companies + Talent modules | 13 |
+| Jobs + Proposals + Contracts | 13 |
+| AI matching + search + embeddings | 13 |
+| AI chat + moderation | 8 |
+| Messaging + Pusher | 8 |
+| Billing + Stripe Connect + escrow | 13 |
+| Admin control plane (all endpoints + dashboards) | 21 |
+| Reviews + public profiles | 5 |
+| Eval harness | 8 |
+| Audit + GDPR + verification | 8 |
+| Notifications + digests | 5 |
+| Feedback module + classifier + admin queue + improvement-task PR bot | 13 |
+| **Total** | **141** |
+
+Capacity: 4 people × 8 points/week × 10 weeks = 320 — comfortable headroom for incidents, polish, and a buffer.
+
+---
+
+## 13. Launch Readiness Gate
+
+Production launch is **blocked** until every item in §13.1 is passing in staging for 7 consecutive days. Each item carries an owner who must sign off. The CTO holds the final go/no-go after PM, Backend lead, AI lead, Security lead, and DevOps lead sign off.
+
+### 13.1 Hard gates — any failure blocks launch
+| # | Item | Owner | Verification |
+|---|---|---|---|
+| 1 | Every endpoint behind Clerk auth except whitelisted public set | Security | Automated CI scan over Route Handlers + Server Actions |
+| 2 | Principal scoping enforced by repo layer; two-tenant probe green 7d | Security | Playwright `tests/e2e/isolation.spec.ts` |
+| 3 | Admin middleware blocks non-admin users to all `/admin/*` and `/api/v1/admin/*` | Security | Manual + E2E |
+| 4 | All admin actions write `AuditLog` row; sampled review of last 100 actions | Security | Manual + automated assertion |
+| 5 | Webhook signature verification on Stripe, Clerk, Persona, Pusher (with replay attack test) | Security | E2E replay test |
+| 6 | Rate limits enforced per principal + per IP under k6 burst | Security | Load test report |
+| 7 | Neon PITR + nightly dump verified by full restore drill to staging | DevOps | Drill log + smoke test |
+| 8 | Pinecone re-embed drill from R2 Parquet export; recall@10 within 2% | AI | Drill log + recall report |
+| 9 | GDPR delete: DB + Pinecone + R2 + Stripe customer scrub, automated test | Legal | Test + manual checklist |
+| 10 | GDPR export delivers JSON in < 24h, end-to-end test | Legal | Automated test |
+| 11 | Stripe Connect Express tested in real mode with $1 payout to test bank | Billing | Manual |
+| 12 | Stripe escrow milestone fund → release flow tested in real mode | Billing | Manual |
+| 13 | KYC happy path + decline path tested via Persona sandbox | Trust | Manual |
+| 14 | Eval golden sets passing baseline thresholds nightly for 7 days | AI | CI report |
+| 15 | AI daily cost caps per principal plan; synthetic burst does not exceed | AI | Load test |
+| 16 | OpenAI ZDR confirmed in writing | AI | Org admin screenshot |
+| 17 | LLM fallback (Anthropic) drilled by killing OpenAI key temporarily | AI | Drill log |
+| 18 | Moderation pipeline blocks known-bad payloads (regression suite) | Trust | E2E + suite |
+| 19 | Pre-launch external pentest; all High/Critical findings remediated | Security | Pentest report + tickets closed |
+| 20 | **Feedback capture firing on every AI surface** (chat / match / search / enrichment) | Product | E2E `tests/e2e/feedback.spec.ts` |
+| 21 | **Admin feedback queue functional**; p1 feedback raises Slack alert in < 60s | Product | Synthetic test |
+| 22 | **Improvement-task → PR bot end-to-end**; bot opens draft PR, CI runs eval, gate works | AI | Synthetic test |
+| 23 | **NPS post-conversation card** shown after 5min idle or panel close | Product | E2E |
+| 24 | **RerankSignal rollup live**; match scoring blends explicit feedback within 1h | AI | Offline verification |
+| 25 | Sentry / Axiom / PostHog / BetterStack / Inngest dashboards receiving data | DevOps | Screenshots |
+| 26 | Backup retention + alerting verified (synthetic deletion + alert) | DevOps | Drill log |
+| 27 | At least 2 super_admins seeded; both 2FA verified | Admin | Manual |
+| 28 | Plan catalog + Stripe Prices in sync in live mode | Billing | Automated reconciliation |
+| 29 | Feature flags audited; no stale or unowned flags in production | Product | Flag inventory review |
+| 30 | All Inngest functions ran successfully ≥ 10 times each in staging | DevOps | Inngest dashboard |
+
+### 13.2 Soft gates — warnings, can ship with stakeholder waiver
+- Lighthouse score ≥ 90 on marketing + public profile
+- Dashboard P95 TTI ≤ 2.0s
+- AI chat first-token P95 ≤ 1.2s
+- AI match generation P95 ≤ 90s
+- Eval cost/query ≤ baseline +20%
+- All flows verified on Replit Reserved VM (not just localhost or preview)
+
+### 13.3 Operational readiness
+| Item | Owner |
+|---|---|
+| On-call rotation defined; PagerDuty or Slack escalation policy live | DevOps |
+| Runbooks published: OpenAI / Cohere / Stripe / Neon / Pinecone outage | DevOps |
+| Status page (BetterStack) public at `status.moreclient.com` | DevOps |
+| Customer support inbox monitored (Resend forward to Slack) | Support |
+| Legal: ToS, Privacy Policy, DPA template, cookie banner published | Legal |
+| Refund + dispute SOP signed off | Billing |
+| Tax registration confirmed for first launch market | Finance |
+| Incident response template + post-mortem template in repo | DevOps |
+
+### 13.4 Feedback loop sanity check (mandatory before public launch)
+- [ ] Submit 20 synthetic feedback events (mix of thumbs/NPS/comments/matches), confirm:
+  - Classifier reaches > 90% agreement vs. manual labels on labelled subset
+  - Dedupe collapses obvious near-duplicates
+  - p1 items page on-call within 60s
+  - Aggregates show non-zero counts within 1 hour
+- [ ] Approve 1 improvement task; confirm PR bot opens a real PR with eval delta in description
+- [ ] Confirm RerankSignal influence: simulate 5 "Hide" actions on a talent → next match query for similar job de-ranks that talent (offline test)
+
+### 13.5 Soft launch sequence
+1. **Closed beta (Week 0):** 20 invited talent + 5 invited companies; full feature surface; daily standup on feedback queue
+2. **Open beta (Week 2):** Waitlist opened; 200 talent + 50 companies; paid tiers disabled; feedback prompts every 3 conversations
+3. **Public launch (Week 4):** Paid tiers enabled; pricing live; Product Hunt + MENA channels announcement
+
+Each stage requires written sign-off from PM, Backend lead, AI lead, Security, and CTO. Roll back to previous stage if hard-gate regression detected for > 24h.

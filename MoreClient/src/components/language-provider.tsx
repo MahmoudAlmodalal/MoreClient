@@ -160,9 +160,118 @@ const translationsEn = {
   copySnippet: "Copy Integration Snippet",
   copied: "Copied!",
   widgetIntegrationInstructions: "Paste this snippet right before the closing </body> tag of your target HTML page. The script will automatically add a floating chat bubble in the bottom-right corner of your site.",
+
+  // ─── Landing — Navigation ───
+  navHome: "Home",
+  navFeatures: "Features",
+  navHowItWorks: "How it works",
+  navPricing: "Pricing",
+  navFaq: "FAQ",
+  navLogin: "Log in",
+  navGetStarted: "Get started",
+
+  // ─── Landing — Hero ───
+  heroBadge: "AI support that never sleeps",
+  heroTitle: "Reply to your customers instantly, around the clock, with effortless efficiency.",
+  heroSubtitle: "An AI platform that learns from your documents and answers your customers in Arabic and English — across every channel, in seconds.",
+  heroCtaPrimary: "Start free with clientMORE",
+  heroCtaSecondary: "Watch a live demo",
+  heroTrustedBy: "Trusted by fast-growing teams everywhere",
+
+  // ─── Landing — Features ───
+  featuresEyebrow: "Built to scale your support",
+  featuresTitle: "Features designed to lift your team and delight your customers.",
+  featuresSubtitle: "Everything you need to turn customer questions into resolved conversations.",
+  featInstantTitle: "Always-on instant replies",
+  featInstantDesc: "Your AI agent answers in seconds, 24/7, so no customer waits in a queue again.",
+  featOmnichannelTitle: "Omnichannel reach",
+  featOmnichannelDesc: "One brain across web widget, WhatsApp, and Telegram — consistent answers everywhere.",
+  featHandoffTitle: "Seamless human handoff",
+  featHandoffDesc: "When confidence drops, conversations escalate smoothly to your team with full context.",
+  featAnalyticsTitle: "Actionable analytics",
+  featAnalyticsDesc: "Track deflection, CSAT, and savings to make smarter support decisions.",
+  featUxTitle: "Polished UX/UI",
+  featUxDesc: "A clean, fast, bilingual experience your customers actually enjoy using.",
+  featSecurityTitle: "Enterprise-grade security",
+  featSecurityDesc: "Tenant isolation, audit trails, and privacy by design protect your data.",
+
+  // ─── Landing — How it works ───
+  howEyebrow: "Live in days, not months",
+  howTitle: "Go live in three simple, no-code steps.",
+  howStep1Title: "Integrate",
+  howStep1Desc: "Connect your channels and embed the widget with a single snippet.",
+  howStep2Title: "Train",
+  howStep2Desc: "Upload your documents — clientMORE learns your business automatically.",
+  howStep3Title: "Launch",
+  howStep3Desc: "Go live and start resolving customer questions instantly.",
+
+  // ─── Landing — Pricing ───
+  pricingEyebrow: "Simple, transparent pricing",
+  pricingTitle: "Invest in growth that scales with you.",
+  pricingSubtitle: "Choose the plan that fits your stage. Upgrade anytime.",
+  pricingPerMonth: "/ month",
+  pricingMostPopular: "Most popular",
+  planStarterName: "Starter",
+  planStarterPrice: "$49",
+  planStarterDesc: "For small teams getting started with AI support.",
+  planGrowthName: "Growth",
+  planGrowthPrice: "$99",
+  planGrowthDesc: "For growing teams that need more power and channels.",
+  planEnterpriseName: "Enterprise",
+  planEnterprisePrice: "Custom",
+  planEnterpriseDesc: "For organizations with advanced security and scale needs.",
+  pricingFeatInstant: "Instant AI replies",
+  pricingFeatChannels: "Multi-channel support",
+  pricingFeatAnalytics: "Advanced analytics",
+  pricingFeatHandoff: "Human handoff",
+  pricingFeatPriority: "Priority support",
+  pricingFeatSso: "SSO & dedicated success manager",
+  pricingChoosePlan: "Choose plan",
+  pricingContactSales: "Contact sales",
+
+  // ─── Landing — FAQ ───
+  faqEyebrow: "Answers, made transparent",
+  faqTitle: "Questions we get asked the most.",
+  faqQ1: "How long does it take to go live?",
+  faqA1: "Most teams are up and running within a day — connect a channel, upload your docs, and launch.",
+  faqQ2: "Which channels are supported?",
+  faqA2: "Web widget, WhatsApp, and Telegram today, with more on the way.",
+  faqQ3: "Does it support Arabic?",
+  faqA3: "Yes — clientMORE is natively bilingual (Arabic & English) with full RTL support.",
+  faqQ4: "How is my data handled?",
+  faqA4: "Your data is tenant-isolated, encrypted, and never used to train shared models.",
+
+  // ─── Landing — Final CTA ───
+  ctaTitle: "Ready to level up your customer service?",
+  ctaSubtitle: "Join the teams delivering instant, on-brand support with clientMORE.",
+  ctaButton: "Get started now",
+
+  // ─── Landing — Footer ───
+  footerTagline: "The bilingual AI customer-support agent that scales with your business.",
+  footerProduct: "Product",
+  footerLegal: "Legal",
+  footerContact: "Contact us",
+  footerPrivacy: "Privacy Policy",
+  footerTerms: "Terms of Service",
+  footerRights: "All rights reserved.",
+
+  // ─── Welcome / Auth ───
+  welcomeTitle: "Welcome to MORE",
+  welcomeSubtitle: "Automate your customer service with advanced AI. Start your journey toward higher efficiency and unmatched satisfaction.",
+  signInBtn: "Sign in",
+  createAccountBtn: "Create a new account",
+  orExplore: "or explore the platform",
+  takeTour: "Take a guided tour",
+  welcomeSlideTitle: "The future of customer service",
+  welcomeSlideText: "Unleash the power of AI to deliver exceptional experiences to your customers, around the clock.",
+  authNotConfiguredTitle: "Authentication isn't configured",
+  authNotConfiguredText: "Sign-in is unavailable in this environment. You can still explore the platform.",
+  backToWelcome: "Back to welcome",
+  goToDashboard: "Explore the dashboard",
 };
 
-const translationsAr: Translations = {
+// Arabic may omit keys; the `t()` lookup falls back to English for any missing key.
+const translationsAr: Partial<Translations> = {
   // Sidebar & Navigation
   dashboard: "لوحة التحكم",
   files: "قاعدة المعرفة",
@@ -316,6 +425,114 @@ const translationsAr: Translations = {
   copySnippet: "نسخ كود الربط",
   copied: "تم النسخ!",
   widgetIntegrationInstructions: "ضع هذا الكود مباشرة قبل وسم الإغلاق </body> في صفحة موقعك. سيقوم الكود تلقائياً بإضافة زر الدردشة العائم في الزاوية السفلية اليمنى لموقعك.",
+
+  // ─── Landing — Navigation ───
+  navHome: "الرئيسية",
+  navFeatures: "المميزات",
+  navHowItWorks: "آلية العمل",
+  navPricing: "الأسعار",
+  navFaq: "الأسئلة الشائعة",
+  navLogin: "تسجيل الدخول",
+  navGetStarted: "ابدأ الآن",
+
+  // ─── Landing — Hero ───
+  heroBadge: "ذكاء اصطناعي لا ينام",
+  heroTitle: "ردّ فوري لعملائك، على مدار الساعة، وبأعلى كفاءة تشغيلية.",
+  heroSubtitle: "منصة ذكاء اصطناعي تتعلّم من مستنداتك وتُجيب عملاءك بالعربية والإنجليزية — عبر جميع القنوات، في ثوانٍ.",
+  heroCtaPrimary: "ابدأ مجاناً مع clientMORE",
+  heroCtaSecondary: "شاهد عرضاً مباشراً",
+  heroTrustedBy: "تثق بنا فرق سريعة النمو حول العالم",
+
+  // ─── Landing — Features ───
+  featuresEyebrow: "مصمم لينمو مع دعمك",
+  featuresTitle: "مميزات صُممت لرفع كفاءة فريقك وإسعاد عملائك.",
+  featuresSubtitle: "كل ما تحتاجه لتحويل أسئلة العملاء إلى محادثات تم حلها.",
+  featInstantTitle: "ردود فورية مستمرة",
+  featInstantDesc: "يجيب مساعدك الذكي خلال ثوانٍ، على مدار الساعة، فلا ينتظر أي عميل في طابور.",
+  featOmnichannelTitle: "حضور متعدد القنوات",
+  featOmnichannelDesc: "عقل واحد عبر المساعد على الموقع وواتساب وتليجرام — إجابات متّسقة في كل مكان.",
+  featHandoffTitle: "تحويل سلس للموظف البشري",
+  featHandoffDesc: "عند انخفاض الثقة، تُحوَّل المحادثات بسلاسة إلى فريقك مع كامل سياق المحادثة.",
+  featAnalyticsTitle: "تحليلات قابلة للتنفيذ",
+  featAnalyticsDesc: "تتبّع معدلات التوفير ورضا العملاء والوفورات لاتخاذ قرارات دعم أذكى.",
+  featUxTitle: "تجربة استخدام متقنة",
+  featUxDesc: "تجربة نظيفة وسريعة وثنائية اللغة يستمتع عملاؤك باستخدامها فعلاً.",
+  featSecurityTitle: "أمان بمستوى المؤسسات",
+  featSecurityDesc: "عزل المستأجرين وسجلّات التدقيق والخصوصية بالتصميم تحمي بياناتك.",
+
+  // ─── Landing — How it works ───
+  howEyebrow: "انطلق خلال أيام لا شهور",
+  howTitle: "انطلق في ثلاث خطوات بسيطة دون أي برمجة.",
+  howStep1Title: "الربط",
+  howStep1Desc: "اربط قنواتك وأضف المساعد إلى موقعك بسطر واحد فقط.",
+  howStep2Title: "التدريب",
+  howStep2Desc: "ارفع مستنداتك — يتعلّم clientMORE تفاصيل عملك تلقائياً.",
+  howStep3Title: "الإطلاق",
+  howStep3Desc: "انطلق مباشرةً وابدأ بحلّ أسئلة العملاء فوراً.",
+
+  // ─── Landing — Pricing ───
+  pricingEyebrow: "أسعار بسيطة وشفافة",
+  pricingTitle: "استثمر في نمو يتوسّع مع حجم أعمالك.",
+  pricingSubtitle: "اختر الباقة التي تناسب مرحلتك. يمكنك الترقية في أي وقت.",
+  pricingPerMonth: "/ شهرياً",
+  pricingMostPopular: "الأكثر شيوعاً",
+  planStarterName: "الأساسية (Starter)",
+  planStarterPrice: "$49",
+  planStarterDesc: "للفرق الصغيرة التي تبدأ رحلتها مع دعم الذكاء الاصطناعي.",
+  planGrowthName: "النمو (Growth)",
+  planGrowthPrice: "$99",
+  planGrowthDesc: "للفرق المتنامية التي تحتاج قوة وقنوات أكثر.",
+  planEnterpriseName: "الشركات (Enterprise)",
+  planEnterprisePrice: "مخصّص",
+  planEnterpriseDesc: "للمؤسسات ذات احتياجات الأمان والتوسّع المتقدمة.",
+  pricingFeatInstant: "ردود ذكاء اصطناعي فورية",
+  pricingFeatChannels: "دعم متعدد القنوات",
+  pricingFeatAnalytics: "تحليلات متقدمة",
+  pricingFeatHandoff: "تحويل للموظف البشري",
+  pricingFeatPriority: "دعم ذو أولوية",
+  pricingFeatSso: "تسجيل دخول موحّد ومدير نجاح مخصّص",
+  pricingChoosePlan: "اختر الباقة",
+  pricingContactSales: "تواصل مع المبيعات",
+
+  // ─── Landing — FAQ ───
+  faqEyebrow: "إجابات بكل شفافية",
+  faqTitle: "الأسئلة التي تُطرح علينا أكثر من غيرها.",
+  faqQ1: "كم يستغرق الإطلاق حتى نبدأ العمل؟",
+  faqA1: "معظم الفرق تنطلق خلال يوم واحد — اربط قناة، ارفع مستنداتك، ثم أطلق.",
+  faqQ2: "ما القنوات التي يدعمها؟",
+  faqA2: "المساعد على الموقع وواتساب وتليجرام حالياً، والمزيد قادم.",
+  faqQ3: "هل يدعم اللغة العربية بشكل كامل؟",
+  faqA3: "نعم — clientMORE ثنائي اللغة أصلاً (عربي وإنجليزي) مع دعم كامل للكتابة من اليمين لليسار.",
+  faqQ4: "كيف يتم التعامل مع بياناتي؟",
+  faqA4: "بياناتك معزولة لكل مستأجر ومشفّرة، ولا تُستخدم أبداً لتدريب نماذج مشتركة.",
+
+  // ─── Landing — Final CTA ───
+  ctaTitle: "مستعد للارتقاء بمستوى خدمة عملائك؟",
+  ctaSubtitle: "انضم إلى الفرق التي تقدّم دعماً فورياً بهوية علامتها مع clientMORE.",
+  ctaButton: "ابدأ الآن",
+
+  // ─── Landing — Footer ───
+  footerTagline: "مساعد خدمة العملاء الذكي ثنائي اللغة الذي ينمو مع أعمالك.",
+  footerProduct: "روابط سريعة",
+  footerLegal: "قانوني",
+  footerContact: "تواصل معنا",
+  footerPrivacy: "سياسة الخصوصية",
+  footerTerms: "شروط الخدمة",
+  footerRights: "جميع الحقوق محفوظة.",
+
+  // ─── Welcome / Auth ───
+  welcomeTitle: "مرحباً بك في MORE",
+  welcomeSubtitle: "أتمت خدمة عملائك بذكاء اصطناعي متطور. ابدأ رحلتك نحو كفاءة أعلى ورضا عملاء لا مثيل له.",
+  signInBtn: "تسجيل الدخول",
+  createAccountBtn: "إنشاء حساب جديد",
+  orExplore: "أو استكشف المنصة",
+  takeTour: "خذ جولة تعريفية",
+  welcomeSlideTitle: "مستقبل خدمة العملاء",
+  welcomeSlideText: "أطلق العنان لقوة الذكاء الاصطناعي لتقديم تجارب استثنائية لعملائك، على مدار الساعة.",
+  authNotConfiguredTitle: "لم يتم إعداد المصادقة",
+  authNotConfiguredText: "تسجيل الدخول غير متاح في هذه البيئة. لا يزال بإمكانك استكشاف المنصة.",
+  backToWelcome: "العودة إلى الترحيب",
+  goToDashboard: "استكشف لوحة التحكم",
 };
 
 interface LanguageContextType {

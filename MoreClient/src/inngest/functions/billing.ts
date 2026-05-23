@@ -39,15 +39,19 @@ export const reconcileCommissions = inngest.createFunction(
     yesterday.setUTCDate(yesterday.getUTCDate() - 1);
     yesterday.setUTCHours(0, 0, 0, 0);
 
+    // step.run JSON-serializes its return value, and bigint is not
+    // JSON-serializable — stringify gmvCents inside the step.
     const metrics = await step.run("rollup", async () => {
-      return rollupDailyMetrics(yesterday);
+      const m = await rollupDailyMetrics(yesterday);
+      return { gmvCents: m.gmvCents.toString() };
     });
 
+    const day = yesterday.toISOString().split("T")[0];
     logger.info(
-      { day: yesterday.toISOString().split("T")[0], gmvCents: metrics.gmvCents.toString() },
+      { day, gmvCents: metrics.gmvCents },
       "commission reconciliation complete",
     );
 
-    return { day: yesterday.toISOString().split("T")[0], gmvCents: metrics.gmvCents.toString() };
+    return { day, gmvCents: metrics.gmvCents };
   },
 );

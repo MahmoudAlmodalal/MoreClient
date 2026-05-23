@@ -8,9 +8,7 @@ import {
   Trash2,
   AlertCircle,
   Database,
-  ArrowRight,
-  Sparkles,
-  Info
+  Sparkles
 } from "lucide-react";
 
 interface IngestedFile {
@@ -24,7 +22,7 @@ interface IngestedFile {
 }
 
 export default function FilesPage() {
-  const { t, isRtl } = useLanguage();
+  const { t } = useLanguage();
   const [dragActive, setDragActive] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [processingStep, setProcessingStep] = useState("");
@@ -98,7 +96,6 @@ export default function FilesPage() {
       "Persisting 32 vectors inside local ChromaDB vector store..."
     ];
 
-    let currentStep = 0;
     setProcessingStep(steps[0]);
 
     // Animate progress bar
@@ -156,8 +153,8 @@ export default function FilesPage() {
           <Database className="h-5 w-5" />
         </div>
         <div className="flex-1 text-sm text-gray-300">
-          <span className="font-bold text-white">ChromaDB Vector Pipeline: </span>
-          Uploaded docs are parsed into markdown text, split with a RecursiveCharacterTextSplitter (chunk_size: 500), and converted to vector embeddings using OpenAI models before saving locally.
+          <span className="font-bold text-white">Demo Vector Pipeline: </span>
+          Uploaded docs are parsed into markdown text, split into chunks, and converted into local demo vectors for the frontend preview.
         </div>
         <div className="flex items-center gap-1.5 text-xs text-purple-400 font-semibold bg-purple-500/5 px-3 py-1.5 rounded-lg border border-purple-500/10">
           <Sparkles className="h-3.5 w-3.5" />
@@ -199,7 +196,7 @@ export default function FilesPage() {
               />
             </div>
             <p className="text-[11px] text-gray-500 animate-pulse">
-              Generating semantic chunks in local ChromaDB persist database...
+              Generating semantic chunks in the local demo index...
             </p>
           </div>
         ) : (

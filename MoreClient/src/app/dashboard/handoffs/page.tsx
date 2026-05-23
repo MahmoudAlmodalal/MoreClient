@@ -5,12 +5,10 @@ import { useLanguage } from "@/components/language-provider";
 import {
   MessageSquare,
   Send,
-  Phone,
   SendHorizontal,
   Smartphone,
   Globe,
   CheckCheck,
-  AlertTriangle,
   User,
   ShieldAlert,
   Bot
@@ -40,7 +38,7 @@ interface HandoffTicket {
 }
 
 export default function HandoffsPage() {
-  const { t, isRtl } = useLanguage();
+  const { t } = useLanguage();
   const [activeTab, setActiveTab] = useState<"all" | "Telegram" | "WhatsApp" | "Widget">("all");
   const [unrepliedOnly, setUnrepliedOnly] = useState(false);
 

@@ -1,7 +1,6 @@
 import type { NextConfig } from "next";
 
-// CSP is handled per-request via src/middleware.ts (nonce-based, strict-dynamic).
-// Only static, non-nonce headers live here.
+// Frontend-only security headers for the demo app.
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },

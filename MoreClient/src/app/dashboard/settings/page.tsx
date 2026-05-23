@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useSyncExternalStore } from "react";
 import { useLanguage } from "@/components/language-provider";
 import {
-  Settings,
   Bot,
   SendHorizontal,
   Smartphone,
@@ -19,6 +18,12 @@ import {
   Trash2,
   Link as LinkIcon
 } from "lucide-react";
+
+const fallbackOrigin = "http://localhost:5000";
+const subscribeOrigin = () => () => {};
+const getClientOrigin = () =>
+  typeof window === "undefined" ? fallbackOrigin : window.location.origin;
+const getServerOrigin = () => fallbackOrigin;
 
 export default function SettingsPage() {
   const {
@@ -55,15 +60,13 @@ export default function SettingsPage() {
   const [successToast, setSuccessToast] = useState(false);
 
   // Dynamic host origin states & Clipboard helpers
-  const [currentOrigin, setCurrentOrigin] = useState("http://localhost:3000");
+  const currentOrigin = useSyncExternalStore(
+    subscribeOrigin,
+    getClientOrigin,
+    getServerOrigin
+  );
   const [copiedScript, setCopiedScript] = useState(false);
   const [copiedIframe, setCopiedIframe] = useState(false);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      setCurrentOrigin(window.location.origin);
-    }
-  }, []);
 
   const copyToClipboard = (text: string, type: "script" | "iframe") => {
     navigator.clipboard.writeText(text);

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 
@@ -14,12 +14,39 @@ interface NotificationItem {
   createdAt: string;
 }
 
-interface NotificationResponse {
-  items: NotificationItem[];
-  unreadCount: number;
-}
+function createDemoNotifications(): NotificationItem[] {
+  const now = Date.now();
 
-const POLL_MS = 30_000;
+  return [
+    {
+      id: "demo-1",
+      eventType: "handoff.created",
+      title: "New handoff needs review",
+      body: "A WhatsApp conversation was escalated after a low-confidence answer.",
+      linkUrl: "/dashboard/handoffs",
+      readAt: null,
+      createdAt: new Date(now - 6 * 60_000).toISOString(),
+    },
+    {
+      id: "demo-2",
+      eventType: "file.processed",
+      title: "Knowledge file processed",
+      body: "returns_policy_v2.txt is ready in the demo knowledge base.",
+      linkUrl: "/dashboard/files",
+      readAt: null,
+      createdAt: new Date(now - 43 * 60_000).toISOString(),
+    },
+    {
+      id: "demo-3",
+      eventType: "settings.saved",
+      title: "Widget settings saved",
+      body: "Branding and bot tone changes are stored locally in this demo session.",
+      linkUrl: "/dashboard/settings",
+      readAt: new Date(now - 2 * 60 * 60_000).toISOString(),
+      createdAt: new Date(now - 2 * 60 * 60_000).toISOString(),
+    },
+  ];
+}
 
 function relativeTime(iso: string): string {
   const diff = Date.now() - new Date(iso).getTime();
@@ -34,27 +61,9 @@ function relativeTime(iso: string): string {
 export function NotificationBell() {
   const { t, isRtl } = useLanguage();
   const [open, setOpen] = useState(false);
-  const [items, setItems] = useState<NotificationItem[]>([]);
-  const [unread, setUnread] = useState(0);
+  const [items, setItems] = useState<NotificationItem[]>(createDemoNotifications);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch("/api/v1/notifications?limit=20", { cache: "no-store" });
-      if (!res.ok) return;
-      const data: NotificationResponse = await res.json();
-      setItems(data.items ?? []);
-      setUnread(data.unreadCount ?? 0);
-    } catch {
-      /* network errors are non-fatal for the bell */
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-    const id = setInterval(load, POLL_MS);
-    return () => clearInterval(id);
-  }, [load]);
+  const unread = items.filter((item) => !item.readAt).length;
 
   // Close on outside click.
   useEffect(() => {
@@ -66,14 +75,9 @@ export function NotificationBell() {
     return () => document.removeEventListener("mousedown", onClick);
   }, [open]);
 
-  const markAllRead = async () => {
-    try {
-      await fetch("/api/v1/notifications/read-all", { method: "POST" });
-      setUnread(0);
-      setItems((prev) => prev.map((n) => ({ ...n, readAt: n.readAt ?? new Date().toISOString() })));
-    } catch {
-      /* ignore */
-    }
+  const markAllRead = () => {
+    const readAt = new Date().toISOString();
+    setItems((prev) => prev.map((n) => ({ ...n, readAt: n.readAt ?? readAt })));
   };
 
   return (

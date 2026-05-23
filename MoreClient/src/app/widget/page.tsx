@@ -4,14 +4,9 @@ import React, { useState, useRef, useEffect } from "react";
 import { useLanguage } from "@/components/language-provider";
 import {
   Send,
-  MessageSquare,
   Bot,
   User,
-  Activity,
   Globe,
-  Loader,
-  ArrowDownCircle,
-  Sparkles,
   X
 } from "lucide-react";
 
@@ -27,13 +22,20 @@ export default function WidgetPage() {
     t,
     language,
     setLanguage,
-    isRtl,
     botName,
     companyLogo
   } = useLanguage();
 
-  const [messages, setMessages] = useState<Message[]>([]);
-
+  const messageIdRef = useRef(1);
+  const greetingText = language === "ar" ? t("widgetGreetingAr") : t("widgetGreeting");
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: "greeting",
+      sender: "bot",
+      text: greetingText,
+      time: "Now"
+    }
+  ]);
   const [inputVal, setInputVal] = useState("");
   const [loading, setLoading] = useState(false);
   const [isEscalated, setIsEscalated] = useState(false);
@@ -48,18 +50,28 @@ export default function WidgetPage() {
     scrollToBottom();
   }, [messages, loading]);
 
-  // Adjust greeting when language switches
-  useEffect(() => {
+  const nextMessageId = () => {
+    messageIdRef.current += 1;
+    return `message-${messageIdRef.current}`;
+  };
+
+  const resetGreeting = (nextLanguage: "en" | "ar") => {
     setMessages([
       {
-        id: "1",
+        id: `greeting-${nextLanguage}`,
         sender: "bot",
-        text: language === "ar" ? t("widgetGreetingAr") : t("widgetGreeting"),
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        text: nextLanguage === "ar" ? t("widgetGreetingAr") : t("widgetGreeting"),
+        time: "Now"
       }
     ]);
     setIsEscalated(false);
-  }, [language, t]);
+  };
+
+  const handleLanguageToggle = () => {
+    const nextLanguage = language === "en" ? "ar" : "en";
+    setLanguage(nextLanguage);
+    resetGreeting(nextLanguage);
+  };
 
   const suggestionsEn = [
     "Refund Policy 💸",
@@ -76,7 +88,7 @@ export default function WidgetPage() {
     if (!text.trim()) return;
 
     const userMessage: Message = {
-      id: Date.now().toString(),
+      id: nextMessageId(),
       sender: "user",
       text: text,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -99,7 +111,7 @@ export default function WidgetPage() {
         setMessages(prev => [
           ...prev,
           {
-            id: (Date.now() + 1).toString(),
+            id: nextMessageId(),
             sender: "human",
             text: botResponse,
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -135,7 +147,7 @@ export default function WidgetPage() {
       setMessages(prev => [
         ...prev,
         {
-          id: (Date.now() + 1).toString(),
+          id: nextMessageId(),
           sender: "bot",
           text: botResponse,
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -165,7 +177,7 @@ export default function WidgetPage() {
       setMessages(prev => [
         ...prev,
         {
-          id: Date.now().toString(),
+          id: nextMessageId(),
           sender: "bot",
           text: language === "ar" ? t("widgetEscalatedAr") : t("widgetEscalated"),
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -203,7 +215,7 @@ export default function WidgetPage() {
         <div className="flex items-center gap-2">
           {/* Language Switch */}
           <button
-            onClick={() => setLanguage(language === "en" ? "ar" : "en")}
+            onClick={handleLanguageToggle}
             className="flex items-center gap-1 rounded-md border border-[#1f1f2e] bg-[#0d0d15] px-2 py-1 text-[10px] text-gray-400 hover:text-white transition-colors cursor-pointer"
           >
             <Globe className="h-3.5 w-3.5 text-purple-400" />

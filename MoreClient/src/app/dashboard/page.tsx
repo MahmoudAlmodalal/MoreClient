@@ -1,17 +1,13 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useSyncExternalStore } from "react";
 import { useLanguage } from "@/components/language-provider";
 import {
-  Users,
   MessageSquare,
-  LifeBuoy,
   DollarSign,
   TrendingUp,
   Clock,
-  ExternalLink,
   CheckCircle,
-  HelpCircle,
   ThumbsUp,
   AlertTriangle
 } from "lucide-react";
@@ -24,8 +20,7 @@ import {
   ResponsiveContainer,
   PieChart,
   Pie,
-  Cell,
-  Legend
+  Cell
 } from "recharts";
 
 interface UnansweredItem {
@@ -37,9 +32,17 @@ interface UnansweredItem {
   timeAgo: string;
 }
 
+const subscribeToClientReady = () => () => {};
+const getClientReady = () => true;
+const getServerReady = () => false;
+
 export default function DashboardPage() {
   const { t, isRtl } = useLanguage();
-  const [mounted, setMounted] = useState(false);
+  const isClient = useSyncExternalStore(
+    subscribeToClientReady,
+    getClientReady,
+    getServerReady
+  );
 
   // States for interactive Q&A injector
   const [unansweredQuestions, setUnansweredQuestions] = useState<UnansweredItem[]>([
@@ -80,10 +83,6 @@ export default function DashboardPage() {
   const [selectedQuestion, setSelectedQuestion] = useState<UnansweredItem | null>(null);
   const [answerInput, setAnswerInput] = useState("");
   const [toastMessage, setToastMessage] = useState("");
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   const handleInjectAnswer = (item: UnansweredItem) => {
     setSelectedQuestion(item);
@@ -155,7 +154,7 @@ export default function DashboardPage() {
     { name: t("channelTelegram"), value: 350, color: "#3b82f6" }
   ];
 
-  if (!mounted) {
+  if (!isClient) {
     return (
       <div className="flex h-64 items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-500 border-t-transparent" />

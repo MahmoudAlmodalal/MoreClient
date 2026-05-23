@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Inter, Cairo } from "next/font/google";
-import { ClerkProvider } from "@clerk/nextjs";
 import "./globals.css";
 import { LanguageProvider } from "@/components/language-provider";
 
@@ -24,9 +23,7 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const hasClerk = !!process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY;
-
-  const content = (
+  return (
     <html
       lang="en"
       className={`${inter.variable} ${cairo.variable} h-full antialiased`}
@@ -37,10 +34,4 @@ export default function RootLayout({
       </body>
     </html>
   );
-
-  if (hasClerk) {
-    return <ClerkProvider>{content}</ClerkProvider>;
-  }
-
-  return content;
 }

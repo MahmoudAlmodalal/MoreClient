@@ -1,150 +1,108 @@
 export const runtime = "edge";
 export const revalidate = 60;
 
-import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
 interface PageProps {
   params: Promise<{ handle: string }>;
 }
 
-interface SkillEntry {
-  level: string;
-  yearsExp: number | null;
-  skill: { slug: string; nameEn: string; nameAr: string; category: string };
-}
-
-interface PortfolioItem {
-  id: string;
-  title: string;
-  description: string | null;
-  mediaUrls: string[];
-  url: string | null;
-}
-
-interface ExperienceItem {
-  id: string;
-  company: string;
-  title: string;
-  startDate: string;
-  endDate: string | null;
-  description: string | null;
-}
-
-interface LanguageEntry {
-  locale: string;
-  proficiency: string;
-}
-
-interface Review {
-  id: string;
-  rating: number;
-  comment: string | null;
-  reviewerType: string;
-  createdAt: string;
-}
-
-interface TalentProfile {
-  id: string;
-  handle: string;
-  displayName: string;
-  headline: string | null;
-  bio: string | null;
-  country: string | null;
-  avatarUrl: string | null;
-  hourlyRate: number | null;
-  currency: string;
-  availability: string;
-  yearsExperience: number | null;
-  verificationStatus: string;
-  featuredUntil: string | null;
-  createdAt: string;
-  skills: SkillEntry[];
-  portfolio: PortfolioItem[];
-  experience: ExperienceItem[];
-  languages: LanguageEntry[];
-}
-
-interface ProfileApiResponse {
-  talent: TalentProfile;
-  reviews: Review[];
-  avgRating: number;
-  reviewCount: number;
-}
-
-async function getProfile(handle: string): Promise<ProfileApiResponse | null> {
-  const base =
-    process.env.NEXT_PUBLIC_APP_URL ??
-    (process.env.REPLIT_DEV_DOMAIN
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-      : "http://localhost:5000");
-
-  try {
-    const res = await fetch(`${base}/api/v1/profiles/${handle}`, {
-      next: { revalidate: 60 },
-    });
-    if (res.status === 404) return null;
-    if (!res.ok) throw new Error(`Profile API returned ${res.status}`);
-    return res.json() as Promise<ProfileApiResponse>;
-  } catch {
-    return null;
-  }
-}
-
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { handle } = await params;
-  const data = await getProfile(handle);
-  if (!data) return { title: "Profile not found" };
-
-  const { talent } = data;
-  const title = `${talent.displayName} — clientMORE`;
-  const description =
-    talent.headline ??
-    talent.bio?.slice(0, 160) ??
-    `${talent.displayName}'s talent profile on clientMORE`;
-
-  return {
-    title,
-    description,
-    openGraph: {
-      title,
-      description,
-      images: talent.avatarUrl ? [{ url: talent.avatarUrl, alt: talent.displayName }] : [],
-      type: "profile",
+const demoTalent = {
+  displayName: "Maya Haddad",
+  headline: "Bilingual customer support automation specialist",
+  bio: "Maya helps growing teams turn messy support knowledge into fast, friendly Arabic and English customer experiences. This demo profile is static and does not depend on an API or database.",
+  country: "Palestine",
+  hourlyRate: 65,
+  currency: "USD",
+  availability: "Available",
+  yearsExperience: 7,
+  verificationStatus: "Verified",
+  memberSince: "2025-09-12T00:00:00.000Z",
+  skills: [
+    { slug: "support-ops", name: "Support operations", level: "expert", yearsExp: 7 },
+    { slug: "arabic-content", name: "Arabic content", level: "expert", yearsExp: 6 },
+    { slug: "automation", name: "Automation design", level: "advanced", yearsExp: 5 },
+    { slug: "analytics", name: "Analytics reporting", level: "advanced", yearsExp: 4 },
+  ],
+  experience: [
+    {
+      id: "exp-1",
+      company: "Levant Retail Group",
+      title: "Customer Experience Automation Lead",
+      startDate: "2023-02-01T00:00:00.000Z",
+      endDate: null,
+      description:
+        "Designed bilingual answer flows, reduced repeated tickets, and built weekly insight reports for operations teams.",
     },
-    twitter: { card: "summary", title, description },
-    alternates: { canonical: `https://clientmore.com/t/${handle}` },
-  };
+    {
+      id: "exp-2",
+      company: "North Star SaaS",
+      title: "Support Knowledge Manager",
+      startDate: "2020-05-01T00:00:00.000Z",
+      endDate: "2023-01-01T00:00:00.000Z",
+      description:
+        "Owned help center taxonomy, escalation rules, and quality review for a distributed support team.",
+    },
+  ],
+  portfolio: [
+    {
+      id: "portfolio-1",
+      title: "Bilingual FAQ Launch",
+      description:
+        "Converted a scattered internal FAQ into a polished self-service experience for Arabic and English customers.",
+    },
+    {
+      id: "portfolio-2",
+      title: "Handoff Quality Dashboard",
+      description:
+        "Created an operations view that tracks unresolved questions, confidence gaps, and agent response quality.",
+    },
+  ],
+  languages: [
+    { locale: "ar", proficiency: "Native" },
+    { locale: "en", proficiency: "Fluent" },
+  ],
+  reviews: [
+    {
+      id: "review-1",
+      rating: 5,
+      reviewerType: "Company",
+      createdAt: "2026-03-18T00:00:00.000Z",
+      comment:
+        "Maya understood our support workflow immediately and made the demo experience feel production-ready.",
+    },
+    {
+      id: "review-2",
+      rating: 5,
+      reviewerType: "Company",
+      createdAt: "2026-01-07T00:00:00.000Z",
+      comment:
+        "Clear thinking, strong bilingual writing, and excellent judgment around escalation rules.",
+    },
+  ],
+};
+
+function averageRating() {
+  return demoTalent.reviews.reduce((sum, review) => sum + review.rating, 0) / demoTalent.reviews.length;
 }
-
-const PROFICIENCY_LABELS: Record<string, string> = {
-  native: "Native",
-  fluent: "Fluent",
-  conversational: "Conversational",
-  basic: "Basic",
-};
-
-const AVAILABILITY_BADGE: Record<string, { label: string; color: string }> = {
-  available: { label: "Available", color: "bg-green-100 text-green-800" },
-  limited: { label: "Limited", color: "bg-yellow-100 text-yellow-800" },
-  unavailable: { label: "Unavailable", color: "bg-gray-100 text-gray-600" },
-};
 
 function formatDateRange(start: string, end: string | null): string {
-  const fmt = (d: string) =>
-    new Date(d).toLocaleDateString("en-US", { year: "numeric", month: "short" });
-  return end ? `${fmt(start)} – ${fmt(end)}` : `${fmt(start)} – Present`;
+  const fmt = (date: string) =>
+    new Date(date).toLocaleDateString("en-US", { year: "numeric", month: "short" });
+
+  return end ? `${fmt(start)} - ${fmt(end)}` : `${fmt(start)} - Present`;
 }
 
 function StarRating({ rating }: { rating: number }) {
   return (
-    <span className="flex items-center gap-0.5">
+    <span className="flex items-center gap-0.5" aria-label={`${rating} out of 5 stars`}>
       {[1, 2, 3, 4, 5].map((star) => (
         <svg
           key={star}
-          className={`w-4 h-4 ${star <= Math.round(rating) ? "text-amber-400" : "text-gray-200"}`}
+          className={`h-4 w-4 ${star <= Math.round(rating) ? "text-amber-400" : "text-gray-200"}`}
           fill="currentColor"
           viewBox="0 0 20 20"
+          aria-hidden="true"
         >
           <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
         </svg>
@@ -153,230 +111,160 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { handle } = await params;
+  const title = `${demoTalent.displayName} (@${handle}) - clientMORE`;
+
+  return {
+    title,
+    description: demoTalent.headline,
+    openGraph: {
+      title,
+      description: demoTalent.headline,
+      type: "profile",
+    },
+    twitter: { card: "summary", title, description: demoTalent.headline },
+  };
+}
+
 export default async function TalentPublicProfilePage({ params }: PageProps) {
   const { handle } = await params;
-  const data = await getProfile(handle);
-
-  if (!data) notFound();
-
-  const { talent, reviews, avgRating, reviewCount } = data;
-
-  const isFeatured = talent.featuredUntil && new Date(talent.featuredUntil) > new Date();
-  const avail = AVAILABILITY_BADGE[talent.availability] ?? AVAILABILITY_BADGE.unavailable;
+  const rating = averageRating();
 
   return (
-    <main className="max-w-4xl mx-auto px-4 py-10 space-y-10">
-      {/* ── Header ── */}
-      <section className="flex flex-col sm:flex-row gap-6 items-start">
-        {talent.avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={talent.avatarUrl}
-            alt={talent.displayName}
-            className="w-24 h-24 rounded-full object-cover shrink-0"
-            loading="eager"
-          />
-        ) : (
-          <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center text-3xl font-bold text-gray-500 shrink-0">
-            {talent.displayName.charAt(0).toUpperCase()}
-          </div>
-        )}
+    <main className="mx-auto max-w-4xl px-4 py-10 text-gray-900">
+      <section className="flex flex-col gap-6 sm:flex-row sm:items-start">
+        <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-full bg-gray-900 text-3xl font-bold text-white">
+          {demoTalent.displayName.charAt(0)}
+        </div>
 
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-2xl font-bold text-gray-900">{talent.displayName}</h1>
-            {talent.verificationStatus === "verified" && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                ✓ Verified
-              </span>
-            )}
-            {isFeatured && (
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700">
-                ★ Featured
-              </span>
-            )}
-          </div>
-
-          {talent.headline && (
-            <p className="mt-1 text-gray-600 text-lg">{talent.headline}</p>
-          )}
-
-          <div className="mt-3 flex flex-wrap gap-2 text-sm items-center">
-            <span className={`px-2 py-0.5 rounded-full font-medium ${avail.color}`}>
-              {avail.label}
+            <h1 className="text-2xl font-bold">{demoTalent.displayName}</h1>
+            <span className="rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+              {demoTalent.verificationStatus}
             </span>
-            {talent.country && <span className="text-gray-500">📍 {talent.country}</span>}
-            {talent.hourlyRate && (
-              <span className="text-gray-500">
-                {talent.hourlyRate} {talent.currency}/hr
-              </span>
-            )}
-            {talent.yearsExperience && (
-              <span className="text-gray-500">{talent.yearsExperience}+ yrs exp</span>
-            )}
-            {reviewCount > 0 && (
-              <span className="flex items-center gap-1 text-gray-700">
-                <StarRating rating={avgRating} />
-                <span className="font-medium">{avgRating.toFixed(1)}</span>
-                <span className="text-gray-400">({reviewCount})</span>
-              </span>
-            )}
+            <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+              {demoTalent.availability}
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-gray-500">@{handle}</p>
+          <p className="mt-2 text-lg text-gray-700">{demoTalent.headline}</p>
+
+          <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-gray-600">
+            <span>{demoTalent.country}</span>
+            <span>
+              {demoTalent.hourlyRate} {demoTalent.currency}/hr
+            </span>
+            <span>{demoTalent.yearsExperience}+ yrs exp</span>
+            <span className="flex items-center gap-1.5 text-gray-800">
+              <StarRating rating={rating} />
+              <span className="font-medium">{rating.toFixed(1)}</span>
+              <span className="text-gray-400">({demoTalent.reviews.length})</span>
+            </span>
           </div>
         </div>
       </section>
 
-      {/* ── Bio ── */}
-      {talent.bio && (
-        <section>
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">About</h2>
-          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{talent.bio}</p>
-        </section>
-      )}
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold">About</h2>
+        <p className="mt-2 leading-relaxed text-gray-700">{demoTalent.bio}</p>
+      </section>
 
-      {/* ── Skills ── */}
-      {talent.skills.length > 0 && (
-        <section>
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">Skills</h2>
-          <div className="flex flex-wrap gap-2">
-            {talent.skills.map(({ skill, level, yearsExp }) => (
-              <div
-                key={skill.slug}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-gray-100 text-sm"
-              >
-                <span className="font-medium text-gray-800">{skill.nameEn}</span>
-                <span className="text-gray-400 capitalize text-xs">{level}</span>
-                {yearsExp && <span className="text-gray-400 text-xs">· {yearsExp}y</span>}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── Experience ── */}
-      {talent.experience.length > 0 && (
-        <section>
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">Experience</h2>
-          <div className="space-y-4">
-            {talent.experience.map((exp) => (
-              <div key={exp.id} className="border-l-2 border-gray-200 pl-4">
-                <p className="font-semibold text-gray-900">{exp.title}</p>
-                <p className="text-gray-600 text-sm">
-                  {exp.company} · {formatDateRange(exp.startDate, exp.endDate)}
-                </p>
-                {exp.description && (
-                  <p className="mt-1 text-gray-700 text-sm">{exp.description}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── Portfolio ── */}
-      {talent.portfolio.length > 0 && (
-        <section>
-          <h2 className="text-lg font-semibold text-gray-900 mb-3">Portfolio</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {talent.portfolio.map((item) => (
-              <div
-                key={item.id}
-                className="border border-gray-200 rounded-xl p-4 hover:border-gray-400 transition-colors"
-              >
-                {item.mediaUrls.length > 0 && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={item.mediaUrls[0]}
-                    alt={item.title}
-                    className="w-full h-36 object-cover rounded-lg mb-3"
-                    loading="lazy"
-                  />
-                )}
-                <p className="font-medium text-gray-900">{item.title}</p>
-                {item.description && (
-                  <p className="text-gray-600 text-sm mt-1 line-clamp-2">{item.description}</p>
-                )}
-                {item.url && (
-                  <a
-                    href={item.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="mt-2 inline-block text-sm text-blue-600 hover:underline"
-                  >
-                    View project →
-                  </a>
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── Languages ── */}
-      {talent.languages.length > 0 && (
-        <section>
-          <h2 className="text-lg font-semibold text-gray-900 mb-2">Languages</h2>
-          <div className="flex flex-wrap gap-3">
-            {talent.languages.map(({ locale, proficiency }) => (
-              <span key={locale} className="text-sm text-gray-700">
-                <span className="font-medium">{locale.toUpperCase()}</span>
-                <span className="text-gray-400"> · {PROFICIENCY_LABELS[proficiency] ?? proficiency}</span>
-              </span>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* ── Reviews ── */}
-      {reviewCount > 0 && (
-        <section>
-          <div className="flex items-center gap-3 mb-4">
-            <h2 className="text-lg font-semibold text-gray-900">Reviews</h2>
-            <span className="flex items-center gap-1.5">
-              <StarRating rating={avgRating} />
-              <span className="font-semibold text-gray-900">{avgRating.toFixed(1)}</span>
-              <span className="text-gray-500 text-sm">
-                ({reviewCount} review{reviewCount !== 1 ? "s" : ""})
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold">Skills</h2>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {demoTalent.skills.map((skill) => (
+            <span key={skill.slug} className="rounded-full bg-gray-100 px-3 py-1.5 text-sm">
+              <span className="font-medium">{skill.name}</span>
+              <span className="ml-1 text-xs capitalize text-gray-400">
+                {skill.level} - {skill.yearsExp}y
               </span>
             </span>
-          </div>
-          <div className="space-y-4">
-            {reviews.map((review) => (
-              <div key={review.id} className="border border-gray-100 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <StarRating rating={review.rating} />
-                  <span className="text-xs text-gray-400">
-                    {new Date(review.createdAt).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "short",
-                    })}
-                  </span>
-                </div>
-                {review.comment && (
-                  <p className="text-gray-700 text-sm leading-relaxed">{review.comment}</p>
-                )}
-                <p className="text-xs text-gray-400 mt-2 capitalize">
-                  {review.reviewerType === "company_user" ? "Company" : "Talent"}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
+          ))}
+        </div>
+      </section>
 
-      {/* ── CTA ── */}
-      <section className="border-t border-gray-200 pt-6 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-        <p className="text-gray-500 text-sm">
-          Member since{" "}
-          {new Date(talent.createdAt).toLocaleDateString("en-US", {
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold">Experience</h2>
+        <div className="mt-4 space-y-4">
+          {demoTalent.experience.map((item) => (
+            <div key={item.id} className="border-l-2 border-gray-200 pl-4">
+              <p className="font-semibold">{item.title}</p>
+              <p className="text-sm text-gray-500">
+                {item.company} - {formatDateRange(item.startDate, item.endDate)}
+              </p>
+              <p className="mt-1 text-sm leading-relaxed text-gray-700">{item.description}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold">Portfolio</h2>
+        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {demoTalent.portfolio.map((item) => (
+            <article key={item.id} className="rounded-xl border border-gray-200 p-4">
+              <p className="font-medium">{item.title}</p>
+              <p className="mt-1 text-sm leading-relaxed text-gray-600">{item.description}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold">Languages</h2>
+        <div className="mt-2 flex flex-wrap gap-3 text-sm text-gray-700">
+          {demoTalent.languages.map((language) => (
+            <span key={language.locale}>
+              <span className="font-medium">{language.locale.toUpperCase()}</span>
+              <span className="text-gray-400"> - {language.proficiency}</span>
+            </span>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-10">
+        <div className="mb-4 flex flex-wrap items-center gap-3">
+          <h2 className="text-lg font-semibold">Reviews</h2>
+          <span className="flex items-center gap-1.5 text-sm">
+            <StarRating rating={rating} />
+            <span className="font-semibold">{rating.toFixed(1)}</span>
+            <span className="text-gray-500">({demoTalent.reviews.length} reviews)</span>
+          </span>
+        </div>
+        <div className="space-y-4">
+          {demoTalent.reviews.map((review) => (
+            <article key={review.id} className="rounded-xl border border-gray-100 p-4">
+              <div className="mb-2 flex items-center justify-between">
+                <StarRating rating={review.rating} />
+                <span className="text-xs text-gray-400">
+                  {new Date(review.createdAt).toLocaleDateString("en-US", {
+                    year: "numeric",
+                    month: "short",
+                  })}
+                </span>
+              </div>
+              <p className="text-sm leading-relaxed text-gray-700">{review.comment}</p>
+              <p className="mt-2 text-xs text-gray-400">{review.reviewerType}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-10 flex flex-col gap-3 border-t border-gray-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm text-gray-500">
+          Demo member since{" "}
+          {new Date(demoTalent.memberSince).toLocaleDateString("en-US", {
             year: "numeric",
             month: "long",
           })}
         </p>
         <a
-          href="/sign-up"
-          className="inline-flex items-center px-5 py-2.5 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-gray-800 transition-colors"
+          href="/dashboard"
+          className="inline-flex items-center justify-center rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-gray-800"
         >
-          Hire {talent.displayName.split(" ")[0]} on clientMORE
+          Open frontend demo
         </a>
       </section>
     </main>

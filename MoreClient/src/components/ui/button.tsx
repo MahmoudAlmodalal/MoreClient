@@ -39,23 +39,40 @@ type ButtonAsLink = CommonProps & {
   href: string;
 } & Omit<React.AnchorHTMLAttributes<HTMLAnchorElement>, keyof CommonProps | "href">;
 
+const stripButtonStyleProps = <T extends Record<string, unknown>>(props: T) => {
+  const rest = { ...props };
+  delete rest.variant;
+  delete rest.size;
+  delete rest.className;
+  delete rest.children;
+  delete rest.href;
+  return rest;
+};
+
 export function Button(props: ButtonAsButton | ButtonAsLink) {
   const { variant = "primary", size = "md", className = "", children } = props;
   const cls = `${base} ${variants[variant]} ${sizes[size]} ${className}`;
 
   if ("href" in props && props.href !== undefined) {
-    const { href, variant: _v, size: _s, className: _c, children: _ch, ...rest } = props;
+    const { href } = props;
+    const rest = stripButtonStyleProps(props as unknown as Record<string, unknown>);
     return (
-      <Link href={href} className={cls} {...rest}>
+      <Link
+        href={href}
+        className={cls}
+        {...(rest as Omit<
+          React.AnchorHTMLAttributes<HTMLAnchorElement>,
+          keyof CommonProps | "href"
+        >)}
+      >
         {children}
       </Link>
     );
   }
 
-  const { variant: _v, size: _s, className: _c, children: _ch, href: _h, ...rest } =
-    props as ButtonAsButton;
+  const rest = stripButtonStyleProps(props as unknown as Record<string, unknown>);
   return (
-    <button className={cls} {...rest}>
+    <button className={cls} {...(rest as React.ButtonHTMLAttributes<HTMLButtonElement>)}>
       {children}
     </button>
   );

@@ -2,7 +2,9 @@ import { requireOpenAI } from "@/server/core/ai/openai";
 import { prisma } from "@/server/core/db";
 import { logger } from "@/server/core/logger";
 import { loadPrompt, interpolate } from "./prompts/index";
+import { wrapUserContent, parseAiJsonOutput } from "./guards";
 import { inngest } from "@/inngest/client";
+import { z } from "zod";
 
 interface EnrichmentResult {
   headline?: string;
@@ -57,7 +59,9 @@ export async function enrichTalentProfile(talentId: string): Promise<EnrichmentR
   );
 
   const { content, version } = loadPrompt("talent-enrich");
-  const systemPrompt = interpolate(content, { profileJson });
+  // Layer 1: wrap profile JSON in role boundary markers to prevent injection
+  const wrappedProfileJson = wrapUserContent(profileJson, "profile");
+  const systemPrompt = interpolate(content, { profileJson: wrappedProfileJson });
 
   logger.info({ talentId, promptVersion: version }, "running talent enrichment");
 
@@ -65,7 +69,7 @@ export async function enrichTalentProfile(talentId: string): Promise<EnrichmentR
     model: "gpt-4o",
     messages: [
       { role: "system", content: systemPrompt },
-      { role: "user", content: "Extract and structure the talent profile information." },
+      { role: "user", content: "Extract and structure the talent profile information as JSON." },
     ],
     response_format: { type: "json_object" },
     temperature: 0.2,
@@ -75,11 +79,21 @@ export async function enrichTalentProfile(talentId: string): Promise<EnrichmentR
   const raw = response.choices[0]?.message.content;
   if (!raw) return null;
 
+  // Layer 3: schema-validated AI output prevents prompt-injected JSON from being applied
+  const enrichmentSchema = z.object({
+    headline: z.string().max(200).optional(),
+    bio: z.string().max(2000).optional(),
+    topSkills: z.array(z.string()).max(20).optional(),
+    yearsExperience: z.number().int().min(0).max(60).optional(),
+    suggestedHourlyRate: z.number().int().min(0).max(10000).optional(),
+    enrichmentNotes: z.string().max(500).optional(),
+  });
+
   let result: EnrichmentResult;
   try {
-    result = JSON.parse(raw);
+    result = parseAiJsonOutput(raw, enrichmentSchema);
   } catch {
-    logger.error({ talentId, raw }, "failed to parse enrichment response");
+    logger.error({ talentId }, "enrichment response failed schema validation — discarding");
     return null;
   }
 

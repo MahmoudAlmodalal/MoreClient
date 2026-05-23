@@ -64,6 +64,23 @@ export async function GET(request: Request) {
  */
 export async function DELETE(request: Request) {
   try {
+    // Step-up re-authentication: require a fresh Clerk session (issued within 15 min)
+    // This prevents attackers with a stolen long-lived session from self-deleting accounts.
+    const { getAuth } = await import("@clerk/nextjs/server");
+    const rawRequest = request as unknown as Parameters<typeof getAuth>[0];
+    const session = await getAuth(rawRequest);
+    const iat = (session.sessionClaims?.iat as number | undefined) ?? 0;
+    const ageSeconds = Math.floor(Date.now() / 1000) - iat;
+    if (ageSeconds > 900) {
+      return NextResponse.json(
+        {
+          error: "Session is too old for this action. Please sign out and sign in again, then retry within 15 minutes.",
+          code: "STEP_UP_REQUIRED",
+        },
+        { status: 403 },
+      );
+    }
+
     const ctx = await resolvePrincipal();
     if (!ctx) throw new AppError("UNAUTHORIZED", "Authentication required", 401);
 

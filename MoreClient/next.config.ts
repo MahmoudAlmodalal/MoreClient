@@ -57,6 +57,16 @@ const nextConfig: NextConfig = {
         source: "/(.*)",
         headers: securityHeaders,
       },
+      {
+        // Public talent profiles: CDN-cacheable with 5-min TTL + 60s stale-while-revalidate
+        source: "/t/:handle",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, s-maxage=300, stale-while-revalidate=60",
+          },
+        ],
+      },
     ];
   },
 };

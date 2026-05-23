@@ -139,9 +139,27 @@ const MIME_TO_EXT: Record<string, string> = {
   "application/zip": "zip",
 };
 
-export function safeFilename(principalId: string, mime: string): string {
+/**
+ * Generate a quarantine key for newly uploaded files.
+ * All uploads land in `quarantine/` first; the Inngest scan job moves
+ * them to `uploads/` only after validation passes.
+ */
+export function quarantineKey(principalId: string, mime: string): string {
   const ext = MIME_TO_EXT[mime] ?? "bin";
   const timestamp = Date.now();
-  const rand = Math.random().toString(36).slice(2, 8);
-  return `uploads/${principalId}/${timestamp}-${rand}.${ext}`;
+  const rand = Math.random().toString(36).slice(2, 10);
+  return `quarantine/${principalId}/${timestamp}-${rand}.${ext}`;
+}
+
+/**
+ * Convert a quarantine key to its final production key.
+ * Called by the scan Inngest job after the file passes all checks.
+ */
+export function finalKey(quarantineKeyStr: string): string {
+  return quarantineKeyStr.replace(/^quarantine\//, "uploads/");
+}
+
+/** @deprecated Use quarantineKey() + scan workflow instead */
+export function safeFilename(principalId: string, mime: string): string {
+  return quarantineKey(principalId, mime);
 }

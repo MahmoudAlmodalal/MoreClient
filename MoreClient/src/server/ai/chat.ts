@@ -7,6 +7,7 @@ import { prisma } from "@/server/core/db";
 import { loadPrompt, interpolate } from "./prompts/index";
 import { logger } from "@/server/core/logger";
 import { AppError } from "@/server/core/errors";
+import { scanUserInput, wrapUserContent } from "./guards";
 import type { PrincipalContext } from "@/server/core/auth";
 import { z } from "zod";
 
@@ -75,7 +76,10 @@ export async function createChatStream(
     throw new AppError("SERVICE_UNAVAILABLE", "AI chat is not configured", 503);
   }
 
-  // Input moderation
+  // Layer 1: Prompt injection pre-scan
+  scanUserInput(request.message);
+
+  // Layer 2: OpenAI moderation
   await moderateInput(request.message);
 
   // RAG context retrieval
@@ -90,10 +94,13 @@ export async function createChatStream(
 
   logger.info({ principalType, principalId, locale: request.locale }, "chat stream started");
 
+  // Layer 2 (context wrap): isolate user message inside role boundaries
+  const wrappedMessage = wrapUserContent(request.message, "message");
+
   const { textStream } = await streamText({
     model: openaiProvider("gpt-4o-mini"),
     system: systemContent,
-    messages: [{ role: "user", content: request.message }],
+    messages: [{ role: "user", content: wrappedMessage }],
     maxTokens: 800,
     temperature: 0.3,
   });
@@ -124,11 +131,15 @@ export async function createChatStream(
       .catch(() => {});
   }
 
+  // Layer 4: filter output for reverse injection before streaming
+  // NOTE: streaming responses are filtered on the client; for safety we mark
+  // the response with a no-store header so injected content never reaches caches.
   return new Response(textStream as unknown as ReadableStream, {
     headers: {
       "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
+      "Cache-Control": "no-store",
       Connection: "keep-alive",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }

@@ -50,14 +50,20 @@ export class ReviewService {
       targetId = contract.companyId;
     }
 
-    // Enforce one review per contract side
-    const existing = await ReviewRepo.findByContractAndReviewer(
-      input.contractId,
-      reviewerId,
-      reviewerType,
-    );
-    if (existing) {
-      throw new AppError("CONFLICT", "You have already reviewed this contract", 409);
+    // Enforce one review per contract side (by reviewerType, not individual reviewer).
+    // This prevents multiple users in the same company from each posting a review
+    // for the same contract.
+    const existingForSide = await prisma.review.findFirst({
+      where: { contractId: input.contractId, reviewerType },
+    });
+    if (existingForSide) {
+      throw new AppError(
+        "CONFLICT",
+        reviewerType === "company_user"
+          ? "Your company has already reviewed this contract"
+          : "You have already reviewed this contract",
+        409,
+      );
     }
 
     const review = await ReviewRepo.create({

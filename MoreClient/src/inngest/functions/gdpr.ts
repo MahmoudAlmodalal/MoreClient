@@ -6,7 +6,9 @@ import {
   ListObjectsV2Command,
   DeleteObjectsCommand,
   PutObjectCommand,
+  GetObjectCommand,
 } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 /**
  * GDPR data export — collect all principal data from Postgres,
@@ -69,9 +71,26 @@ export const gdprExport = inngest.createFunction(
     });
 
     await step.run("notify-user", async () => {
-      // Phase 6 will wire Resend email with a signed R2 URL.
-      // For now: log the export location.
-      logger.info({ principalId, key }, "GDPR export complete — email notification pending Phase 6");
+      // Generate a 72-hour signed download URL for the exported archive.
+      if (r2) {
+        try {
+          const downloadUrl = await getSignedUrl(
+            r2,
+            new GetObjectCommand({ Bucket: BUCKET, Key: key }),
+            { expiresIn: 72 * 60 * 60 }, // 72 hours
+          );
+          // Phase 6 will wire Resend to email this URL to the principal.
+          // For now: log the signed URL so it can be retrieved from admin logs.
+          logger.info(
+            { principalId, key, downloadUrl: downloadUrl.slice(0, 80) + "…" },
+            "GDPR export ready — signed download URL generated (email delivery pending Phase 6)",
+          );
+        } catch {
+          logger.warn({ principalId, key }, "failed to generate GDPR export signed URL");
+        }
+      } else {
+        logger.warn({ principalId, key }, "R2 not configured; GDPR export signed URL skipped");
+      }
     });
 
     return { principalId, key };

@@ -2,6 +2,8 @@ import { requireOpenAI } from "@/server/core/ai/openai";
 import { prisma } from "@/server/core/db";
 import { logger } from "@/server/core/logger";
 import { loadPrompt, interpolate } from "./prompts/index";
+import { wrapUserContent, parseAiJsonOutput } from "./guards";
+import { z } from "zod";
 
 interface ScoringResult {
   score: number;
@@ -70,15 +72,19 @@ export async function scoreProposal(proposalId: string): Promise<ScoringResult |
       null,
       2,
     ),
-    proposalJson: JSON.stringify(
-      {
-        coverLetter: proposal.coverLetter,
-        bidAmount: proposal.bidAmount,
-        bidCurrency: proposal.bidCurrency,
-        durationWeeks: proposal.durationWeeks,
-      },
-      null,
-      2,
+    // Wrap the cover letter (user-generated content) in role boundaries
+    proposalJson: wrapUserContent(
+      JSON.stringify(
+        {
+          coverLetter: proposal.coverLetter,
+          bidAmount: proposal.bidAmount,
+          bidCurrency: proposal.bidCurrency,
+          durationWeeks: proposal.durationWeeks,
+        },
+        null,
+        2,
+      ),
+      "job",
     ),
   });
 
@@ -98,11 +104,24 @@ export async function scoreProposal(proposalId: string): Promise<ScoringResult |
   const raw = response.choices[0]?.message.content;
   if (!raw) return null;
 
+  const scoringSchema = z.object({
+    score: z.number().min(0).max(100),
+    reasons: z.object({
+      relevance: z.string().max(500),
+      experience: z.string().max(500),
+      coverLetter: z.string().max(500),
+      budget: z.string().max(500),
+      availability: z.string().max(500),
+    }),
+    summary: z.string().max(1000),
+    recommendation: z.enum(["strong_yes", "yes", "maybe", "no"]),
+  });
+
   let result: ScoringResult;
   try {
-    result = JSON.parse(raw);
+    result = parseAiJsonOutput(raw, scoringSchema);
   } catch {
-    logger.error({ proposalId, raw }, "failed to parse scoring response");
+    logger.error({ proposalId }, "scoring response failed schema validation — discarding");
     return null;
   }
 

@@ -9,6 +9,7 @@ import { syncSubscriptionFn, reconcileCommissions } from "@/inngest/functions/bi
 import { triageReport } from "@/inngest/functions/moderation";
 import { weeklyDigest } from "@/inngest/functions/notifications";
 import { gdprExport, gdprDelete } from "@/inngest/functions/gdpr";
+import { scanUploadedFile } from "@/inngest/functions/uploads";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
@@ -26,5 +27,6 @@ export const { GET, POST, PUT } = serve({
     weeklyDigest,
     gdprExport,
     gdprDelete,
+    scanUploadedFile,
   ],
 });

@@ -2,6 +2,7 @@ export const revalidate = 300; // 5-minute ISR
 
 import { notFound } from "next/navigation";
 import { prisma } from "@/server/core/db";
+import { ReviewRepo } from "@/server/reviews/repo";
 import type { Metadata } from "next";
 
 interface PageProps {
@@ -58,7 +59,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!talent) return { title: "Profile not found" };
 
   const title = `${talent.displayName} — clientMORE`;
-  const description = talent.headline ?? talent.bio?.slice(0, 160) ?? `${talent.displayName}'s talent profile on clientMORE`;
+  const description =
+    talent.headline ?? talent.bio?.slice(0, 160) ?? `${talent.displayName}'s talent profile on clientMORE`;
 
   return {
     title,
@@ -88,16 +90,46 @@ const AVAILABILITY_BADGE: Record<string, { label: string; color: string }> = {
 };
 
 function formatDateRange(start: Date, end: Date | null): string {
-  const fmt = (d: Date) =>
-    d.toLocaleDateString("en-US", { year: "numeric", month: "short" });
+  const fmt = (d: Date) => d.toLocaleDateString("en-US", { year: "numeric", month: "short" });
   return end ? `${fmt(start)} – ${fmt(end)}` : `${fmt(start)} – Present`;
+}
+
+function StarRating({ rating }: { rating: number }) {
+  return (
+    <span className="flex items-center gap-0.5">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <svg
+          key={star}
+          className={`w-4 h-4 ${star <= Math.round(rating) ? "text-amber-400" : "text-gray-200"}`}
+          fill="currentColor"
+          viewBox="0 0 20 20"
+        >
+          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+        </svg>
+      ))}
+    </span>
+  );
 }
 
 export default async function TalentPublicProfilePage({ params }: PageProps) {
   const { handle } = await params;
-  const talent = await getTalentProfile(handle);
+
+  const [talent, reviewData] = await Promise.all([
+    getTalentProfile(handle),
+    (async () => {
+      // Will be populated after talent id is known; pre-fetch a placeholder
+      return null;
+    })(),
+  ]);
 
   if (!talent) notFound();
+
+  const [{ items: reviews, avgRating, reviewCount }] = await Promise.all([
+    ReviewRepo.listByTarget(talent.id, "talent", { limit: 5 }).then(async (r) => {
+      const agg = await ReviewRepo.aggregateRating(talent.id);
+      return { ...r, avgRating: agg.avg, reviewCount: agg.count };
+    }),
+  ]);
 
   const isFeatured = talent.featuredUntil && talent.featuredUntil > new Date();
   const avail = AVAILABILITY_BADGE[talent.availability] ?? AVAILABILITY_BADGE.unavailable;
@@ -124,10 +156,7 @@ export default async function TalentPublicProfilePage({ params }: PageProps) {
           <div className="flex flex-wrap items-center gap-2">
             <h1 className="text-2xl font-bold text-gray-900">{talent.displayName}</h1>
             {talent.verificationStatus === "verified" && (
-              <span
-                title="Verified"
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700"
-              >
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
                 ✓ Verified
               </span>
             )}
@@ -142,21 +171,24 @@ export default async function TalentPublicProfilePage({ params }: PageProps) {
             <p className="mt-1 text-gray-600 text-lg">{talent.headline}</p>
           )}
 
-          <div className="mt-3 flex flex-wrap gap-2 text-sm">
+          <div className="mt-3 flex flex-wrap gap-2 text-sm items-center">
             <span className={`px-2 py-0.5 rounded-full font-medium ${avail.color}`}>
               {avail.label}
             </span>
-            {talent.country && (
-              <span className="text-gray-500">📍 {talent.country}</span>
-            )}
+            {talent.country && <span className="text-gray-500">📍 {talent.country}</span>}
             {talent.hourlyRate && (
               <span className="text-gray-500">
                 {talent.hourlyRate} {talent.currency}/hr
               </span>
             )}
             {talent.yearsExperience && (
-              <span className="text-gray-500">
-                {talent.yearsExperience}+ years experience
+              <span className="text-gray-500">{talent.yearsExperience}+ yrs exp</span>
+            )}
+            {reviewCount > 0 && (
+              <span className="flex items-center gap-1 text-gray-700">
+                <StarRating rating={avgRating} />
+                <span className="font-medium">{avgRating.toFixed(1)}</span>
+                <span className="text-gray-400">({reviewCount})</span>
               </span>
             )}
           </div>
@@ -264,10 +296,46 @@ export default async function TalentPublicProfilePage({ params }: PageProps) {
         </section>
       )}
 
+      {/* ── Reviews ── */}
+      {reviewCount > 0 && (
+        <section>
+          <div className="flex items-center gap-3 mb-4">
+            <h2 className="text-lg font-semibold text-gray-900">Reviews</h2>
+            <span className="flex items-center gap-1.5">
+              <StarRating rating={avgRating} />
+              <span className="font-semibold text-gray-900">{avgRating.toFixed(1)}</span>
+              <span className="text-gray-500 text-sm">({reviewCount} review{reviewCount !== 1 ? "s" : ""})</span>
+            </span>
+          </div>
+          <div className="space-y-4">
+            {reviews.map((review) => (
+              <div key={review.id} className="border border-gray-100 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <StarRating rating={review.rating} />
+                  <span className="text-xs text-gray-400">
+                    {review.createdAt.toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                    })}
+                  </span>
+                </div>
+                {review.comment && (
+                  <p className="text-gray-700 text-sm leading-relaxed">{review.comment}</p>
+                )}
+                <p className="text-xs text-gray-400 mt-2 capitalize">
+                  {review.reviewerType === "company_user" ? "Company" : "Talent"}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* ── CTA ── */}
       <section className="border-t border-gray-200 pt-6 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
         <p className="text-gray-500 text-sm">
-          Member since {talent.createdAt.toLocaleDateString("en-US", { year: "numeric", month: "long" })}
+          Member since{" "}
+          {talent.createdAt.toLocaleDateString("en-US", { year: "numeric", month: "long" })}
         </p>
         <a
           href="/sign-up"

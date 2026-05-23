@@ -1,10 +1,10 @@
 import { serve } from "inngest/next";
 import { inngest } from "@/inngest/client";
-
-// Functions are registered here — add imports as each phase builds them
-const functions: Parameters<typeof serve>[0]["functions"] = [];
+import { embedJobPosting } from "@/inngest/functions/jobs";
+import { scoreProposal } from "@/inngest/functions/proposals";
+import { rollupDailyAnalytics } from "@/inngest/functions/analytics";
 
 export const { GET, POST, PUT } = serve({
   client: inngest,
-  functions,
+  functions: [embedJobPosting, scoreProposal, rollupDailyAnalytics],
 });

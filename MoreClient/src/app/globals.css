@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+:root {
+  --background: #050508;
+  --foreground: #f3f4f6;
+  --primary: #8b5cf6;
+  --primary-hover: #7c3aed;
+  --border: #1f1f2e;
+  --card-bg: #0d0d15;
+  --sidebar-bg: #07070b;
+}
+
+@theme {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card-bg);
+  --color-sidebar: var(--sidebar-bg);
+  --color-accent: var(--primary);
+  --color-border-custom: var(--border);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), sans-serif;
+  overflow-x: hidden;
+}
+
+html[dir="rtl"] body {
+  font-family: var(--font-cairo), sans-serif;
+}
+
+/* Custom Scrollbar for Sleek Dark Theme */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #07070b;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1e1e2f;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2e2e42;
+}
+
+/* Glassmorphism Classes */
+.glass {
+  background: rgba(13, 13, 21, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.glow-purple {
+  box-shadow: 0 0 40px -5px rgba(139, 92, 246, 0.15);
+}

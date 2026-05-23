@@ -1,0 +1,341 @@
+"use client";
+
+import React, { useState, useRef, useEffect } from "react";
+import { useLanguage } from "@/components/language-provider";
+import {
+  Send,
+  MessageSquare,
+  Bot,
+  User,
+  Activity,
+  Globe,
+  Loader,
+  ArrowDownCircle,
+  Sparkles,
+  X
+} from "lucide-react";
+
+interface Message {
+  id: string;
+  sender: "user" | "bot" | "human";
+  text: string;
+  time: string;
+}
+
+export default function WidgetPage() {
+  const {
+    t,
+    language,
+    setLanguage,
+    isRtl,
+    botName,
+    companyLogo
+  } = useLanguage();
+
+  const [messages, setMessages] = useState<Message[]>([]);
+
+  const [inputVal, setInputVal] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [isEscalated, setIsEscalated] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom of chats
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages, loading]);
+
+  // Adjust greeting when language switches
+  useEffect(() => {
+    setMessages([
+      {
+        id: "1",
+        sender: "bot",
+        text: language === "ar" ? t("widgetGreetingAr") : t("widgetGreeting"),
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    ]);
+    setIsEscalated(false);
+  }, [language, t]);
+
+  const suggestionsEn = [
+    "Refund Policy 💸",
+    "Upgrade Subscription ⚡",
+    "Talk to Human Agent 👥"
+  ];
+  const suggestionsAr = [
+    "سياسة الاسترجاع 💸",
+    "ترقية الاشتراك ⚡",
+    "التحدث مع الدعم البشري 👥"
+  ];
+
+  const sendMessage = (text: string) => {
+    if (!text.trim()) return;
+
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      sender: "user",
+      text: text,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+
+    setMessages(prev => [...prev, userMessage]);
+    setLoading(true);
+
+    // Simulate RAG / Fallback strategy
+    setTimeout(() => {
+      let botResponse = "";
+      const query = text.toLowerCase();
+
+      if (isEscalated) {
+        // Human agent handles it
+        botResponse = language === "ar"
+          ? "مرحباً، أقرأ محادثتك وسأقوم بحل المشكلة فوراً."
+          : "Hello, I am reviewing your chat history and will resolve this issue immediately.";
+        
+        setMessages(prev => [
+          ...prev,
+          {
+            id: (Date.now() + 1).toString(),
+            sender: "human",
+            text: botResponse,
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }
+        ]);
+        setLoading(false);
+        return;
+      }
+
+      // Simple RAG Matching Strategy simulation
+      if (query.includes("refund") || query.includes("استرجاع") || query.includes("ترجيع")) {
+        botResponse = language === "ar"
+          ? "تنص سياستنا على إمكانية استرداد الأموال بالكامل في غضون 14 يوماً من الشراء. يرجى التوجه لصفحة الفواتير لطلب الاسترجاع."
+          : "Our policy allows a full refund within 14 days of purchase. Please head to your billing dashboard page to request a cancellation.";
+      } else if (query.includes("upgrade") || query.includes("ترقية") || query.includes("اشتراك")) {
+        botResponse = language === "ar"
+          ? "يمكنك ترقية اشتراكك في أي وقت من الإعدادات. نوفر الباقة الاحترافية (Pro) مقابل $500 والباقة القصوى (Ultra) مقابل $1500."
+          : "You can upgrade your subscription anytime. We offer the Pro Tier for $500/month and the Ultra Tier for $1500/month directly in settings.";
+      } else if (query.includes("arabic") || query.includes("عربي") || query.includes("english") || query.includes("إنجليزي")) {
+        botResponse = language === "ar"
+          ? "نعم، أنا ناطق باللغتين العربية والإنجليزية بطلاقة! سأجيبك دائماً بنفس لغة سؤالك."
+          : "Yes, I am fully bilingual in English and Arabic. I will always respond using the same language you write in.";
+      } else if (query.includes("human") || query.includes("دعم") || query.includes("بشري") || query.includes("agent")) {
+        triggerEscalation();
+        return;
+      } else {
+        // Fallback strategy: trigger low confidence escalate prompt
+        botResponse = language === "ar"
+          ? "عذراً، لا تتوفر لدي معلومات كافية للإجابة على هذا السؤال. هل تريد التحدث مع موظف دعم بشري؟"
+          : "I don't have enough information to answer that question. Would you like to speak with a human support agent?";
+      }
+
+      setMessages(prev => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          sender: "bot",
+          text: botResponse,
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }
+      ]);
+      setLoading(false);
+    }, 1200);
+  };
+
+  const handleSend = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputVal.trim()) return;
+    sendMessage(inputVal);
+    setInputVal("");
+  };
+
+  const handleSuggestionClick = (suggestionText: string) => {
+    const cleanText = suggestionText.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDFFF]/g, '').trim();
+    sendMessage(cleanText);
+  };
+
+  const triggerEscalation = () => {
+    setIsEscalated(true);
+    setLoading(true);
+
+    setTimeout(() => {
+      setMessages(prev => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          sender: "bot",
+          text: language === "ar" ? t("widgetEscalatedAr") : t("widgetEscalated"),
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }
+      ]);
+      setLoading(false);
+    }, 800);
+  };
+
+  return (
+    <div className="flex h-screen flex-col bg-[#050508] text-white">
+      {/* Widget Header */}
+      <div
+        className="flex items-center justify-between border-b border-purple-500/20 backdrop-blur-md px-4 py-3.5 shadow-lg relative"
+        style={{ background: "linear-gradient(90deg, rgba(88, 28, 135, 0.85) 0%, rgba(49, 46, 129, 0.85) 50%, rgba(7, 7, 11, 0.9) 100%)" }}
+      >
+        {/* Subtle neon glowing lightbar directly below header */}
+        <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-60" />
+        <div className="flex items-center gap-2.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={companyLogo}
+            alt="Logo"
+            className="h-8 w-8 rounded-lg object-cover border border-purple-500/20 shadow-md"
+          />
+          <div>
+            <h2 className="text-xs font-bold text-white tracking-tight flex items-center gap-1.5">
+              {botName}
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            </h2>
+            <span className="text-[9px] text-gray-500 font-medium">Bilingual Support Agent</span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* Language Switch */}
+          <button
+            onClick={() => setLanguage(language === "en" ? "ar" : "en")}
+            className="flex items-center gap-1 rounded-md border border-[#1f1f2e] bg-[#0d0d15] px-2 py-1 text-[10px] text-gray-400 hover:text-white transition-colors cursor-pointer"
+          >
+            <Globe className="h-3.5 w-3.5 text-purple-400" />
+            <span>{language === "en" ? "AR" : "EN"}</span>
+          </button>
+
+          {/* Close Widget Button */}
+          <button
+            onClick={() => window.parent.postMessage("naseh-close-widget", "*")}
+            className="rounded-md p-1 text-gray-400 hover:bg-[#1f1f2e] hover:text-white transition-colors cursor-pointer"
+            title="Close chat"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      {/* Messages Scroll Area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+        {messages.map((msg) => {
+          const isUser = msg.sender === "user";
+          return (
+            <div
+              key={msg.id}
+              className={`flex gap-2.5 max-w-[85%] ${
+                isUser ? "ml-auto flex-row-reverse justify-start" : "mr-auto justify-start"
+              }`}
+            >
+              {/* Bot/Agent Avatar */}
+              {!isUser && (
+                <div className="h-7 w-7 rounded-xl flex items-center justify-center shrink-0 border border-purple-500/20 bg-[#0d0d15] shadow-inner mt-1">
+                  {msg.sender === "human" ? (
+                    <User className="h-3.5 w-3.5 text-indigo-400 animate-pulse" />
+                  ) : (
+                    <Bot className="h-3.5 w-3.5 text-purple-400" />
+                  )}
+                </div>
+              )}
+
+              <div className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
+                <div
+                  className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
+                    isUser
+                      ? "text-white rounded-tr-none shadow-lg shadow-purple-500/10"
+                      : msg.sender === "human"
+                      ? "bg-[#0d0d15] border border-indigo-500/25 text-indigo-100 rounded-tl-none shadow-inner"
+                      : "bg-[#0d0d15] text-purple-200 border border-[#1f1f2e] rounded-tl-none shadow-inner"
+                  }`}
+                  style={isUser ? { background: "linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)" } : undefined}
+                >
+                  <p className="text-left rtl:text-right whitespace-pre-line leading-relaxed">{msg.text}</p>
+                  
+                  {/* Time & Sender Badge */}
+                  <div className="mt-1.5 flex items-center gap-1.5 text-[8px] text-gray-500 justify-between">
+                    <span className="font-semibold uppercase tracking-wider">
+                      {isUser
+                        ? (language === "ar" ? "أنت" : "You")
+                        : msg.sender === "human"
+                        ? t("humanBadge")
+                        : t("botBadge")}
+                    </span>
+                    <span className="opacity-40">•</span>
+                    <span suppressHydrationWarning>{msg.time}</span>
+                  </div>
+                </div>
+
+                {/* Escalation options below bubble if needed */}
+                {!isUser && msg.text.includes("speak with a human") && !isEscalated && (
+                  <button
+                    onClick={triggerEscalation}
+                    className="mt-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-3.5 py-1.5 text-[10px] font-bold text-white hover:brightness-110 shadow-md shadow-purple-600/20 transition-all active:scale-95 cursor-pointer"
+                  >
+                    Yes, connect to Human Agent
+                  </button>
+                )}
+                {!isUser && msg.text.includes("التحدث مع موظف") && !isEscalated && (
+                  <button
+                    onClick={triggerEscalation}
+                    className="mt-2 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 px-3.5 py-1.5 text-[10px] font-bold text-white hover:brightness-110 shadow-md shadow-purple-600/20 transition-all active:scale-95 cursor-pointer"
+                  >
+                    نعم، حولني للموظف البشري
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+
+        {/* Suggestion Chips */}
+        {messages.length <= 2 && (
+          <div className="flex flex-wrap gap-2 px-1 py-3 justify-start items-center animate-in fade-in slide-in-from-bottom-2 duration-300">
+            {(language === "ar" ? suggestionsAr : suggestionsEn).map((chip, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => handleSuggestionClick(chip)}
+                className="rounded-full border border-purple-500/20 bg-purple-950/20 hover:bg-purple-900/40 px-3 py-1.5 text-[10px] font-semibold text-purple-300 hover:text-white transition-all cursor-pointer shadow-sm hover:scale-[1.03]"
+              >
+                {chip}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Typing Loading State */}
+        {loading && (
+          <div className="flex items-center gap-2 text-xs text-gray-500 italic max-w-xs mr-auto ml-1.5">
+            <div className="h-2 w-2 rounded-full bg-purple-500 animate-ping" />
+            <span>{language === "ar" ? t("aiSearchingAr") : t("aiSearching")}</span>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Footer Chat Form */}
+      <form onSubmit={handleSend} className="border-t border-[#1f1f2e] bg-gradient-to-t from-[#07070b] to-[#0a0a10] p-3 flex gap-2">
+        <input
+          required
+          type="text"
+          value={inputVal}
+          onChange={(e) => setInputVal(e.target.value)}
+          placeholder={language === "ar" ? t("widgetInputPlaceholderAr") : t("widgetPlaceholder")}
+          className="flex-1 rounded-xl border border-[#1f1f2e] bg-[#0d0d15] px-3.5 py-2.5 text-xs text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none transition-colors"
+        />
+        <button
+          type="submit"
+          className="rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 p-2.5 text-white hover:brightness-110 active:scale-95 transition-all shadow-md shadow-purple-600/10 shrink-0 cursor-pointer"
+        >
+          <Send className="h-4.5 w-4.5" />
+        </button>
+      </form>
+    </div>
+  );
+}

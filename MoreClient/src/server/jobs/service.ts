@@ -78,8 +78,8 @@ export class JobService {
     const job = await JobRepo.findById(jobId);
     if (!job) throw new AppError("NOT_FOUND", "Job not found", 404);
     if (job.companyId !== ctx.company.id) throw new AppError("FORBIDDEN", "Access denied", 403);
-    if (job.status === "active" || job.proposals.length > 0) {
-      throw new AppError("UNPROCESSABLE", "Cannot delete a job with active proposals", 422);
+    if (job.status === "published" || job.status === "paused") {
+      throw new AppError("UNPROCESSABLE", "Close the job before deleting it", 422);
     }
     await JobRepo.softDelete(jobId);
   }

@@ -31,12 +31,11 @@ export class ProposalService {
     query: ListProposalsQuery,
     ctx: CompanyContext | TalentContext,
   ): Promise<{ items: ProposalWithRelations[]; hasMore: boolean; nextCursor: string | null }> {
-    const safeQuery = { ...query };
+    const safeQuery: typeof query = ctx.type === "talent"
+      ? { ...query, talentId: ctx.talent.id, jobId: undefined }
+      : { ...query };
 
-    if (ctx.type === "talent") {
-      safeQuery.talentId = ctx.talent.id;
-      delete safeQuery.jobId;
-    } else {
+    if (ctx.type === "company") {
       if (safeQuery.jobId) {
         const job = await JobRepo.findById(safeQuery.jobId);
         if (!job || job.companyId !== ctx.company.id) {

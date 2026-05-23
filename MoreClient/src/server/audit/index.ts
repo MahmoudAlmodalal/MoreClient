@@ -53,6 +53,22 @@ export function auditContextFromPrincipal(
 }
 
 /**
+ * Build an AuditContext from a PlatformAdmin (for admin-only routes
+ * where resolvePrincipal has already been called by requireAdmin).
+ */
+export function auditContextFromAdmin(
+  admin: { clerkUserId: string },
+  request?: Request,
+): AuditContext {
+  return {
+    actorType: "admin",
+    actorId: admin.clerkUserId,
+    ipAddress: request?.headers.get("x-forwarded-for") ?? undefined,
+    userAgent: request?.headers.get("user-agent") ?? undefined,
+  };
+}
+
+/**
  * Write a structured audit log entry.
  * Fire-and-forget — never throws to avoid disrupting the main request.
  */

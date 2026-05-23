@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { resolvePrincipal } from "@/server/core/auth";
-import { AppError, toProblemJson } from "@/server/core/errors";
+import { AppError, toProblemJson, toAppError } from "@/server/core/errors";
+import { deleteAccount } from "@/server/gdpr/index";
 
 export async function GET(request: Request) {
   try {
@@ -54,5 +55,30 @@ export async function GET(request: Request) {
     }
     const internalErr = new AppError("INTERNAL", "Internal server error", 500);
     return NextResponse.json(toProblemJson(internalErr), { status: 500 });
+  }
+}
+
+/**
+ * DELETE /api/v1/me — GDPR account deletion.
+ * Requires { confirm: true } in body to prevent accidental deletion.
+ */
+export async function DELETE(request: Request) {
+  try {
+    const ctx = await resolvePrincipal();
+    if (!ctx) throw new AppError("UNAUTHORIZED", "Authentication required", 401);
+
+    const body = await request.json().catch(() => ({}));
+    if (!body?.confirm) {
+      return NextResponse.json(
+        { error: "Pass { confirm: true } in the request body to confirm account deletion" },
+        { status: 400 },
+      );
+    }
+
+    const result = await deleteAccount(ctx);
+    return NextResponse.json(result);
+  } catch (err) {
+    const appErr = toAppError(err);
+    return NextResponse.json(toProblemJson(appErr, request.url), { status: appErr.status });
   }
 }

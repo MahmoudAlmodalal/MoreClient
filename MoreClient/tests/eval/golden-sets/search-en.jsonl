@@ -1,0 +1,10 @@
+{"id":"s-en-001","query":"experienced React developer TypeScript","type":"talent","expectedTopSkills":["react","typescript","nextjs"],"minResults":1,"locale":"en"}
+{"id":"s-en-002","query":"UI designer Figma mobile MENA","type":"talent","expectedTopSkills":["figma","ui-ux"],"minResults":1,"locale":"en"}
+{"id":"s-en-003","query":"Python machine learning engineer remote","type":"talent","expectedTopSkills":["python","machine-learning"],"minResults":1,"locale":"en"}
+{"id":"s-en-004","query":"Arabic content writer native speaker","type":"talent","expectedTopSkills":["arabic-content","content-writing"],"minResults":1,"locale":"en"}
+{"id":"s-en-005","query":"DevOps AWS Kubernetes CI/CD","type":"talent","expectedTopSkills":["aws","docker","ci-cd"],"minResults":1,"locale":"en"}
+{"id":"s-en-006","query":"financial model investor deck Series A","type":"talent","expectedTopSkills":["financial-modeling","accounting"],"minResults":1,"locale":"en"}
+{"id":"s-en-007","query":"Node.js backend REST API PostgreSQL","type":"talent","expectedTopSkills":["nodejs","rest-api","postgresql"],"minResults":1,"locale":"en"}
+{"id":"s-en-008","query":"senior graphic designer brand identity logo","type":"talent","expectedTopSkills":["brand-identity","figma","ui-ux"],"minResults":1,"locale":"en"}
+{"id":"s-en-009","query":"LLM prompt engineering AI products","type":"talent","expectedTopSkills":["llm-prompting","machine-learning"],"minResults":1,"locale":"en"}
+{"id":"s-en-010","query":"Scrum master agile coach project manager","type":"talent","expectedTopSkills":["agile-scrum","project-management"],"minResults":1,"locale":"en"}

@@ -61,7 +61,7 @@ class Settings:
     # Optional Telegram webhook secret token (set on setWebhook); when set, inbound
     # updates whose X-Telegram-Bot-Api-Secret-Token header mismatches are dropped.
     TELEGRAM_WEBHOOK_SECRET: str | None = os.getenv("TELEGRAM_WEBHOOK_SECRET")
-    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5000").rstrip("/")
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5001").rstrip("/")
     BACKEND_PUBLIC_URL: str = os.getenv("BACKEND_PUBLIC_URL", "http://localhost:8000").rstrip("/")
     GOOGLE_CLIENT_ID: str | None = os.getenv("GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET: str | None = os.getenv("GOOGLE_CLIENT_SECRET")
@@ -109,7 +109,7 @@ class Settings:
     # --- CORS ---
     ALLOWED_ORIGINS: list[str] = _csv(
         os.getenv("ALLOWED_ORIGINS"),
-        ["http://localhost:5000", "http://127.0.0.1:5000"],
+        ["http://localhost:5001", "http://127.0.0.1:5001"],
     )
 
     @property

@@ -22,6 +22,12 @@ class Settings:
     OPENAI_API_KEY: str | None = os.getenv("OPENAI_API_KEY")
     ANTHROPIC_API_KEY: str | None = os.getenv("ANTHROPIC_API_KEY")
     APP_SECRET: str | None = os.getenv("APP_SECRET")
+    FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5000").rstrip("/")
+    BACKEND_PUBLIC_URL: str = os.getenv("BACKEND_PUBLIC_URL", "http://localhost:8000").rstrip("/")
+    GOOGLE_CLIENT_ID: str | None = os.getenv("GOOGLE_CLIENT_ID")
+    GOOGLE_CLIENT_SECRET: str | None = os.getenv("GOOGLE_CLIENT_SECRET")
+    APPLE_CLIENT_ID: str | None = os.getenv("APPLE_CLIENT_ID")
+    APPLE_CLIENT_SECRET: str | None = os.getenv("APPLE_CLIENT_SECRET")
 
     # --- AI models ---
     CHAT_MODEL: str = os.getenv("CHAT_MODEL", "gpt-4o")

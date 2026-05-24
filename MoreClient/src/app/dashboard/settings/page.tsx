@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useSyncExternalStore } from "react";
+import React, { useState, useSyncExternalStore } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { apiSend, type SettingsOut } from "@/lib/api";
 import {
@@ -107,9 +107,13 @@ export default function SettingsPage() {
   const [uploadMode, setUploadMode] = useState(true);
 
   // Keep the local logo mirror in sync once the provider hydrates from backend.
-  useEffect(() => {
+  // Adjusting state during render (instead of an effect) is the React-recommended
+  // pattern for deriving state from a changing prop and avoids an extra commit.
+  const [prevCompanyLogo, setPrevCompanyLogo] = useState(companyLogo);
+  if (companyLogo !== prevCompanyLogo) {
+    setPrevCompanyLogo(companyLogo);
     setLogoInput(companyLogo);
-  }, [companyLogo]);
+  }
 
   const [dragActive, setDragActive] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);

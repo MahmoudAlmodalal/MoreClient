@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useSyncExternalStore } from "react";
+import React, { useState, useSyncExternalStore } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { apiSend, type SettingsOut } from "@/lib/api";
 import {
@@ -103,13 +103,12 @@ export default function SettingsPage() {
   };
 
   // Local mirror states for logo preview
-  const [logoInput, setLogoInput] = useState(companyLogo);
+  const [logoDraft, setLogoDraft] = useState({ base: companyLogo, value: companyLogo });
+  const logoInput = logoDraft.base === companyLogo ? logoDraft.value : companyLogo;
+  const setLogoInput = (value: string) => {
+    setLogoDraft({ base: companyLogo, value });
+  };
   const [uploadMode, setUploadMode] = useState(true);
-
-  // Keep the local logo mirror in sync once the provider hydrates from backend.
-  useEffect(() => {
-    setLogoInput(companyLogo);
-  }, [companyLogo]);
 
   const [dragActive, setDragActive] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);

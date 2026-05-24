@@ -34,9 +34,11 @@ export default function FilesPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchFiles = () => apiGet<FileOut[]>("/api/files");
+
   const loadFiles = async () => {
     try {
-      const rows = await apiGet<FileOut[]>("/api/files");
+      const rows = await fetchFiles();
       setFiles(rows);
       setError(null);
     } catch (err) {
@@ -47,7 +49,29 @@ export default function FilesPage() {
   };
 
   useEffect(() => {
-    loadFiles();
+    let cancelled = false;
+
+    const loadInitialFiles = async () => {
+      try {
+        const rows = await fetchFiles();
+        if (cancelled) return;
+        setFiles(rows);
+        setError(null);
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Failed to load files");
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadInitialFiles();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleDrag = (e: React.DragEvent) => {

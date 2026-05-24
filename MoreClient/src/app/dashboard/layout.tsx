@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
@@ -19,6 +19,10 @@ import {
   ShieldAlert
 } from "lucide-react";
 
+const subscribeToRole = () => () => {};
+const getClientIsAdmin = () => sessionStorage.getItem("userRole") === "admin";
+const getServerIsAdmin = () => false;
+
 export default function DashboardLayout({
   children,
 }: {
@@ -28,11 +32,11 @@ export default function DashboardLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    setIsAdmin(sessionStorage.getItem("userRole") === "admin");
-  }, []);
+  const isAdmin = useSyncExternalStore(
+    subscribeToRole,
+    getClientIsAdmin,
+    getServerIsAdmin
+  );
 
   const navigation = [
     { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },

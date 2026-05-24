@@ -34,7 +34,7 @@ const getClientReady = () => true;
 const getServerReady = () => false;
 
 export default function SuperAdminPage() {
-  const { t, isRtl, language } = useLanguage();
+  const { t, isRtl } = useLanguage();
   
   const isClient = useSyncExternalStore(
     subscribeToClientReady,
@@ -48,7 +48,6 @@ export default function SuperAdminPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPlanFilter, setSelectedPlanFilter] = useState<string>("all");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("all");
-  const [loading, setLoading] = useState(true);
 
   // Real data from backend
   const [tenants, setTenants] = useState<TenantOut[]>([]);
@@ -105,10 +104,46 @@ export default function SuperAdminPage() {
 
   // Initial load
   useEffect(() => {
-    Promise.all([loadTenants(), loadKpis(), loadHealth()]).finally(() =>
-      setLoading(false)
-    );
-  }, [loadTenants, loadKpis, loadHealth]);
+    let cancelled = false;
+
+    const loadInitialAdminData = async () => {
+      const [tenantResult, kpiResult, healthResult] = await Promise.allSettled([
+        fetchTenants({
+          search: searchQuery,
+          plan: selectedPlanFilter,
+          status: selectedStatusFilter,
+        }),
+        fetchAdminKpis(),
+        fetchAdminHealth(),
+      ]);
+
+      if (cancelled) return;
+
+      if (tenantResult.status === "fulfilled") {
+        setTenants(tenantResult.value);
+      } else {
+        console.error("Failed to load tenants", tenantResult.reason);
+      }
+
+      if (kpiResult.status === "fulfilled") {
+        setKpis(kpiResult.value);
+      } else {
+        console.error("Failed to load KPIs", kpiResult.reason);
+      }
+
+      if (healthResult.status === "fulfilled") {
+        setHealth(healthResult.value);
+      } else {
+        console.error("Failed to load health", healthResult.reason);
+      }
+    };
+
+    void loadInitialAdminData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [searchQuery, selectedPlanFilter, selectedStatusFilter]);
 
   // Poll health every 10s when on overview tab
   useEffect(() => {

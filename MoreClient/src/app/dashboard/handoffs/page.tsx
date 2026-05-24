@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { apiGet, apiSend, type HandoffOut } from "@/lib/api";
 import {
@@ -45,25 +45,34 @@ export default function HandoffsPage() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
 
-  const loadTickets = useCallback(async () => {
-    try {
-      setError(null);
-      const data = await apiGet<HandoffOut[]>("/api/handoffs");
-      setTickets(data);
-      // Auto-select the first ticket (keep current selection if still present).
-      setSelectedTicketId(prev =>
-        prev !== null && data.some(d => d.id === prev) ? prev : (data[0]?.id ?? null)
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load handoffs");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const fetchTickets = () => apiGet<HandoffOut[]>("/api/handoffs");
 
   useEffect(() => {
-    loadTickets();
-  }, [loadTickets]);
+    let cancelled = false;
+
+    const loadInitialTickets = async () => {
+      try {
+        const data = await fetchTickets();
+        if (cancelled) return;
+        setTickets(data);
+        setSelectedTicketId(data[0]?.id ?? null);
+        setError(null);
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Failed to load handoffs");
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadInitialTickets();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const activeTicket = tickets.find(t => t.id === selectedTicketId);
   const activeOrder = activeTicket?.metadata.order;

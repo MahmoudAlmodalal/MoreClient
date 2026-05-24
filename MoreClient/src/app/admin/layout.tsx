@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { NotificationBell } from "@/components/notification-bell";
 import {
   LayoutDashboard,
-  Users,
   Eye,
   LogOut,
   Menu,
@@ -18,6 +17,10 @@ import {
   ArrowLeft
 } from "lucide-react";
 
+const subscribeToRole = () => () => {};
+const getClientIsAdmin = () => sessionStorage.getItem("userRole") === "admin";
+const getServerIsAdmin = () => false;
+
 export default function SuperAdminLayout({
   children,
 }: {
@@ -27,18 +30,19 @@ export default function SuperAdminLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+  const isAuthorized = useSyncExternalStore(
+    subscribeToRole,
+    getClientIsAdmin,
+    getServerIsAdmin
+  );
 
   useEffect(() => {
-    const role = sessionStorage.getItem("userRole");
-    if (role !== "admin") {
+    if (!isAuthorized) {
       router.push("/dashboard");
-    } else {
-      setIsAuthorized(true);
     }
-  }, [router]);
+  }, [isAuthorized, router]);
 
-  if (isAuthorized === null) {
+  if (!isAuthorized) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#050508]">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-500/50 border-t-purple-500" />

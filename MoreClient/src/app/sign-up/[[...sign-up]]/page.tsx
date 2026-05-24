@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Apple } from "lucide-react";
+import { register, ApiError } from "@/lib/api";
 
 export default function SignUpPage() {
   const { t } = useLanguage();
@@ -33,21 +34,22 @@ export default function SignUpPage() {
     }
 
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const session = await register(name, email, password, name);
+      router.push(session.redirectTo);
+    } catch (err) {
       setLoading(false);
-      if (email.toLowerCase().includes("admin")) {
-        sessionStorage.setItem("userRole", "admin");
-        router.push("/admin");
+      if (err instanceof ApiError) {
+        setError(err.message);
       } else {
-        sessionStorage.setItem("userRole", "user");
-        router.push("/dashboard");
+        setError(t("signUpFailed") || "Sign up failed. Please try again.");
       }
-    }, 1500);
+    }
   };
 
   const handleSocialSignUp = () => {
-    sessionStorage.setItem("userRole", "user");
-    router.push("/dashboard");
+    // TODO: Implement OAuth signup (Google, Apple)
+    setError("Social signup coming soon");
   };
 
   return (

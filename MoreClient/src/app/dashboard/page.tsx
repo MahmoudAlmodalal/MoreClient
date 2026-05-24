@@ -7,6 +7,7 @@ import {
   apiGet,
   apiSend,
   createWebSocketUrl,
+  createAuthenticatedWebSocketUrl,
   type AnalyticsResponse,
   type AnalyticsSocketMessage
 } from "@/lib/api";

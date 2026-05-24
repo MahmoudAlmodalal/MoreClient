@@ -81,3 +81,50 @@ def ingest_document(db: Session, filename: str, data: bytes, tenant_key: str | N
         raise
 
     return doc
+
+
+def create_document_record(
+    db: Session,
+    filename: str,
+    data: bytes,
+    tenant_key: str | None = None,
+) -> Document:
+    """Parse and persist a processing row without vectorizing yet."""
+    ftype, text = extract(filename, data)
+    doc = Document(
+        title=filename,
+        tenant_key=_tenant_key(tenant_key),
+        content=text,
+        source="upload",
+        file_size=len(data),
+        file_type=ftype,
+        chunk_count=0,
+        status="processing",
+    )
+    db.add(doc)
+    db.commit()
+    db.refresh(doc)
+    return doc
+
+
+def index_document(db: Session, document_id: int) -> Document:
+    """Chunk, embed, and persist vectors for an existing processing document."""
+    doc = db.get(Document, document_id)
+    if doc is None:
+        raise ValueError(f"document {document_id} not found")
+
+    try:
+        chunks = chunk_text(doc.content or "")
+        if chunks:
+            vectors = embeddings.embed_texts(chunks)
+            vectorstore.add_document_chunks(doc.id, chunks, vectors, tenant_key=doc.tenant_key)
+        doc.chunk_count = len(chunks)
+        doc.status = "completed"
+        db.commit()
+        db.refresh(doc)
+    except Exception:
+        doc.status = "failed"
+        db.commit()
+        raise
+
+    return doc

@@ -6,7 +6,7 @@ from pydantic import BaseModel
 class UploadResponse(BaseModel):
     file: str       # filename
     chunks: int
-    status: str     # "Completed" | "Failed"
+    status: str     # "Processing" | "Completed" | "Failed"
 
 
 class FileOut(BaseModel):

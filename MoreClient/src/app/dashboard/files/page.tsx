@@ -48,6 +48,19 @@ export default function FilesPage() {
     }
   };
 
+  const waitForProcessing = async (fileName: string) => {
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const rows = await fetchFiles();
+      setFiles(rows);
+      const uploaded = rows.find((row) => row.name === fileName);
+      if (!uploaded || uploaded.status !== "Processing") {
+        return;
+      }
+      setProcessingStep("Indexing in the background...");
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
 
@@ -108,9 +121,9 @@ export default function FilesPage() {
     const steps = [
       "Reading file contents...",
       "Converting to clean Markdown format...",
-      "Splitting document into 500-character chunks...",
-      "Generating text-embedding-3-small vectors...",
-      "Persisting 32 vectors inside local ChromaDB vector store..."
+      "Creating the knowledge-base record...",
+      "Queuing local vector indexing...",
+      "Refreshing file status..."
     ];
 
     setProcessingStep(steps[0]);
@@ -127,10 +140,17 @@ export default function FilesPage() {
     }, 400);
 
     try {
-      await apiUpload<UploadResponse>("/api/upload", file);
+      const uploaded = await apiUpload<UploadResponse>("/api/upload", file);
       setUploadProgress(100);
-      // Re-fetch so the real chunk count / status from the backend shows.
+      setProcessingStep(
+        uploaded.status === "Processing"
+          ? "File saved. Indexing continues in the background..."
+          : "File uploaded and indexed."
+      );
       await loadFiles();
+      if (uploaded.status === "Processing") {
+        await waitForProcessing(uploaded.file);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not process file");
     } finally {
@@ -217,7 +237,7 @@ export default function FilesPage() {
               />
             </div>
             <p className="text-[11px] text-gray-500 animate-pulse">
-              Generating semantic chunks in the local demo index...
+              The file is saved first; indexing can finish in the background.
             </p>
           </div>
         ) : (

@@ -1,16 +1,26 @@
 """/api/upload + /api/files — owned by Phase B agent B2."""
 
+from threading import Thread
+
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from backend.core.config import settings as cfg
-from backend.models.database import get_db
+from backend.models.database import SessionLocal, get_db
 from backend.models.tables import Document
 from backend.schemas.files import FileOut, UploadResponse
 from backend.services.ai import vectorstore
-from backend.services.ingestion.ingest import ingest_document
+from backend.services.ingestion.ingest import create_document_record, index_document
 
 router = APIRouter()
+
+
+def _index_document_background(document_id: int) -> None:
+    db = SessionLocal()
+    try:
+        index_document(db, document_id)
+    finally:
+        db.close()
 
 
 def _human_size(n_bytes: int | None) -> str:
@@ -57,10 +67,10 @@ def upload_file(
 ) -> UploadResponse:
     data = file.file.read()
     try:
-        doc = ingest_document(db, file.filename, data, tenant_key=tenant_key)
+        doc = create_document_record(db, file.filename, data, tenant_key=tenant_key)
     except Exception:
-        # ingest_document marks the row failed before raising
         raise HTTPException(status_code=400, detail="could not process file")
+    Thread(target=_index_document_background, args=(doc.id,), daemon=True).start()
     return UploadResponse(
         file=doc.title,
         chunks=doc.chunk_count,

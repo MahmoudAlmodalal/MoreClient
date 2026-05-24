@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { Apple } from "lucide-react";
+import { login, ApiError } from "@/lib/api";
 
 const SLIDES = 3;
 
@@ -27,21 +28,22 @@ export default function WelcomePage() {
       return;
     }
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const session = await login(email, password);
+      router.push(session.redirectTo);
+    } catch (err) {
       setLoading(false);
-      if (email.toLowerCase().includes("admin")) {
-        sessionStorage.setItem("userRole", "admin");
-        router.push("/admin");
+      if (err instanceof ApiError) {
+        setError(err.message);
       } else {
-        sessionStorage.setItem("userRole", "user");
-        router.push("/dashboard");
+        setError(t("loginFailed") || "Login failed. Please try again.");
       }
-    }, 1200);
+    }
   };
 
   const handleSocialLogin = () => {
-    sessionStorage.setItem("userRole", "user");
-    router.push("/dashboard");
+    // TODO: Implement OAuth login (Google, Apple)
+    setError("Social login coming soon");
   };
 
   useEffect(() => {

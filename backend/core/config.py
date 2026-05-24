@@ -20,6 +20,7 @@ class Settings:
 
     # --- Provider keys ---
     OPENAI_API_KEY: str | None = os.getenv("OPENAI_API_KEY")
+    NVIDIA_API_KEY: str | None = os.getenv("NVIDIA_API_KEY")
     ANTHROPIC_API_KEY: str | None = os.getenv("ANTHROPIC_API_KEY")
     APP_SECRET: str | None = os.getenv("APP_SECRET")
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5000").rstrip("/")
@@ -48,7 +49,7 @@ class Settings:
 
     @property
     def has_openai(self) -> bool:
-        return bool(self.OPENAI_API_KEY)
+        return bool(self.OPENAI_API_KEY) or bool(self.NVIDIA_API_KEY)
 
 
 settings = Settings()

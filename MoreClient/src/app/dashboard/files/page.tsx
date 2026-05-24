@@ -6,6 +6,7 @@ import { apiGet, apiUpload, apiSend, type FileOut, type UploadResponse } from "@
 import {
   UploadCloud,
   File,
+  FileSpreadsheet,
   Trash2,
   AlertCircle,
   Database,
@@ -174,7 +175,7 @@ export default function FilesPage() {
           type="file"
           id="file-upload"
           className="hidden"
-          accept=".pdf,.docx,.txt"
+          accept=".pdf,.docx,.txt,.xlsx"
           onChange={handleFileInput}
           disabled={uploading}
         />
@@ -244,7 +245,11 @@ export default function FilesPage() {
                 {files.map((file) => (
                   <tr key={file.id} className="hover:bg-[#1a1a26]/20 transition-colors">
                     <td className="px-4 py-4 flex items-center gap-3 font-medium text-white">
-                      <File className="h-4 w-4 text-purple-400 shrink-0" />
+                      {/\.xlsx?$/i.test(file.name) ? (
+                        <FileSpreadsheet className="h-4 w-4 text-emerald-400 shrink-0" />
+                      ) : (
+                        <File className="h-4 w-4 text-purple-400 shrink-0" />
+                      )}
                       <span className="truncate max-w-xs">{file.name}</span>
                     </td>
                     <td className="px-4 py-4">{file.size}</td>

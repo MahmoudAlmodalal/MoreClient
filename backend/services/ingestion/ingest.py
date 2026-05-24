@@ -11,6 +11,7 @@ from backend.services.ai import embeddings, vectorstore
 from backend.services.ingestion import docx as docx_parser
 from backend.services.ingestion import pdf as pdf_parser
 from backend.services.ingestion import txt as txt_parser
+from backend.services.ingestion import xlsx as xlsx_parser
 from backend.services.ingestion.chunker import chunk_text
 
 
@@ -20,6 +21,8 @@ def _detect_type(filename: str) -> str:
         return "pdf"
     if name.endswith(".docx"):
         return "docx"
+    if name.endswith(".xlsx"):
+        return "xlsx"
     if name.endswith(".txt") or name.endswith(".md"):
         return "txt"
     return "txt"
@@ -32,6 +35,8 @@ def extract(filename: str, data: bytes) -> tuple[str, str]:
         return ftype, pdf_parser.extract_pdf(data)
     if ftype == "docx":
         return ftype, docx_parser.extract_docx(data)
+    if ftype == "xlsx":
+        return ftype, xlsx_parser.extract_xlsx(data)
     return ftype, txt_parser.extract_txt(data)
 
 

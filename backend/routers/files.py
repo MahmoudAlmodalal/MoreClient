@@ -48,11 +48,11 @@ def _to_file_out(doc: Document) -> FileOut:
 
 
 @router.post("/api/upload", response_model=UploadResponse)
-async def upload_file(
+def upload_file(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ) -> UploadResponse:
-    data = await file.read()
+    data = file.file.read()
     try:
         doc = ingest_document(db, file.filename, data)
     except Exception:

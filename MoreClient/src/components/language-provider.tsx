@@ -68,9 +68,9 @@ const translationsEn = {
 
   // Files Ingestion Page
   filesTitle: "Knowledge Base Ingestion",
-  filesSub: "Upload PDFs, DOCX, or TXT documents. clientMORE converts them to Markdown, chunks, and embeds them into ChromaDB.",
+  filesSub: "Upload PDFs, DOCX, TXT, or XLSX spreadsheets. clientMORE converts them to Markdown, chunks, and embeds them into ChromaDB.",
   dropzoneTitle: "Drag & drop files here, or click to browse",
-  dropzoneSub: "Supports PDF, DOCX, TXT (Max 20MB)",
+  dropzoneSub: "Supports PDF, DOCX, TXT, XLSX (Max 50MB)",
   fileListTitle: "Parsed Documents",
   fileListSub: "Currently ingested knowledge assets used for RAG response generation.",
   fileName: "File Name",
@@ -389,9 +389,9 @@ const translationsAr: Partial<Translations> = {
 
   // Files Ingestion Page
   filesTitle: "حقن ملفات قاعدة المعرفة",
-  filesSub: "قم برفع ملفات PDF أو DOCX أو TXT. يقوم نصيح بتحويلها إلى Markdown وتقسيمها وتخزينها كمتجهات في ChromaDB.",
+  filesSub: "قم برفع ملفات PDF أو DOCX أو TXT أو جداول بيانات XLSX. يقوم نصيح بتحويلها إلى Markdown وتقسيمها وتخزينها كمتجهات في ChromaDB.",
   dropzoneTitle: "اسحب وأفلت الملفات هنا، أو انقر للتصفح",
-  dropzoneSub: "يدعم PDF، DOCX، TXT (الحد الأقصى 20 ميجابايت)",
+  dropzoneSub: "يدعم PDF، DOCX، TXT، XLSX (الحد الأقصى 50 ميجابايت)",
   fileListTitle: "المستندات التي تمت معالجتها",
   fileListSub: "ملفات المعرفة المستخدمة حالياً لتوليد الإجابات الذكية (RAG).",
   fileName: "اسم الملف",

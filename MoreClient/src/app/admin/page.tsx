@@ -1,9 +1,17 @@
 "use client";
 
-import React, { useState, useEffect, useSyncExternalStore } from "react";
+import React, { useState, useEffect, useSyncExternalStore, useCallback } from "react";
 import { useLanguage } from "@/components/language-provider";
-import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import type { TenantOut, AdminKpis, AdminHealth } from "@/lib/api";
+import {
+  fetchTenants,
+  createTenant,
+  updateTenant,
+  deleteTenant as apiDeleteTenant,
+  toggleTenantStatus,
+  fetchAdminKpis,
+  fetchAdminHealth,
+} from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
   Users,
@@ -17,27 +25,9 @@ import {
   Server,
   Database,
   Cpu,
-  TrendingUp,
-  Sliders,
-  Play,
-  Square,
-  RefreshCw,
   Edit2,
   Trash2,
-  ToggleLeft,
-  ToggleRight
 } from "lucide-react";
-
-interface TenantSubscription {
-  id: string;
-  name: string;
-  email: string;
-  plan: "pro" | "ultra" | "custom";
-  status: "active" | "inactive";
-  usedMessages: number;
-  limitMessages: number;
-  createdDate: string;
-}
 
 const subscribeToClientReady = () => () => {};
 const getClientReady = () => true;
@@ -58,72 +48,17 @@ export default function SuperAdminPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPlanFilter, setSelectedPlanFilter] = useState<string>("all");
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("all");
+  const [loading, setLoading] = useState(true);
 
-  // Simulated System Load State
-  const [trafficMode, setTrafficMode] = useState<"normal" | "high" | "idle">("normal");
-  const [cpuUsage, setCpuUsage] = useState(32);
-  const [memUsage, setMemUsage] = useState(48);
-  const [dbLatency, setDbLatency] = useState(14);
-  const [llmLatency, setLlmLatency] = useState(180);
-
-  // Tenant Subscriptions Mock Database
-  const [tenants, setTenants] = useState<TenantSubscription[]>([
-    {
-      id: "1",
-      name: "Acme Corporates",
-      email: "admin@acme.com",
-      plan: "pro",
-      status: "active",
-      usedMessages: 382,
-      limitMessages: 500,
-      createdDate: "2026-03-01"
-    },
-    {
-      id: "2",
-      name: "EduTraker Systems",
-      email: "tech@edutraker.edu",
-      plan: "ultra",
-      status: "active",
-      usedMessages: 1120,
-      limitMessages: 1500,
-      createdDate: "2026-04-12"
-    },
-    {
-      id: "3",
-      name: "Noor Al-Huda Quran Center",
-      email: "contact@nooralhuda.org",
-      plan: "pro",
-      status: "active",
-      usedMessages: 145,
-      limitMessages: 500,
-      createdDate: "2026-04-20"
-    },
-    {
-      id: "4",
-      name: "TechStart Hub",
-      email: "billing@techstart.io",
-      plan: "custom",
-      status: "inactive",
-      usedMessages: 0,
-      limitMessages: 10000,
-      createdDate: "2026-05-02"
-    },
-    {
-      id: "5",
-      name: "GazaDevs Agency",
-      email: "dev@gazadevs.ps",
-      plan: "pro",
-      status: "active",
-      usedMessages: 490,
-      limitMessages: 500,
-      createdDate: "2026-05-18"
-    }
-  ]);
+  // Real data from backend
+  const [tenants, setTenants] = useState<TenantOut[]>([]);
+  const [kpis, setKpis] = useState<AdminKpis | null>(null);
+  const [health, setHealth] = useState<AdminHealth | null>(null);
 
   // Modal States
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [currentTenant, setCurrentTenant] = useState<TenantSubscription | null>(null);
+  const [currentTenant, setCurrentTenant] = useState<TenantOut | null>(null);
 
   // Form States for Creation
   const [newTenantName, setNewTenantName] = useState("");
@@ -137,43 +72,50 @@ export default function SuperAdminPage() {
   const [editTenantPlan, setEditTenantPlan] = useState<"pro" | "ultra" | "custom">("pro");
   const [editTenantLimit, setEditTenantLimit] = useState(500);
 
-  // Dynamically update system load stats based on Traffic Mode
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (trafficMode === "high") {
-      setCpuUsage(84);
-      setMemUsage(78);
-      setDbLatency(42);
-      setLlmLatency(420);
-      interval = setInterval(() => {
-        setCpuUsage(prev => Math.min(95, Math.max(78, prev + Math.floor(Math.random() * 5) - 2)));
-        setDbLatency(prev => Math.min(60, Math.max(35, prev + Math.floor(Math.random() * 7) - 3)));
-        setLlmLatency(prev => Math.min(480, Math.max(380, prev + Math.floor(Math.random() * 20) - 10)));
-      }, 3000);
-    } else if (trafficMode === "idle") {
-      setCpuUsage(12);
-      setMemUsage(24);
-      setDbLatency(4);
-      setLlmLatency(110);
-      interval = setInterval(() => {
-        setCpuUsage(prev => Math.min(18, Math.max(8, prev + Math.floor(Math.random() * 3) - 1)));
-        setDbLatency(prev => Math.min(7, Math.max(2, prev + Math.floor(Math.random() * 3) - 1)));
-        setLlmLatency(prev => Math.min(130, Math.max(95, prev + Math.floor(Math.random() * 10) - 5)));
-      }, 3000);
-    } else {
-      // Normal Traffic
-      setCpuUsage(34);
-      setMemUsage(42);
-      setDbLatency(12);
-      setLlmLatency(175);
-      interval = setInterval(() => {
-        setCpuUsage(prev => Math.min(45, Math.max(25, prev + Math.floor(Math.random() * 5) - 2)));
-        setDbLatency(prev => Math.min(18, Math.max(8, prev + Math.floor(Math.random() * 4) - 2)));
-        setLlmLatency(prev => Math.min(210, Math.max(150, prev + Math.floor(Math.random() * 14) - 7)));
-      }, 3000);
+  // ── Data fetching ───────────────────────────────────────────────────────
+
+  const loadTenants = useCallback(async () => {
+    try {
+      const data = await fetchTenants({
+        search: searchQuery,
+        plan: selectedPlanFilter,
+        status: selectedStatusFilter,
+      });
+      setTenants(data);
+    } catch (err) {
+      console.error("Failed to load tenants", err);
     }
+  }, [searchQuery, selectedPlanFilter, selectedStatusFilter]);
+
+  const loadKpis = useCallback(async () => {
+    try {
+      setKpis(await fetchAdminKpis());
+    } catch (err) {
+      console.error("Failed to load KPIs", err);
+    }
+  }, []);
+
+  const loadHealth = useCallback(async () => {
+    try {
+      setHealth(await fetchAdminHealth());
+    } catch (err) {
+      console.error("Failed to load health", err);
+    }
+  }, []);
+
+  // Initial load
+  useEffect(() => {
+    Promise.all([loadTenants(), loadKpis(), loadHealth()]).finally(() =>
+      setLoading(false)
+    );
+  }, [loadTenants, loadKpis, loadHealth]);
+
+  // Poll health every 10s when on overview tab
+  useEffect(() => {
+    if (activeTab !== "overview") return;
+    const interval = setInterval(loadHealth, 10000);
     return () => clearInterval(interval);
-  }, [trafficMode]);
+  }, [activeTab, loadHealth]);
 
   // Show customized Toast notifications
   const triggerToast = (msg: string) => {
@@ -183,72 +125,45 @@ export default function SuperAdminPage() {
     }, 3000);
   };
 
-  // KPIs
-  const activeTenantsCount = tenants.filter(t => t.status === "active").length;
-  const globalAIMessages = tenants.reduce((sum, t) => sum + t.usedMessages, 0);
+  // ── CRUD Handlers ──────────────────────────────────────────────────────
 
-  const calculateMRR = () => {
-    return tenants
-      .filter(t => t.status === "active")
-      .reduce((sum, t) => {
-        if (t.plan === "pro") return sum + 500;
-        if (t.plan === "ultra") return sum + 1500;
-        return sum + 3000; // Custom
-      }, 0);
-  };
-
-  const totalMRR = calculateMRR();
-
-  // Create Subscription Action
-  const handleCreateSubscription = (e: React.FormEvent) => {
+  const handleCreateSubscription = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTenantName || !newTenantEmail) return;
-
-    const newTenant: TenantSubscription = {
-      id: Date.now().toString(),
-      name: newTenantName,
-      email: newTenantEmail,
-      plan: newTenantPlan,
-      status: "active",
-      usedMessages: 0,
-      limitMessages: newTenantLimit,
-      createdDate: new Date().toISOString().split("T")[0]
-    };
-
-    setTenants(prev => [...prev, newTenant]);
-    setIsCreateModalOpen(false);
-    triggerToast(t("createSubscriptionSuccess"));
-    
-    // Clear forms
-    setNewTenantName("");
-    setNewTenantEmail("");
-    setNewTenantPlan("pro");
-    setNewTenantLimit(500);
-  };
-
-  // Toggle Activation/Deactivation
-  const handleToggleStatus = (id: string) => {
-    let updatedStatus = "";
-    setTenants(prev =>
-      prev.map(t => {
-        if (t.id === id) {
-          const nextStatus = t.status === "active" ? "inactive" : "active";
-          updatedStatus = nextStatus;
-          return { ...t, status: nextStatus };
-        }
-        return t;
-      })
-    );
-
-    if (updatedStatus === "inactive") {
-      triggerToast(t("deactivatedSuccess"));
-    } else {
-      triggerToast(t("activatedSuccess"));
+    try {
+      await createTenant({
+        name: newTenantName,
+        email: newTenantEmail,
+        plan: newTenantPlan,
+        limitMessages: newTenantLimit,
+      });
+      setIsCreateModalOpen(false);
+      triggerToast(t("createSubscriptionSuccess"));
+      setNewTenantName("");
+      setNewTenantEmail("");
+      setNewTenantPlan("pro");
+      setNewTenantLimit(500);
+      await loadTenants();
+      await loadKpis();
+    } catch (err: unknown) {
+      triggerToast(err instanceof Error ? err.message : "Failed to create tenant");
     }
   };
 
-  // Open Edit Dialog
-  const openEditModal = (tenant: TenantSubscription) => {
+  const handleToggleStatus = async (id: number) => {
+    try {
+      const updated = await toggleTenantStatus(id);
+      triggerToast(
+        updated.status === "inactive" ? t("deactivatedSuccess") : t("activatedSuccess")
+      );
+      await loadTenants();
+      await loadKpis();
+    } catch (err: unknown) {
+      triggerToast(err instanceof Error ? err.message : "Toggle failed");
+    }
+  };
+
+  const openEditModal = (tenant: TenantOut) => {
     setCurrentTenant(tenant);
     setEditTenantName(tenant.name);
     setEditTenantEmail(tenant.email);
@@ -257,66 +172,61 @@ export default function SuperAdminPage() {
     setIsEditModalOpen(true);
   };
 
-  // Save Edit Action
-  const handleSaveEdit = (e: React.FormEvent) => {
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentTenant) return;
-
-    setTenants(prev =>
-      prev.map(t => {
-        if (t.id === currentTenant.id) {
-          return {
-            ...t,
-            name: editTenantName,
-            email: editTenantEmail,
-            plan: editTenantPlan,
-            limitMessages: editTenantLimit
-          };
-        }
-        return t;
-      })
-    );
-
-    setIsEditModalOpen(false);
-    triggerToast(t("saved"));
-  };
-
-  // Delete Action
-  const handleDeleteTenant = (id: string) => {
-    if (confirm("Are you sure you want to delete this subscription?")) {
-      setTenants(prev => prev.filter(t => t.id !== id));
-      triggerToast("Subscription deleted.");
+    try {
+      await updateTenant(currentTenant.id, {
+        name: editTenantName,
+        email: editTenantEmail,
+        plan: editTenantPlan,
+        limitMessages: editTenantLimit,
+      });
+      setIsEditModalOpen(false);
+      triggerToast(t("saved"));
+      await loadTenants();
+      await loadKpis();
+    } catch (err: unknown) {
+      triggerToast(err instanceof Error ? err.message : "Update failed");
     }
   };
 
-  // Filtering Subscribers
-  const filteredTenants = tenants.filter(t => {
-    const matchesSearch =
-      t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.email.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesPlan = selectedPlanFilter === "all" || t.plan === selectedPlanFilter;
-    const matchesStatus =
-      selectedStatusFilter === "all" ||
-      (selectedStatusFilter === "active" && t.status === "active") ||
-      (selectedStatusFilter === "inactive" && t.status === "inactive");
+  const handleDeleteTenant = async (id: number) => {
+    if (!confirm("Are you sure you want to delete this subscription?")) return;
+    try {
+      await apiDeleteTenant(id);
+      triggerToast("Subscription deleted.");
+      await loadTenants();
+      await loadKpis();
+    } catch (err: unknown) {
+      triggerToast(err instanceof Error ? err.message : "Delete failed");
+    }
+  };
 
-    return matchesSearch && matchesPlan && matchesStatus;
-  });
+  // Server-side filtering — tenants already filtered by the API
+  const filteredTenants = tenants;
+
+  // Derived values from real KPIs
+  const cpuUsage = health?.cpuUsagePercent ?? 0;
+  const memUsage = health?.memoryUsagePercent ?? 0;
+  const dbLatency = health?.dbLatencyMs ?? 0;
+  const chromaOk = health?.chromaStatus === "healthy";
+  const llmConfigured = health?.llmProviderStatus === "configured";
+  const highLoad = cpuUsage > 80;
 
   // KPI UI Metadata
-  const kpis = [
+  const kpiCards = [
     {
       name: t("metricTotalTenants"),
-      value: activeTenantsCount,
-      subText: `${tenants.length} registered total`,
+      value: kpis?.activeTenants ?? 0,
+      subText: `${kpis?.totalTenants ?? 0} registered total`,
       icon: Users,
       color: "from-blue-500/10 to-indigo-500/10 border-blue-500/30",
       iconColor: "text-blue-400"
     },
     {
       name: t("metricTotalMRR"),
-      value: `$${totalMRR.toLocaleString()}`,
+      value: `$${(kpis?.totalMrr ?? 0).toLocaleString()}`,
       subText: "SaaS Monthly Recurrent Revenue",
       icon: DollarSign,
       color: "from-emerald-500/10 to-green-500/10 border-emerald-500/30",
@@ -324,7 +234,7 @@ export default function SuperAdminPage() {
     },
     {
       name: t("metricGlobalMessages"),
-      value: globalAIMessages.toLocaleString(),
+      value: (kpis?.globalMessages ?? 0).toLocaleString(),
       subText: "AI requests handled this month",
       icon: MessageSquare,
       color: "from-purple-500/10 to-violet-500/10 border-purple-500/30",
@@ -332,14 +242,14 @@ export default function SuperAdminPage() {
     },
     {
       name: t("metricSystemHealth"),
-      value: trafficMode === "high" ? "API Alert" : "100% OK",
-      subText: trafficMode === "high" ? "Heavy LLM Traffic" : t("healthHealthy"),
+      value: highLoad ? "API Alert" : "100% OK",
+      subText: highLoad ? "Heavy CPU Load" : t("healthHealthy"),
       icon: Activity,
       color:
-        trafficMode === "high"
+        highLoad
           ? "from-amber-500/10 to-orange-500/10 border-amber-500/30 animate-pulse"
           : "from-purple-500/10 to-pink-500/10 border-purple-500/30",
-      iconColor: trafficMode === "high" ? "text-amber-400" : "text-purple-400"
+      iconColor: highLoad ? "text-amber-400" : "text-purple-400"
     }
   ];
 
@@ -392,7 +302,7 @@ export default function SuperAdminPage() {
 
       {/* KPI Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {kpis.map((kpi, idx) => {
+        {kpiCards.map((kpi, idx) => {
           const Icon = kpi.icon;
           return (
             <div
@@ -444,34 +354,14 @@ export default function SuperAdminPage() {
             <div className="flex justify-between items-center">
               <div>
                 <h3 className="text-base font-bold text-white">System Performance Meters</h3>
-                <p className="text-xs text-gray-500 mt-0.5">Real-time resource utilization indicators</p>
+                <p className="text-xs text-gray-500 mt-0.5">Live resource utilization from backend (polling every 10s)</p>
               </div>
-              <div className="flex items-center gap-1 bg-[#050508] border border-[#1f1f2e] rounded-lg p-1">
-                <button
-                  onClick={() => setTrafficMode("idle")}
-                  className={`text-[10px] font-bold px-2 py-1 rounded transition-colors ${
-                    trafficMode === "idle" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"
-                  }`}
-                >
-                  Idle
-                </button>
-                <button
-                  onClick={() => setTrafficMode("normal")}
-                  className={`text-[10px] font-bold px-2 py-1 rounded transition-colors ${
-                    trafficMode === "normal" ? "bg-purple-600 text-white" : "text-gray-400 hover:text-white"
-                  }`}
-                >
-                  Normal
-                </button>
-                <button
-                  onClick={() => setTrafficMode("high")}
-                  className={`text-[10px] font-bold px-2 py-1 rounded transition-colors ${
-                    trafficMode === "high" ? "bg-red-600 text-white animate-pulse" : "text-gray-400 hover:text-white"
-                  }`}
-                >
-                  Peak Load
-                </button>
-              </div>
+              <button
+                onClick={loadHealth}
+                className="text-[10px] font-bold px-3 py-1.5 rounded-lg bg-purple-600 text-white hover:bg-purple-500 transition-colors"
+              >
+                Refresh
+              </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
@@ -532,20 +422,20 @@ export default function SuperAdminPage() {
                 </div>
               </div>
 
-              {/* LLM Response Latency */}
+              {/* LLM Provider Status */}
               <div className="space-y-2">
                 <div className="flex justify-between text-xs font-semibold">
                   <span className="text-gray-400 flex items-center gap-1.5">
                     <Activity className="h-4 w-4 text-pink-400" />
-                    {t("llmLatency")}
+                    LLM Provider
                   </span>
-                  <span className="text-white">{llmLatency} ms</span>
+                  <span className="text-white">{llmConfigured ? "Configured" : "Not Configured"}</span>
                 </div>
                 <div className="h-3 w-full bg-[#050508] border border-[#1f1f2e] rounded-full overflow-hidden">
                   <div
-                    style={{ width: `${Math.min(100, (llmLatency / 500) * 100)}%` }}
+                    style={{ width: llmConfigured ? "100%" : "20%" }}
                     className={`h-full rounded-full transition-all duration-1000 ${
-                      llmLatency > 400 ? "bg-red-500" : llmLatency > 300 ? "bg-amber-500" : "bg-pink-500"
+                      llmConfigured ? "bg-pink-500" : "bg-amber-500"
                     }`}
                   />
                 </div>
@@ -562,28 +452,30 @@ export default function SuperAdminPage() {
                   </span>
                 </div>
                 <div className="bg-[#050508] border border-[#1f1f2e] rounded-xl p-3">
-                  <p className="text-[10px] text-gray-500 font-bold uppercase">ChromaDB Cluster</p>
-                  <span className="inline-flex items-center gap-1 mt-1 text-emerald-400 text-xs font-bold">
-                    <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                    Healthy (3/3)
+                  <p className="text-[10px] text-gray-500 font-bold uppercase">ChromaDB</p>
+                  <span className={`inline-flex items-center gap-1 mt-1 text-xs font-bold ${
+                    chromaOk ? "text-emerald-400" : "text-red-400"
+                  }`}>
+                    <span className={`h-2 w-2 rounded-full ${chromaOk ? "bg-emerald-400 animate-pulse" : "bg-red-400"}`} />
+                    {chromaOk ? "Healthy" : "Unreachable"}
                   </span>
                 </div>
                 <div className="bg-[#050508] border border-[#1f1f2e] rounded-xl p-3">
-                  <p className="text-[10px] text-gray-500 font-bold uppercase">Redis Cache</p>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase">DB Latency</p>
                   <span className="inline-flex items-center gap-1 mt-1 text-emerald-400 text-xs font-bold">
                     <span className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                    Active (100%)
+                    {dbLatency.toFixed(1)} ms
                   </span>
                 </div>
                 <div className="bg-[#050508] border border-[#1f1f2e] rounded-xl p-3">
                   <p className="text-[10px] text-gray-500 font-bold uppercase">LLM Provider API</p>
                   <span className={`inline-flex items-center gap-1 mt-1 text-xs font-bold ${
-                    trafficMode === "high" ? "text-amber-400" : "text-emerald-400"
+                    llmConfigured ? "text-emerald-400" : "text-amber-400"
                   }`}>
                     <span className={`h-2 w-2 rounded-full ${
-                      trafficMode === "high" ? "bg-amber-400 animate-ping" : "bg-emerald-400 animate-pulse"
+                      llmConfigured ? "bg-emerald-400 animate-pulse" : "bg-amber-400"
                     }`} />
-                    {trafficMode === "high" ? "Latency Alert" : "Responsive"}
+                    {llmConfigured ? "Configured" : "No API Key"}
                   </span>
                 </div>
               </div>
@@ -609,21 +501,21 @@ export default function SuperAdminPage() {
                 </div>
 
                 <div className={`rounded-xl border p-3 flex gap-3 transition-colors ${
-                  trafficMode === "high" 
+                  highLoad 
                     ? "bg-amber-500/5 border-amber-500/30" 
                     : "bg-[#050508]/40 border-[#1f1f2e]"
                 }`}>
                   <AlertTriangle className={`h-5 w-5 shrink-0 mt-0.5 ${
-                    trafficMode === "high" ? "text-amber-400 animate-bounce" : "text-gray-600"
+                    highLoad ? "text-amber-400 animate-bounce" : "text-gray-600"
                   }`} />
                   <div>
-                    <h4 className={`text-xs font-bold ${trafficMode === "high" ? "text-white" : "text-gray-500"}`}>
-                      LLM Model Latency Check
+                    <h4 className={`text-xs font-bold ${highLoad ? "text-white" : "text-gray-500"}`}>
+                      System Load Check
                     </h4>
                     <p className="text-[10px] text-gray-500 mt-0.5">
-                      {trafficMode === "high" 
-                        ? "Gemini-3.5 API response is taking longer than 400ms threshold." 
-                        : "Response metrics within normal B2B limits."}
+                      {highLoad 
+                        ? `CPU usage at ${cpuUsage.toFixed(1)}% — exceeds 80% threshold.` 
+                        : "Resource metrics within normal operating limits."}
                     </p>
                   </div>
                 </div>

@@ -106,10 +106,14 @@ class VectorRagStrategy(RagStrategy):
             )
         system = (
             f"You are {bot_name}, a {tone} customer-support assistant. "
-            f"Answer ONLY using the knowledge base context below. If the context "
-            f"does not contain the answer, say you don't know. "
             f"Always respond in {lang_name}. {extra}\n\n"
-            f"Knowledge base context:\n{context}{memory_block}"
+            f"RULES:\n"
+            f"- Answer ONLY using the knowledge base context below.\n"
+            f"- Formulate your answer in a natural, direct conversational way.\n"
+            f"- Extract the specific answer and do NOT verbatim copy-paste texts like document titles, intros, or question numbers.\n"
+            f"- Do NOT mention that you are using a context, guide, or document.\n"
+            f"- If the context does not contain the answer, say you don't know.\n\n"
+            f"Context:\n{context}{memory_block}"
         )
         messages = [{"role": "system", "content": system}]
         for m in history[-cfg.MEMORY_WINDOW:]:
@@ -117,7 +121,14 @@ class VectorRagStrategy(RagStrategy):
             messages.append({"role": role, "content": m.get("content", "")})
         messages.append({"role": "user", "content": query})
 
-        client = OpenAI(api_key=cfg.OPENAI_API_KEY)
+        if cfg.NVIDIA_API_KEY:
+            client = OpenAI(
+                base_url="https://integrate.api.nvidia.com/v1",
+                api_key=cfg.NVIDIA_API_KEY
+            )
+        else:
+            client = OpenAI(api_key=cfg.OPENAI_API_KEY)
+
         resp = client.chat.completions.create(
             model=cfg.CHAT_MODEL, messages=messages, temperature=0.2
         )

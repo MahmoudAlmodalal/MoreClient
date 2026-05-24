@@ -17,6 +17,8 @@ pymupdf>=1.24            # verified 1.27.2.3
 python-docx>=1.1         # verified 1.2.0
 langdetect==1.0.9
 python-multipart>=0.0.9
+pandas>=2.0.0
+openpyxl>=3.0.0
 
 # Channels
 python-telegram-bot>=21   # verified 22.7 (Telegram send done via raw Bot API/httpx)

@@ -21,6 +21,7 @@ class CustomerIntent(str, Enum):
     COMPLAINT = "complaint"
     GREETING = "greeting"
     ORDER_STATUS = "order_status"
+    SPAM = "spam"
 
 
 @dataclass
@@ -50,6 +51,20 @@ _SUPPORT_PATTERNS = [
 _COMPLAINT_PATTERNS = [
     r"\b(problem|issue|broken|not working|refund|return|exchange|delayed|wrong order|complaint)\b",
     r"(مشكلة|شكوى|لا يعمل|ما يشتغل|معطل|إرجاع|ارجاع|استبدال|تأخر|تاخر|لم يصل|ما وصل|خطأ في الطلب)",
+]
+
+_SPAM_PATTERNS = [
+    r"\b(crypto|bitcoin|forex|invest|make money|make \$|casino|betting|porn|advertise|marketing)\b",
+    r"https?://\S+",  # Link spam
+    r"([a-zA-Z0-9])\1{4,}",  # Repeated characters like aaaaaaa
+    r"([\u0600-\u06ff])\1{4,}",  # Repeated Arabic characters like ههههههههه
+]
+
+_QUESTION_INDICATORS = [
+    r"\b(how|what|why|where|when|who|which|whose|whom|can you|is there|do you|policy|how-to)\b",
+    r"\?",
+    r"(كيف|لماذا|اين|أين|متى|من|هل|بكم|كم|ماذا|ما هو|ماهو|سياسة|طريقة)",
+    r"\؟",
 ]
 
 _ORDER_STATUS_PATTERNS = [
@@ -116,6 +131,7 @@ def _keyword_scan(message: str) -> IntentResult:
     normalized = _normalize(message)
 
     checks = [
+        (CustomerIntent.SPAM, _SPAM_PATTERNS, 0.95),
         (CustomerIntent.COMPLAINT, _COMPLAINT_PATTERNS, 0.94),
         (CustomerIntent.SUPPORT_REQUEST, _SUPPORT_PATTERNS, 0.94),
         (CustomerIntent.ORDER_STATUS, _ORDER_STATUS_PATTERNS, 0.88),
@@ -124,6 +140,14 @@ def _keyword_scan(message: str) -> IntentResult:
     ]
     for intent, patterns, confidence in checks:
         if any(re.search(pattern, normalized, flags=re.IGNORECASE) for pattern in patterns):
+            if intent == CustomerIntent.COMPLAINT:
+                # Check for general question keywords to prevent false positive complaints
+                if any(re.search(q_pat, normalized, flags=re.IGNORECASE) for q_pat in _QUESTION_INDICATORS):
+                    return IntentResult(
+                        intent=CustomerIntent.GENERAL_INQUIRY,
+                        confidence=0.50,
+                        reasoning="Complaint keywords found but matches question/policy indicator.",
+                    )
             return IntentResult(
                 intent=intent,
                 confidence=confidence,
@@ -188,7 +212,8 @@ def _llm_classify(message: str, history: list[dict]) -> IntentResult | None:
         "- complaint: العميل غير راضٍ أو لديه مشكلة أو شكوى\n"
         "- general_inquiry: سؤال عام عن المنتجات أو الخدمات، بما في ذلك السعر بدون طلب شراء واضح\n"
         "- greeting: تحية فقط\n"
-        "- order_status: استفسار عن حالة طلب سابق\n\n"
+        "- order_status: استفسار عن حالة طلب سابق\n"
+        "- spam: رسالة عشوائية، إعلانات، محتوى غير لائق، أو نص غير مفهوم / أحرف مكررة\n\n"
         f"الرسالة: {message}\n"
         f"سياق المحادثة السابقة:\n{history_text or 'لا يوجد'}\n\n"
         'أجب بصيغة JSON فقط: {"intent":"...","confidence":0.0,"product_mentioned":null,"reasoning":"..."}'

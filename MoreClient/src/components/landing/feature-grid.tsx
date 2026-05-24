@@ -1,80 +1,132 @@
 "use client";
 
 import {
-  BarChart3,
-  Bolt,
+  Bot,
   Globe2,
-  Handshake,
-  MonitorSmartphone,
-  ShieldCheck,
+  BarChart3,
+  Database,
+  KeyRound,
+  Users,
 } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
-import { Section, SectionHeading } from "@/components/ui/section";
-import { Card } from "@/components/ui/card";
 
 export function FeatureGrid() {
-  const { t } = useLanguage();
+  const { language } = useLanguage();
 
-  const features = [
+  const featuresAr = [
     {
-      title: t("featInstantTitle"),
-      desc: t("featInstantDesc"),
-      icon: Bolt,
-      accent: "text-amber-300 bg-amber-400/10",
+      title: "ردود ذكية مؤتمتة",
+      desc: "روبوت ذكاء اصطناعي تفاعلي يفهم أسئلة عملائك ويجيب عليها فوراً بناء على مستندات قاعدة المعرفة المرفوعة الخاصة بك.",
+      icon: Bot,
+      accent: "text-purple-300 bg-purple-400/10 border-purple-500/20",
     },
     {
-      title: t("featOmnichannelTitle"),
-      desc: t("featOmnichannelDesc"),
+      title: "قنوات تراسل موحدة",
+      desc: "اربط قنوات الواتساب والرسائل النصية والبريد الإلكتروني وتفاعل مع كافة المحادثات من واجهة موحدة.",
       icon: Globe2,
-      accent: "text-sky-300 bg-sky-400/10",
+      accent: "text-sky-300 bg-sky-400/10 border-sky-500/20",
     },
     {
-      title: t("featHandoffTitle"),
-      desc: t("featHandoffDesc"),
-      icon: Handshake,
-      accent: "text-emerald-300 bg-emerald-400/10",
-    },
-    {
-      title: t("featAnalyticsTitle"),
-      desc: t("featAnalyticsDesc"),
+      title: "تقارير وإحصائيات متكاملة",
+      desc: "لوحة إحصائيات متقدمة لحجم استهلاك الرسائل، سرعة استجابة عقد الـ API، وسجل اشتراكات العملاء.",
       icon: BarChart3,
-      accent: "text-brand-300 bg-brand-500/10",
+      accent: "text-emerald-300 bg-emerald-400/10 border-emerald-500/20",
     },
     {
-      title: t("featUxTitle"),
-      desc: t("featUxDesc"),
-      icon: MonitorSmartphone,
-      accent: "text-cyan-300 bg-cyan-400/10",
+      title: "قواعد بيانات مخصصة",
+      desc: "تخزين آمن ومحمي بالكامل عبر تقسيم قواعد بيانات المشتركين على خوادم إقليمية لسرعة استجابة خارقة.",
+      icon: Database,
+      accent: "text-amber-300 bg-amber-400/10 border-amber-500/20",
     },
     {
-      title: t("featSecurityTitle"),
-      desc: t("featSecurityDesc"),
-      icon: ShieldCheck,
-      accent: "text-rose-300 bg-rose-400/10",
+      title: "ربط برمجي مرن (Webhooks)",
+      desc: "مفاتيح وصول الـ API وربط فوري للتحديثات التلقائية لتكامل سلس مع متاجر سلة أو أنظمة الـ ERP الخاصة بك.",
+      icon: KeyRound,
+      accent: "text-cyan-300 bg-cyan-400/10 border-cyan-500/20",
+    },
+    {
+      title: "إدارة الصلاحيات والفرق",
+      desc: "إضافة مدراء وموظفي دعم، وتحديد صلاحيات الوصول إلى القنوات المختلفة والتحكم في إعدادات عقد التشغيل.",
+      icon: Users,
+      accent: "text-rose-300 bg-rose-400/10 border-rose-500/20",
     },
   ];
 
+  const featuresEn = [
+    {
+      title: "Smart Automated Replies",
+      desc: "An interactive AI chatbot that understands customer questions and replies instantly based on your uploaded knowledge base documents.",
+      icon: Bot,
+      accent: "text-purple-300 bg-purple-400/10 border-purple-500/20",
+    },
+    {
+      title: "Unified Messaging Channels",
+      desc: "Connect WhatsApp, SMS, and Email channels and engage with all conversations from one unified interface.",
+      icon: Globe2,
+      accent: "text-sky-300 bg-sky-400/10 border-sky-500/20",
+    },
+    {
+      title: "Integrated Reports & Analytics",
+      desc: "Advanced statistics dashboard for message volume, API node latency, and client subscription tracking.",
+      icon: BarChart3,
+      accent: "text-emerald-300 bg-emerald-400/10 border-emerald-500/20",
+    },
+    {
+      title: "Dedicated Databases & Nodes",
+      desc: "Fully secure and isolated storage by partitioning tenant databases across regional sharding nodes.",
+      icon: Database,
+      accent: "text-amber-300 bg-amber-400/10 border-amber-500/20",
+    },
+    {
+      title: "Flexible API & Webhooks",
+      desc: "Access tokens and instant update webhooks for seamless integrations with Salla, Zid, or your local ERP system.",
+      icon: KeyRound,
+      accent: "text-cyan-300 bg-cyan-400/10 border-cyan-500/20",
+    },
+    {
+      title: "Team & Permission Management",
+      desc: "Add admins and support agents, define access permissions for different channels, and manage deployment node settings.",
+      icon: Users,
+      accent: "text-rose-300 bg-rose-400/10 border-rose-500/20",
+    },
+  ];
+
+  const features = language === "ar" ? featuresAr : featuresEn;
+
   return (
-    <Section id="features">
-      <SectionHeading
-        eyebrow={t("featuresEyebrow")}
-        title={t("featuresTitle")}
-        subtitle={t("featuresSubtitle")}
-      />
-      <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {features.map((f) => {
-          const Icon = f.icon;
-          return (
-          <Card key={f.title} tone="dark" className="transition-colors hover:border-brand-500/30">
-            <div className={`mb-4 inline-flex h-11 w-11 items-center justify-center rounded-lg ${f.accent}`}>
-              <Icon size={22} aria-hidden="true" />
-            </div>
-            <h3 className="text-lg font-semibold text-white">{f.title}</h3>
-            <p className="mt-2 text-sm leading-relaxed text-gray-400">{f.desc}</p>
-          </Card>
-          );
-        })}
+    <section id="features" className="relative py-20 bg-white/[0.01] border-t border-[#24213f]">
+      <div className="mx-auto max-w-6xl px-5 sm:px-8">
+        {/* Section Header */}
+        <div className="text-center mb-14">
+          <h2 className="text-3xl font-bold text-white sm:text-4xl">
+            {language === "ar" ? "مميزات خارقة لنمو أعمالك" : "Supercharged Features for Business Growth"}
+          </h2>
+          <p className="mx-auto mt-4 max-w-2xl text-sm sm:text-base text-gray-400">
+            {language === "ar"
+              ? "كل ما تحتاجه للتحكم الشامل ببيانات وقنوات تواصل عملائك في لوحة تحكم واحدة"
+              : "Everything you need for unified control over customer data and messaging channels in a single dashboard"}
+          </p>
+        </div>
+
+        {/* Features Grid */}
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {features.map((f) => {
+            const Icon = f.icon;
+            return (
+              <div
+                key={f.title}
+                className="rounded-2xl border border-white/5 bg-[#151324]/40 p-6 text-start transition-all duration-300 hover:border-purple-500/30 hover:bg-[#151324]/70 hover:-translate-y-1 shadow-lg shadow-black/20"
+              >
+                <div className={`mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl border ${f.accent}`}>
+                  <Icon size={20} aria-hidden="true" />
+                </div>
+                <h3 className="text-lg font-bold text-white mb-2">{f.title}</h3>
+                <p className="text-xs sm:text-sm leading-relaxed text-gray-400">{f.desc}</p>
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </Section>
+    </section>
   );
 }

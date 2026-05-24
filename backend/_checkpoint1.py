@@ -66,7 +66,24 @@ with TestClient(app) as client:  # context manager triggers lifespan (init_db + 
         files={"file": ("faq.pdf", make_pdf(), "application/pdf")},
     )
     up = r.json()
-    show("1. Upload PDF -> /api/upload", r.status_code == 200 and up.get("chunks", 0) > 0, f"{r.status_code} {up}")
+    
+    # Wait for the document processing background thread to complete
+    import time
+    status = "Processing"
+    chunks = 0
+    for _ in range(20):
+        r_files = client.get("/api/files")
+        if r_files.status_code == 200:
+            files_list = r_files.json()
+            faq_entry = next((f for f in files_list if f.get("name") == "faq.pdf"), None)
+            if faq_entry:
+                status = faq_entry.get("status")
+                chunks = faq_entry.get("chunks", 0)
+                if status == "Completed":
+                    break
+        time.sleep(0.5)
+
+    show("1. Upload PDF -> /api/upload", status == "Completed" and chunks > 0, f"status={status} chunks={chunks} {up}")
 
     # 2) Ask a question about it -> /api/chat (web)
     r = client.post("/api/chat", json={
@@ -91,6 +108,15 @@ with TestClient(app) as client:  # context manager triggers lifespan (init_db + 
     unk = r.json()
     show("4. Out-of-doc question -> 'I don't know'", unk.get("escalate") is True,
          f"escalate={unk.get('escalate')} conf={unk.get('confidence')} reply={unk.get('reply')[:120]!r}")
+
+    # 4b) Send a spam message -> should get spam blocked response, escalate=False
+    r = client.post("/api/chat", json={
+        "session_id": "demo-web-spam", "message": "Invest in Bitcoin now! https://scam-bitcoin.com", "channel": "web",
+    })
+    spam = r.json()
+    spam_ok = not spam.get("escalate") and "blocked" in spam.get("reply", "").lower()
+    show("4b. Spam message filtering", spam_ok,
+         f"escalate={spam.get('escalate')} conf={spam.get('confidence')} reply={spam.get('reply')!r}")
 
     # 5) GET /api/analytics -> should return real data
     r = client.get("/api/analytics")

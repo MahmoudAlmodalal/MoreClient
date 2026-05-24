@@ -111,6 +111,22 @@ class ChatService:
             )
 
         intent = classify_intent(message, history=history, setting=setting)
+        if intent.intent == CustomerIntent.SPAM:
+            reply = (
+                "تم حظر الرسالة للاشتباه في محتوى عشوائي."
+                if lang == "ar"
+                else "Message blocked: potential spam detected."
+            )
+            self._add_message(conv, role="assistant", content=reply)
+            self.db.commit()
+            return ChatResponse(
+                reply=reply,
+                sender="bot",
+                escalate=False,
+                confidence=intent.confidence,
+                language=lang,
+            )
+
         if (
             intent.intent == CustomerIntent.PURCHASE_INTENT
             and getattr(setting, "purchase_flow_enabled", True)

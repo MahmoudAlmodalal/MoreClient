@@ -4,10 +4,10 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
+import { useSessionRole } from "@/lib/use-session-role";
 import { NotificationBell } from "@/components/notification-bell";
 import {
   LayoutDashboard,
-  Users,
   Eye,
   LogOut,
   Menu,
@@ -27,18 +27,18 @@ export default function SuperAdminLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+  const role = useSessionRole();
+  const isAuthorized = role === "admin";
 
+  // Navigate-only effect (no setState): bounce non-admins to the dashboard once
+  // the client role snapshot resolves. `null` is the pre-hydration snapshot.
   useEffect(() => {
-    const role = sessionStorage.getItem("userRole");
     if (role !== "admin") {
       router.push("/dashboard");
-    } else {
-      setIsAuthorized(true);
     }
-  }, [router]);
+  }, [role, router]);
 
-  if (isAuthorized === null) {
+  if (!isAuthorized) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#050508]">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-500/50 border-t-purple-500" />
@@ -68,10 +68,12 @@ export default function SuperAdminLayout({
         <div className="flex items-center gap-3">
           <button
             type="button"
+            aria-label={isRtl ? "فتح القائمة" : "Open menu"}
+            aria-expanded={mobileMenuOpen}
             className="text-gray-400 hover:text-gray-100 md:hidden"
             onClick={() => setMobileMenuOpen(true)}
           >
-            <Menu className="h-6 w-6" />
+            <Menu className="h-6 w-6" aria-hidden="true" />
           </button>
           
           <div className="flex items-center gap-3">
@@ -176,10 +178,11 @@ export default function SuperAdminLayout({
                 <h2 className="text-lg font-bold text-white">{t("superAdminTitle")}</h2>
                 <button
                   type="button"
+                  aria-label={isRtl ? "إغلاق القائمة" : "Close menu"}
                   className="rounded-md p-1.5 text-gray-400 hover:bg-[#1a1a26] hover:text-white"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  <X className="h-6 w-6" />
+                  <X className="h-6 w-6" aria-hidden="true" />
                 </button>
               </div>
 

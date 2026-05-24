@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
+import { useSessionRole } from "@/lib/use-session-role";
 import { NotificationBell } from "@/components/notification-bell";
 import {
   LayoutDashboard,
@@ -28,11 +29,7 @@ export default function DashboardLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const [isAdmin, setIsAdmin] = useState(false);
-
-  useEffect(() => {
-    setIsAdmin(sessionStorage.getItem("userRole") === "admin");
-  }, []);
+  const isAdmin = useSessionRole() === "admin";
 
   const navigation = [
     { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
@@ -59,10 +56,12 @@ export default function DashboardLayout({
         <div className="flex items-center gap-3">
           <button
             type="button"
+            aria-label={isRtl ? "فتح القائمة" : "Open menu"}
+            aria-expanded={mobileMenuOpen}
             className="text-gray-400 hover:text-gray-100 md:hidden"
             onClick={() => setMobileMenuOpen(true)}
           >
-            <Menu className="h-6 w-6" />
+            <Menu className="h-6 w-6" aria-hidden="true" />
           </button>
           
           <div className="flex items-center gap-3">
@@ -158,10 +157,11 @@ export default function DashboardLayout({
                 <h2 className="text-lg font-bold text-white">{t("adminPanel")}</h2>
                 <button
                   type="button"
+                  aria-label={isRtl ? "إغلاق القائمة" : "Close menu"}
                   className="rounded-md p-1.5 text-gray-400 hover:bg-[#1a1a26] hover:text-white"
                   onClick={() => setMobileMenuOpen(false)}
                 >
-                  <X className="h-6 w-6" />
+                  <X className="h-6 w-6" aria-hidden="true" />
                 </button>
               </div>
 

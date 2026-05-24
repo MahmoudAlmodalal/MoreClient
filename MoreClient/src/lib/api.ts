@@ -7,6 +7,10 @@
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+function joinBasePath(base: string, path: string): string {
+  return `${base.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
+}
+
 export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -27,7 +31,7 @@ async function parseError(res: Response): Promise<never> {
 }
 
 export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { headers: { Accept: "application/json" } });
+  const res = await fetch(joinBasePath(BASE, path), { headers: { Accept: "application/json" } });
   if (!res.ok) return parseError(res);
   return res.json() as Promise<T>;
 }
@@ -37,7 +41,7 @@ export async function apiSend<T>(
   method: "POST" | "PUT" | "DELETE" | "PATCH",
   body?: unknown,
 ): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, {
+  const res = await fetch(joinBasePath(BASE, path), {
     method,
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -50,7 +54,7 @@ export async function apiSend<T>(
 export async function apiUpload<T>(path: string, file: File): Promise<T> {
   const fd = new FormData();
   fd.append("file", file);
-  const res = await fetch(`${BASE}${path}`, { method: "POST", body: fd });
+  const res = await fetch(joinBasePath(BASE, path), { method: "POST", body: fd });
   if (!res.ok) return parseError(res);
   return res.json() as Promise<T>;
 }
@@ -96,6 +100,30 @@ export type AnalyticsResponse = {
     timeAgo: string;
   }[];
 };
+
+export type AnalyticsSocketMessage = {
+  type: "analytics.snapshot";
+  reason: string;
+  data: AnalyticsResponse;
+};
+
+export function createWebSocketUrl(path: string): string {
+  const configured = process.env.NEXT_PUBLIC_WS_URL;
+  if (configured) return joinBasePath(configured, path);
+
+  try {
+    const url = new URL(BASE);
+    url.protocol = url.protocol === "https:" ? "wss:" : "ws:";
+    return joinBasePath(url.toString(), path);
+  } catch {
+    if (typeof window !== "undefined") {
+      const url = new URL(path, window.location.origin);
+      url.protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      return url.toString();
+    }
+    return path;
+  }
+}
 
 export type HandoffMessage = { id: string; role: string; content: string; time: string };
 

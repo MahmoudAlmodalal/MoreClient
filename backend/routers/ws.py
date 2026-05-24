@@ -1,4 +1,4 @@
-"""WebSocket chat endpoint for the web widget.
+"""WebSocket endpoints for the web widget and realtime dashboard.
 
 The widget opens one socket per session at /ws/chat/{session_id} and exchanges
 messages over it. ChatService is synchronous (sync SQLAlchemy / httpx / OpenAI),
@@ -12,6 +12,11 @@ from starlette.concurrency import run_in_threadpool
 from backend.core.language import detect_language
 from backend.models.database import SessionLocal
 from backend.services.channels.factory import ChannelFactory
+from backend.services.realtime import (
+    broadcast_dashboard_snapshot,
+    build_dashboard_snapshot_message,
+    dashboard_connections,
+)
 
 router = APIRouter()
 
@@ -59,8 +64,23 @@ async def chat_ws(websocket: WebSocket, session_id: str) -> None:
             # guard — a drop mid-send raises WebSocketDisconnect (caught below).
             try:
                 payload = await run_in_threadpool(_run)
+                broadcast_dashboard_snapshot("chat.message")
             except Exception:
                 payload = _error_payload(detect_language(inbound.text))
             await websocket.send_json(payload)
     except WebSocketDisconnect:
         return
+
+
+@router.websocket("/ws/dashboard")
+async def dashboard_ws(websocket: WebSocket) -> None:
+    await websocket.accept()
+    client = dashboard_connections.add(websocket)
+    try:
+        initial_payload = build_dashboard_snapshot_message("initial")
+        await dashboard_connections.send_to_client(client, initial_payload)
+
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        dashboard_connections.remove(client)

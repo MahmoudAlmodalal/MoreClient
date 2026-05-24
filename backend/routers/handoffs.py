@@ -14,6 +14,7 @@ from backend.core.language import detect_language
 from backend.models.database import get_db
 from backend.models.tables import Conversation, Handoff, Message, PurchaseOrder
 from backend.schemas.handoffs import HandoffMessageOut, HandoffOut, ReplyRequest
+from backend.services.realtime import broadcast_dashboard_snapshot
 
 router = APIRouter()
 
@@ -131,6 +132,7 @@ def reply_handoff(handoff_id: int, body: ReplyRequest, db: Session = Depends(get
     db.commit()
 
     db.refresh(handoff)
+    broadcast_dashboard_snapshot("handoff.reply")
     return _build_handoff_out(handoff, db)
 
 
@@ -149,4 +151,5 @@ def resolve_handoff(handoff_id: int, db: Session = Depends(get_db)):
         conv.status = "closed"
 
     db.commit()
+    broadcast_dashboard_snapshot("handoff.resolve")
     return {"ok": True}

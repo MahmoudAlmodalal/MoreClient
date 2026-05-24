@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from backend.models.database import get_db
 from backend.services.channels.factory import ChannelFactory
+from backend.services.realtime import broadcast_dashboard_snapshot
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,7 @@ async def telegram_webhook(request: Request, db: Session = Depends(get_db)):
         inbound = channel.parse(payload, db)
         if inbound is not None:
             channel.deliver(inbound, channel.reply(inbound, db), db)
+            broadcast_dashboard_snapshot("channel.telegram")
     except Exception:
         # Swallow — webhooks must never surface a non-200 to the provider.
         logger.exception("Telegram webhook processing error")
@@ -59,6 +61,8 @@ async def whatsapp_webhook(request: Request, db: Session = Depends(get_db)):
             if inbound is not None
             else _EMPTY_TWIML
         )
+        if inbound is not None:
+            broadcast_dashboard_snapshot("channel.whatsapp")
         return Response(content=twiml, media_type="application/xml")
     except Exception:
         # On any failure, reply with empty TwiML at status 200 so Twilio

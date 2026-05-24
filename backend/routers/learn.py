@@ -5,6 +5,8 @@ row, then best-effort embed it and add it to the vector store so future queries
 can retrieve it.
 """
 
+from datetime import datetime
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -13,6 +15,7 @@ from backend.models.database import get_db
 from backend.models.tables import Conversation, Handoff, LearnedAnswer
 from backend.schemas.learn import LearnRequest, LearnResponse
 from backend.services.ai import embeddings, vectorstore
+from backend.services.realtime import broadcast_dashboard_snapshot
 
 router = APIRouter()
 
@@ -20,12 +23,18 @@ router = APIRouter()
 @router.post("/api/learn", response_model=LearnResponse)
 def learn(body: LearnRequest, db: Session = Depends(get_db)) -> LearnResponse:
     tenant_key = (body.tenant_key or cfg.DEFAULT_TENANT_KEY).strip().lower() or cfg.DEFAULT_TENANT_KEY
+    source_handoff: Handoff | None = None
+    source_conversation: Conversation | None = None
+
     if body.source_handoff_id is not None:
-        handoff = db.get(Handoff, body.source_handoff_id)
-        if handoff is not None:
-            conv = handoff.conversation or db.get(Conversation, handoff.conversation_id)
-            if conv is not None:
-                tenant_key = conv.tenant_key
+        source_handoff = db.get(Handoff, body.source_handoff_id)
+        if source_handoff is not None:
+            source_conversation = source_handoff.conversation or db.get(
+                Conversation,
+                source_handoff.conversation_id,
+            )
+            if source_conversation is not None:
+                tenant_key = source_conversation.tenant_key
 
     la = LearnedAnswer(
         tenant_key=tenant_key,
@@ -34,6 +43,13 @@ def learn(body: LearnRequest, db: Session = Depends(get_db)) -> LearnResponse:
         source_handoff_id=body.source_handoff_id,
     )
     db.add(la)
+
+    if source_handoff is not None:
+        source_handoff.status = "resolved"
+        source_handoff.resolved_at = datetime.utcnow()
+        if source_conversation is not None:
+            source_conversation.status = "closed"
+
     db.commit()
     db.refresh(la)
 
@@ -44,4 +60,5 @@ def learn(body: LearnRequest, db: Session = Depends(get_db)) -> LearnResponse:
     except Exception:
         pass
 
+    broadcast_dashboard_snapshot("learn.answer")
     return LearnResponse(id=la.id, status="learned")

@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 from backend.models.database import get_db
 from backend.schemas.chat import ChatRequest, ChatResponse
 from backend.services.chat_service import ChatService
+from backend.services.realtime import broadcast_dashboard_snapshot
 
 router = APIRouter()
 
@@ -33,6 +34,7 @@ def post_chat(
         # Expose server-side latency so the perf gate (and any client) can read it
         # without changing the ChatResponse schema. Demo target: < 3000 ms.
         response.headers["X-Response-Time-ms"] = f"{(time.perf_counter() - start) * 1000:.1f}"
+        broadcast_dashboard_snapshot("chat.message")
         return result
     except HTTPException:
         raise

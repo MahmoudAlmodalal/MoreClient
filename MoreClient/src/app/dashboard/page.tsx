@@ -1,8 +1,14 @@
 "use client";
 
-import React, { useEffect, useState, useSyncExternalStore } from "react";
+import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useLanguage } from "@/components/language-provider";
-import { apiGet, apiSend, type AnalyticsResponse } from "@/lib/api";
+import {
+  apiGet,
+  apiSend,
+  createWebSocketUrl,
+  type AnalyticsResponse,
+  type AnalyticsSocketMessage
+} from "@/lib/api";
 import {
   MessageSquare,
   DollarSign,
@@ -55,6 +61,16 @@ export default function DashboardPage() {
   const [selectedQuestion, setSelectedQuestion] = useState<UnansweredItem | null>(null);
   const [answerInput, setAnswerInput] = useState("");
   const [toastMessage, setToastMessage] = useState("");
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reconnectAttemptRef = useRef(0);
+  const dashboardSocketRef = useRef<WebSocket | null>(null);
+
+  const applyAnalyticsData = useCallback((data: AnalyticsResponse) => {
+    setKpis(data.kpis);
+    setTopQuestions(data.top_questions);
+    setChannelDistribution(data.channel_distribution);
+    setUnansweredQuestions(data.unanswered);
+  }, []);
 
   // Fetch real analytics on mount; on failure, keep graceful zero/empty defaults.
   useEffect(() => {
@@ -62,10 +78,7 @@ export default function DashboardPage() {
     apiGet<AnalyticsResponse>("/api/analytics")
       .then((data) => {
         if (!active) return;
-        setKpis(data.kpis);
-        setTopQuestions(data.top_questions);
-        setChannelDistribution(data.channel_distribution);
-        setUnansweredQuestions(data.unanswered);
+        applyAnalyticsData(data);
       })
       .catch(() => {
         /* graceful fallback: leave zeros/empty arrays in place */
@@ -73,7 +86,66 @@ export default function DashboardPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [applyAnalyticsData]);
+
+  useEffect(() => {
+    if (!isClient) return;
+
+    let stopped = false;
+
+    const clearReconnectTimer = () => {
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+    };
+
+    const connect = () => {
+      clearReconnectTimer();
+      const socket = new WebSocket(createWebSocketUrl("/ws/dashboard"));
+      dashboardSocketRef.current = socket;
+
+      socket.onopen = () => {
+        reconnectAttemptRef.current = 0;
+      };
+
+      socket.onmessage = (event) => {
+        try {
+          const message = JSON.parse(event.data) as AnalyticsSocketMessage;
+          if (message.type === "analytics.snapshot") {
+            applyAnalyticsData(message.data);
+          }
+        } catch {
+          /* ignore malformed frames */
+        }
+      };
+
+      socket.onclose = () => {
+        if (dashboardSocketRef.current === socket) {
+          dashboardSocketRef.current = null;
+        }
+        if (stopped) return;
+
+        const attempt = reconnectAttemptRef.current + 1;
+        reconnectAttemptRef.current = attempt;
+        const delay = Math.min(30000, 1000 * 2 ** Math.min(attempt - 1, 5));
+        reconnectTimerRef.current = setTimeout(connect, delay);
+      };
+
+      socket.onerror = () => {
+        socket.close();
+      };
+    };
+
+    connect();
+
+    return () => {
+      stopped = true;
+      clearReconnectTimer();
+      dashboardSocketRef.current?.close();
+      dashboardSocketRef.current = null;
+    };
+  }, [applyAnalyticsData, isClient]);
 
   const handleInjectAnswer = (item: UnansweredItem) => {
     setSelectedQuestion(item);

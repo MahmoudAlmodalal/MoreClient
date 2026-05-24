@@ -13,6 +13,7 @@ class FileOut(BaseModel):
     """Matches the frontend IngestedFile shape."""
 
     id: int
+    tenant_key: str
     name: str
     size: str       # human-formatted, e.g. "2.4 MB"
     type: str       # "pdf" | "docx" | "txt"

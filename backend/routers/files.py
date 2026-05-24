@@ -1,8 +1,9 @@
 """/api/upload + /api/files — owned by Phase B agent B2."""
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
+from backend.core.config import settings as cfg
 from backend.models.database import get_db
 from backend.models.tables import Document
 from backend.schemas.files import FileOut, UploadResponse
@@ -38,6 +39,7 @@ def _status_label(status: str | None) -> str:
 def _to_file_out(doc: Document) -> FileOut:
     return FileOut(
         id=doc.id,
+        tenant_key=doc.tenant_key,
         name=doc.title,
         size=_human_size(doc.file_size),
         type=doc.file_type or "txt",
@@ -50,11 +52,12 @@ def _to_file_out(doc: Document) -> FileOut:
 @router.post("/api/upload", response_model=UploadResponse)
 def upload_file(
     file: UploadFile = File(...),
+    tenant_key: str | None = Form(None),
     db: Session = Depends(get_db),
 ) -> UploadResponse:
     data = file.file.read()
     try:
-        doc = ingest_document(db, file.filename, data)
+        doc = ingest_document(db, file.filename, data, tenant_key=tenant_key)
     except Exception:
         # ingest_document marks the row failed before raising
         raise HTTPException(status_code=400, detail="could not process file")
@@ -66,8 +69,17 @@ def upload_file(
 
 
 @router.get("/api/files", response_model=list[FileOut])
-def list_files(db: Session = Depends(get_db)) -> list[FileOut]:
-    docs = db.query(Document).order_by(Document.created_at.desc()).all()
+def list_files(
+    tenant_key: str | None = Query(None),
+    db: Session = Depends(get_db),
+) -> list[FileOut]:
+    tenant = (tenant_key or cfg.DEFAULT_TENANT_KEY).strip().lower() or cfg.DEFAULT_TENANT_KEY
+    docs = (
+        db.query(Document)
+        .filter(Document.tenant_key == tenant)
+        .order_by(Document.created_at.desc())
+        .all()
+    )
     return [_to_file_out(doc) for doc in docs]
 
 

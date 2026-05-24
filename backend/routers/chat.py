@@ -28,6 +28,7 @@ def post_chat(
             session_id=payload.session_id,
             message=payload.message,
             channel=payload.channel,
+            tenant_key=payload.tenant_key,
         )
         # Expose server-side latency so the perf gate (and any client) can read it
         # without changing the ChatResponse schema. Demo target: < 3000 ms.

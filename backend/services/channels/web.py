@@ -15,26 +15,29 @@ from backend.schemas.chat import ChatResponse
 from backend.services.channels.base import Channel, Inbound
 
 
-def _extract_text(payload: str) -> str:
+def _extract_payload(payload: str) -> tuple[str, str | None]:
     """Accept either a JSON envelope {"message": "..."} or a plain text frame."""
     try:
         data = json.loads(payload)
     except (json.JSONDecodeError, TypeError):
-        return payload if isinstance(payload, str) else ""
+        return (payload if isinstance(payload, str) else "", None)
     if isinstance(data, dict):
-        return str(data.get("message") or data.get("text") or "")
-    return str(data)
+        text = str(data.get("message") or data.get("text") or "")
+        tenant_key = data.get("tenantKey") or data.get("tenant_key")
+        return text, str(tenant_key) if tenant_key else None
+    return str(data), None
 
 
 class WebChannel(Channel):
     name = "web"
 
     def parse(self, payload: str, db: Session | None = None) -> Inbound | None:
-        text = _extract_text(payload)
+        text, tenant_key = _extract_payload(payload)
         if not text.strip():
             return None
         # session_id is assigned by the WebSocket route from the URL path.
-        return Inbound(session_id="", text=text)
+        meta = {"tenant_key": tenant_key} if tenant_key else {}
+        return Inbound(session_id="", text=text, meta=meta)
 
     def deliver(self, inbound: Inbound, response: ChatResponse, db: Session) -> dict[str, Any]:
         return {

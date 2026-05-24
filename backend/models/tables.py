@@ -27,6 +27,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Session, relationship
 
 from backend.models.database import Base
+from backend.core.config import settings as cfg
 
 
 class Document(Base):
@@ -34,6 +35,7 @@ class Document(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String(255), nullable=False)          # = filename
+    tenant_key = Column(String(255), default=cfg.DEFAULT_TENANT_KEY, nullable=False, index=True)
     content = Column(Text, nullable=False)               # extracted text
     source = Column(String(255), nullable=True)
     file_size = Column(Integer, nullable=True)           # bytes; frontend formats to "2.4 MB"
@@ -48,6 +50,7 @@ class Conversation(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     channel = Column(String(50), nullable=False)          # web | whatsapp | telegram
+    tenant_key = Column(String(255), default=cfg.DEFAULT_TENANT_KEY, nullable=False, index=True)
     customer_ref = Column(String(255), nullable=True)
     status = Column(String(20), default="open", nullable=False)  # open|closed|handoff
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -105,6 +108,7 @@ class LearnedAnswer(Base):
     __tablename__ = "learned_answers"
 
     id = Column(Integer, primary_key=True, index=True)
+    tenant_key = Column(String(255), default=cfg.DEFAULT_TENANT_KEY, nullable=False, index=True)
     question = Column(Text, nullable=False)
     answer = Column(Text, nullable=False)
     source_handoff_id = Column(Integer, ForeignKey("handoffs.id"), nullable=True)
@@ -203,19 +207,6 @@ def upgrade_existing_schema(engine) -> None:
         return
 
     dialect = engine.dialect.name
-    settings_columns = {col["name"] for col in inspector.get_columns("settings")}
-    additions = {
-        "purchase_flow_enabled": ("BOOLEAN", True),
-        "purchase_collect_address": ("BOOLEAN", True),
-        "purchase_collect_quantity": ("BOOLEAN", True),
-        "purchase_auto_forward_to_support": ("BOOLEAN", True),
-        "purchase_confirmation_required": ("BOOLEAN", True),
-        "purchase_session_minutes": ("INTEGER", 30),
-        "purchase_currency_label": ("VARCHAR(20)", "ريال"),
-        "intent_llm_enabled": ("BOOLEAN", True),
-        "intent_confidence_threshold": ("FLOAT", 0.70),
-        "auto_handoff_on_complaint": ("BOOLEAN", True),
-    }
 
     def sql_default(value):
         if isinstance(value, bool):
@@ -228,7 +219,20 @@ def upgrade_existing_schema(engine) -> None:
         return f"'{escaped}'"
 
     with engine.begin() as conn:
-        for name, (sql_type, default) in additions.items():
+        settings_columns = {col["name"] for col in inspector.get_columns("settings")}
+        settings_additions = {
+            "purchase_flow_enabled": ("BOOLEAN", True),
+            "purchase_collect_address": ("BOOLEAN", True),
+            "purchase_collect_quantity": ("BOOLEAN", True),
+            "purchase_auto_forward_to_support": ("BOOLEAN", True),
+            "purchase_confirmation_required": ("BOOLEAN", True),
+            "purchase_session_minutes": ("INTEGER", 30),
+            "purchase_currency_label": ("VARCHAR(20)", "ريال"),
+            "intent_llm_enabled": ("BOOLEAN", True),
+            "intent_confidence_threshold": ("FLOAT", 0.70),
+            "auto_handoff_on_complaint": ("BOOLEAN", True),
+        }
+        for name, (sql_type, default) in settings_additions.items():
             if name in settings_columns:
                 continue
             ddl = (
@@ -236,3 +240,27 @@ def upgrade_existing_schema(engine) -> None:
                 f"DEFAULT {sql_default(default)} NOT NULL"
             )
             conn.execute(text(ddl))
+
+        table_additions = {
+            "documents": {
+                "tenant_key": ("VARCHAR(255)", cfg.DEFAULT_TENANT_KEY),
+            },
+            "conversations": {
+                "tenant_key": ("VARCHAR(255)", cfg.DEFAULT_TENANT_KEY),
+            },
+            "learned_answers": {
+                "tenant_key": ("VARCHAR(255)", cfg.DEFAULT_TENANT_KEY),
+            },
+        }
+        for table_name, additions in table_additions.items():
+            if table_name not in tables:
+                continue
+            columns = {col["name"] for col in inspector.get_columns(table_name)}
+            for name, (sql_type, default) in additions.items():
+                if name in columns:
+                    continue
+                ddl = (
+                    f"ALTER TABLE {table_name} ADD COLUMN {name} {sql_type} "
+                    f"DEFAULT {sql_default(default)} NOT NULL"
+                )
+                conn.execute(text(ddl))

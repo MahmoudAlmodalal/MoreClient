@@ -5,6 +5,7 @@ opens a Handoff when the bot escalates.
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+import re
 
 from backend.core import long_term_memory, memory
 from backend.core.config import settings as cfg
@@ -25,22 +26,60 @@ class ChatService:
     def __init__(self, db: Session):
         self.db = db
 
-    def handle(self, *, session_id: str, message: str, channel: str = "web") -> ChatResponse:
+    def handle(
+        self,
+        *,
+        session_id: str,
+        message: str,
+        channel: str = "web",
+        tenant_key: str | None = None,
+    ) -> ChatResponse:
+        tenant = self._tenant_key(tenant_key)
         setting = get_or_create_settings(self.db)
-        conv = self._get_or_create_conversation(session_id, channel)
+        conv = self._get_or_create_conversation(session_id, channel, tenant)
 
         lang = detect_language(message)
 
         # Short-term memory: read the warm cache *before* recording this turn, so
         # `history` holds only prior turns (the current message is the query). On a
         # cold cache, prime from the DB (which doesn't yet hold this message).
-        mem_key = f"{channel}:{session_id}"
+        mem_key = f"{tenant}:{channel}:{session_id}"
         history = memory.get_context(mem_key)
         if not history:
             memory.prime(mem_key, self._recent_messages(conv, n=cfg.MEMORY_WINDOW))
             history = memory.get_context(mem_key)
 
         self._add_message(conv, role="user", content=message)
+
+        if self._is_greeting(message):
+            answer = self._greeting_reply(lang)
+            self._add_message(conv, role="assistant", content=answer)
+            self._remember_turn(mem_key, session_id, message, answer)
+            setting.used_messages = (setting.used_messages or 0) + 1
+            self.db.commit()
+            return ChatResponse(
+                reply=answer,
+                sender="bot",
+                escalate=False,
+                confidence=1.0,
+                language=lang,
+            )
+
+        if self._is_unsafe_or_instruction_attack(message):
+            conv.status = "handoff"
+            self._ensure_handoff(conv, reason="unsafe_or_unanswered")
+            answer = self._unanswered_handoff_reply(lang)
+            self._add_message(conv, role="assistant", content=answer)
+            self._remember_turn(mem_key, session_id, message, answer)
+            setting.used_messages = (setting.used_messages or 0) + 1
+            self.db.commit()
+            return ChatResponse(
+                reply=answer,
+                sender="bot",
+                escalate=True,
+                confidence=0.0,
+                language=lang,
+            )
 
         if conv.status == "handoff":
             answer = self._handoff_waiting_reply(lang)
@@ -112,7 +151,12 @@ class ChatService:
         # Long-term memory: recall what we know about this user across sessions.
         user_memory = long_term_memory.recall(session_id, message)
 
-        strategy = rag.resolve_strategy(message, setting, kb_empty=vectorstore.is_empty())
+        strategy = rag.resolve_strategy(
+            message,
+            setting,
+            kb_empty=vectorstore.is_empty(tenant),
+            tenant_key=tenant,
+        )
         result = strategy.run(message, lang, setting, history, user_memory)
 
         if result.escalate:
@@ -142,19 +186,30 @@ class ChatService:
 
     # --- helpers ---------------------------------------------------------
 
-    def _get_or_create_conversation(self, session_id: str, channel: str) -> Conversation:
+    def _get_or_create_conversation(
+        self,
+        session_id: str,
+        channel: str,
+        tenant_key: str,
+    ) -> Conversation:
         stmt = (
             select(Conversation)
             .where(
                 Conversation.customer_ref == session_id,
                 Conversation.channel == channel,
+                Conversation.tenant_key == tenant_key,
                 Conversation.status != "closed",
             )
             .order_by(Conversation.id.desc())
         )
         conv = self.db.scalars(stmt).first()
         if conv is None:
-            conv = Conversation(channel=channel, customer_ref=session_id, status="open")
+            conv = Conversation(
+                channel=channel,
+                tenant_key=tenant_key,
+                customer_ref=session_id,
+                status="open",
+            )
             self.db.add(conv)
             self.db.commit()
             self.db.refresh(conv)
@@ -198,9 +253,13 @@ class ChatService:
 
     def _handoff_started_reply(self, lang: str, reason: str) -> str:
         if lang == "ar":
+            if reason in ("low_confidence", "unsafe_or_unanswered"):
+                return self._unanswered_handoff_reply(lang)
             if reason == "complaint":
                 return "أفهمك، تم تحويل المحادثة لفريق الدعم لمراجعة المشكلة والرد عليك قريباً."
             return "تم تحويلك إلى موظف دعم. سيرد عليك فريقنا قريباً."
+        if reason in ("low_confidence", "unsafe_or_unanswered"):
+            return self._unanswered_handoff_reply(lang)
         if reason == "complaint":
             return "I understand. I’ve forwarded this to our support team so they can review the issue and reply shortly."
         return "I’ve connected you with a support agent. Our team will reply shortly."
@@ -209,3 +268,37 @@ class ChatService:
         if lang == "ar":
             return "المحادثة حالياً مع فريق الدعم، وسيتم الرد عليك قريباً."
         return "This conversation is already with our support team. They’ll reply shortly."
+
+    def _unanswered_handoff_reply(self, lang: str) -> str:
+        if lang == "ar":
+            return "تم تحويل سؤالك إلى فريق الدعم، وسيتم الرد عليك قريباً."
+        return "I’ve forwarded your question to our support team. They’ll reply shortly."
+
+    def _greeting_reply(self, lang: str) -> str:
+        if lang == "ar":
+            return "مرحباً! كيف أقدر أساعدك اليوم؟"
+        return "Hello! How can I help you today?"
+
+    def _tenant_key(self, value: str | None) -> str:
+        return (value or cfg.DEFAULT_TENANT_KEY).strip().lower() or cfg.DEFAULT_TENANT_KEY
+
+    def _is_greeting(self, message: str) -> bool:
+        normalized = re.sub(r"\s+", " ", message.strip().lower())
+        return bool(
+            re.fullmatch(
+                r"(hi|hello|hey|good morning|good evening|مرحبا|مرحباً|السلام عليكم|اهلا|أهلا|هلا|صباح الخير|مساء الخير)",
+                normalized,
+                flags=re.IGNORECASE,
+            )
+        )
+
+    def _is_unsafe_or_instruction_attack(self, message: str) -> bool:
+        normalized = re.sub(r"\s+", " ", message.strip().lower())
+        patterns = (
+            r"\b(ignore|disregard|forget|bypass)\b.*\b(instruction|instructions|rules|system|developer)\b",
+            r"\b(system prompt|developer message|hidden instruction|secret prompt)\b",
+            r"(تجاهل|انسى|اكسر|تجاوز).{0,40}(تعليمات|قواعد|النظام|السيستم)",
+            r"(اعطني|أعطني|اكشف|اظهر|أظهر).{0,40}(التعليمات|البرومبت|prompt|system)",
+            r"(انا|أنا).{0,20}(مالكك|صاحبك|مديرك).{0,60}(تجاهل|اكشف|اعطني|أعطني)",
+        )
+        return any(re.search(pattern, normalized, flags=re.IGNORECASE) for pattern in patterns)

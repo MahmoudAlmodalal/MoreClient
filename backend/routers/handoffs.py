@@ -67,7 +67,9 @@ def _build_handoff_out(handoff: Handoff, db: Session) -> HandoffOut:
     customer_ref = conv.customer_ref if conv else None
     user = customer_ref or f"Session {handoff.conversation_id}"
     channel = conv.channel if conv else ""
-    metadata = {"customerRef": customer_ref} if customer_ref else {}
+    metadata = {"tenantKey": conv.tenant_key} if conv else {}
+    if customer_ref:
+        metadata["customerRef"] = customer_ref
 
     order = (
         db.query(PurchaseOrder)

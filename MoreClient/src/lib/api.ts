@@ -69,6 +69,7 @@ export type UploadResponse = { file: string; chunks: number; status: string };
 
 export type FileOut = {
   id: number;
+  tenant_key: string;
   name: string;
   size: string;
   type: string;

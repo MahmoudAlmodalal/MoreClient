@@ -17,6 +17,7 @@ class Settings:
     # --- Persistence ---
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./backend.db")
     CHROMA_DIR: str = os.getenv("CHROMA_DIR", "./chroma_store")
+    DEFAULT_TENANT_KEY: str = os.getenv("DEFAULT_TENANT_KEY", "telnet").strip() or "telnet"
 
     # --- Provider keys ---
     OPENAI_API_KEY: str | None = os.getenv("OPENAI_API_KEY")

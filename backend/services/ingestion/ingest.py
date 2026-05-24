@@ -7,6 +7,7 @@ Chroma chunks consistent (chunk_count is authoritative for the frontend).
 from sqlalchemy.orm import Session
 
 from backend.models.tables import Document
+from backend.core.config import settings as cfg
 from backend.services.ai import embeddings, vectorstore
 from backend.services.ingestion import docx as docx_parser
 from backend.services.ingestion import pdf as pdf_parser
@@ -40,7 +41,11 @@ def extract(filename: str, data: bytes) -> tuple[str, str]:
     return ftype, txt_parser.extract_txt(data)
 
 
-def ingest_document(db: Session, filename: str, data: bytes) -> Document:
+def _tenant_key(value: str | None) -> str:
+    return (value or cfg.DEFAULT_TENANT_KEY).strip().lower() or cfg.DEFAULT_TENANT_KEY
+
+
+def ingest_document(db: Session, filename: str, data: bytes, tenant_key: str | None = None) -> Document:
     """Parse, chunk, embed, persist. Returns the committed Document row.
 
     The Document row is created first (status="processing") so a failure mid-way
@@ -49,6 +54,7 @@ def ingest_document(db: Session, filename: str, data: bytes) -> Document:
     ftype, text = extract(filename, data)
     doc = Document(
         title=filename,
+        tenant_key=_tenant_key(tenant_key),
         content=text,
         source="upload",
         file_size=len(data),
@@ -64,7 +70,7 @@ def ingest_document(db: Session, filename: str, data: bytes) -> Document:
         chunks = chunk_text(text)
         if chunks:
             vectors = embeddings.embed_texts(chunks)
-            vectorstore.add_document_chunks(doc.id, chunks, vectors)
+            vectorstore.add_document_chunks(doc.id, chunks, vectors, tenant_key=doc.tenant_key)
         doc.chunk_count = len(chunks)
         doc.status = "completed"
         db.commit()

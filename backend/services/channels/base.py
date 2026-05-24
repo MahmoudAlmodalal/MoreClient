@@ -16,6 +16,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from backend.core.config import settings as cfg
 from backend.schemas.chat import ChatResponse
 from backend.services.chat_service import ChatService
 
@@ -44,8 +45,12 @@ class Channel(ABC):
 
     def reply(self, inbound: Inbound, db: Session) -> ChatResponse:
         """Run the shared brain — identical for every channel."""
+        tenant_key = inbound.meta.get("tenant_key") or cfg.DEFAULT_TENANT_KEY
         return ChatService(db).handle(
-            session_id=inbound.session_id, message=inbound.text, channel=self.name
+            session_id=inbound.session_id,
+            message=inbound.text,
+            channel=self.name,
+            tenant_key=tenant_key,
         )
 
     @abstractmethod

@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
-import { apiGet, createWebSocketUrl, type HandoffOut, type DashboardSocketMessage } from "@/lib/api";
+import { apiGet, createWebSocketUrl, createAuthenticatedWebSocketUrl, type HandoffOut, type DashboardSocketMessage } from "@/lib/api";
 import { useAsyncOnMount } from "@/lib/use-async-effect";
 
 interface NotificationItem {

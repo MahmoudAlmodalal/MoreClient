@@ -71,7 +71,8 @@ def upload_file(
         raise HTTPException(status_code=413, detail="file too large (max 10MB)")
 
     try:
-        doc = ingest_document(db, file.filename, data)
+        # Document.title is NOT NULL — fall back when the client omits a filename.
+        doc = ingest_document(db, file.filename or "upload", data)
     except Exception:
         # ingest_document marks the row failed before raising
         raise HTTPException(status_code=400, detail="could not process file")
@@ -103,8 +104,12 @@ def delete_file(file_id: int, db: Session = Depends(get_db)) -> dict:
     doc = db.get(Document, file_id)
     if doc is None:
         raise HTTPException(status_code=404, detail="file not found")
-    # keep Chroma + SQL consistent
-    vectorstore.delete_document(file_id)
+    # keep Chroma + SQL consistent: delete vectors first so a Chroma failure leaves
+    # the SQL row intact (and surfaces a clean error) rather than orphaning vectors.
+    try:
+        vectorstore.delete_document(file_id)
+    except Exception:
+        raise HTTPException(status_code=502, detail="could not delete file vectors")
     db.delete(doc)
     db.commit()
     return {"ok": True}

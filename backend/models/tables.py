@@ -9,6 +9,7 @@ exists. After changing any column below, delete the SQLite file (backend.db)
 once so the schema is recreated fresh. There is no migration tool yet.
 """
 
+import re
 from datetime import datetime
 
 from sqlalchemy import (
@@ -217,6 +218,12 @@ def upgrade_existing_schema(engine) -> None:
         "auto_handoff_on_complaint": ("BOOLEAN", True),
     }
 
+    # Defense-in-depth: these column names/types are hardcoded above, but guard the
+    # interpolation so a future maintainer can't smuggle a user-derived identifier into
+    # the ALTER TABLE DDL (SQLAlchemy can't bind identifiers, only values).
+    _ident_re = re.compile(r"^[a-z_][a-z0-9_]*$")
+    _allowed_types = {"BOOLEAN", "INTEGER", "FLOAT", "VARCHAR(20)"}
+
     def sql_default(value):
         if isinstance(value, bool):
             if dialect == "postgresql":
@@ -231,6 +238,8 @@ def upgrade_existing_schema(engine) -> None:
         for name, (sql_type, default) in additions.items():
             if name in settings_columns:
                 continue
+            if not _ident_re.match(name) or sql_type not in _allowed_types:
+                raise ValueError(f"unsafe schema upgrade column: {name!r} {sql_type!r}")
             ddl = (
                 f"ALTER TABLE settings ADD COLUMN {name} {sql_type} "
                 f"DEFAULT {sql_default(default)} NOT NULL"

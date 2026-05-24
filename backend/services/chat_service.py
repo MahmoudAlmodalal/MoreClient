@@ -26,6 +26,19 @@ class ChatService:
         self.db = db
 
     def handle(self, *, session_id: str, message: str, channel: str = "web") -> ChatResponse:
+        """Public entry. Rolls the session back on any failure so a half-written
+        turn never lingers on a pooled connection, then re-raises for the caller
+        (the router normalizes it to a clean 500)."""
+        try:
+            return self._handle(session_id=session_id, message=message, channel=channel)
+        except Exception:
+            try:
+                self.db.rollback()
+            except Exception:  # pragma: no cover — rollback best-effort
+                pass
+            raise
+
+    def _handle(self, *, session_id: str, message: str, channel: str = "web") -> ChatResponse:
         setting = get_or_create_settings(self.db)
         conv = self._get_or_create_conversation(session_id, channel)
 

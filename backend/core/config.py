@@ -53,7 +53,8 @@ class Settings:
     # --- AI models ---
     CHAT_MODEL: str = os.getenv("CHAT_MODEL", "gpt-4o")
     EMBED_MODEL: str = os.getenv("EMBED_MODEL", "text-embedding-3-small")
-    EMBED_DIM: int = int(os.getenv("EMBED_DIM", "1536"))  # text-embedding-3-small / hash fallback
+    # text-embedding-3-small / hash fallback; clamp so a bad env value can't crash boot.
+    EMBED_DIM: int = _clamp_int(os.getenv("EMBED_DIM"), 1536, 1, 8192)
 
     # --- Provider routing (OpenAI-compatible endpoints; no extra SDK needed) ---
     # auto = try Gemini, then DeepSeek (NVIDIA), then OpenAI — whichever keys exist.

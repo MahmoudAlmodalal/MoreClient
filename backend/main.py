@@ -10,11 +10,15 @@ from contextlib import asynccontextmanager
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from sqlalchemy import text
 
 from backend.core.config import settings
-from backend.models.database import init_db
+from backend.models.database import SessionLocal, init_db
+
+logger = logging.getLogger(__name__)
 from backend.routers import (
     admin,
     analytics,
@@ -54,9 +58,18 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization", "Accept"],
 )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    """Normalize any unhandled error to a clean problem+json 500 so tracebacks
+    never reach the client. FastAPI's HTTPException / validation handlers are
+    left intact (they already emit a `detail` body the frontend reads)."""
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
+    return JSONResponse(status_code=500, content={"detail": "internal server error"})
 
 app.include_router(admin.router)
 app.include_router(chat.router)
@@ -72,4 +85,15 @@ app.include_router(ws.router)
 
 @app.get("/health")
 def health():
-    return {"status": "ok"}
+    """Lightweight liveness probe — always 200 so it stays usable as a probe.
+    Reports DB reachability without raising. (Deep metrics live in /api/admin/health.)"""
+    db_status = "ok"
+    db = SessionLocal()
+    try:
+        db.execute(text("SELECT 1"))
+    except Exception:
+        logger.warning("Health check DB ping failed", exc_info=True)
+        db_status = "error"
+    finally:
+        db.close()
+    return {"status": "ok", "db": db_status}

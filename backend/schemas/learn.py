@@ -4,9 +4,9 @@ from pydantic import BaseModel, Field
 
 
 class LearnRequest(BaseModel):
-    question: str = Field(..., min_length=1)
-    answer: str = Field(..., min_length=1)
-    source_handoff_id: int | None = None
+    question: str = Field(..., min_length=1, max_length=4000)
+    answer: str = Field(..., min_length=1, max_length=4000)
+    source_handoff_id: int | None = Field(default=None, ge=1)
 
 
 class LearnResponse(BaseModel):

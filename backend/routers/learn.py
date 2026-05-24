@@ -5,6 +5,8 @@ row, then best-effort embed it and add it to the vector store so future queries
 can retrieve it.
 """
 
+import logging
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -12,6 +14,8 @@ from backend.models.database import get_db
 from backend.models.tables import LearnedAnswer
 from backend.schemas.learn import LearnRequest, LearnResponse
 from backend.services.ai import embeddings, vectorstore
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -32,6 +36,7 @@ def learn(body: LearnRequest, db: Session = Depends(get_db)) -> LearnResponse:
         embedding = embeddings.embed_query(f"{body.question}\n{body.answer}")
         vectorstore.add_learned(la.id, body.question, body.answer, embedding)
     except Exception:
-        pass
+        # Row is saved but not yet retrievable — log so the orphan is diagnosable.
+        logger.warning("learned answer %s saved but KB embed/add failed", la.id, exc_info=True)
 
     return LearnResponse(id=la.id, status="learned")

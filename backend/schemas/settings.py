@@ -47,16 +47,16 @@ class SettingsOut(_CamelModel):
 class SettingsUpdate(_CamelModel):
     """All fields optional — PUT performs a partial update."""
 
-    company_name: str | None = None
-    bot_name: str | None = None
-    company_logo: str | None = None
+    company_name: str | None = Field(default=None, max_length=255)
+    bot_name: str | None = Field(default=None, max_length=255)
+    company_logo: str | None = Field(default=None, max_length=200_000)  # URL or base64 data URI
     bot_tone: str | None = None
-    system_prompt_extra: str | None = None
-    telegram_token: str | None = None
+    system_prompt_extra: str | None = Field(default=None, max_length=8000)
+    telegram_token: str | None = Field(default=None, max_length=255)
     is_telegram_active: bool | None = None
-    twilio_sid: str | None = None
-    twilio_token: str | None = None
-    twilio_number: str | None = None
+    twilio_sid: str | None = Field(default=None, max_length=255)
+    twilio_token: str | None = Field(default=None, max_length=255)
+    twilio_number: str | None = Field(default=None, max_length=50)
     is_whatsapp_active: bool | None = None
     subscription_plan: str | None = None
     used_messages: int | None = None
@@ -67,7 +67,7 @@ class SettingsUpdate(_CamelModel):
     purchase_auto_forward_to_support: bool | None = None
     purchase_confirmation_required: bool | None = None
     purchase_session_minutes: int | None = Field(default=None, gt=0)
-    purchase_currency_label: str | None = None
+    purchase_currency_label: str | None = Field(default=None, max_length=20)
     intent_llm_enabled: bool | None = None
     intent_confidence_threshold: float | None = Field(default=None, ge=0, le=1)
     auto_handoff_on_complaint: bool | None = None

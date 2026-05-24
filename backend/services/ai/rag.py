@@ -207,15 +207,23 @@ class RagStrategy(ABC):
 
 
 class FallbackStrategy(RagStrategy):
-    def __init__(self, reason: str = "low_confidence", confidence: float = 0.0):
+    def __init__(
+        self,
+        reason: str = "low_confidence",
+        confidence: float = 0.0,
+        escalate: bool = True,
+        message: str | None = None,
+    ):
         self.reason = reason
         self.confidence = confidence
+        self.escalate = escalate
+        self.message = message
 
     def run(self, query, lang, setting, history=None, user_memory=None) -> RagResult:
         return RagResult(
-            answer=_CANNED.get(lang, _CANNED["en"]),
+            answer=self.message or _CANNED.get(lang, _CANNED["en"]),
             confidence=self.confidence,
-            escalate=True,
+            escalate=self.escalate,
             reason=self.reason,
         )
 

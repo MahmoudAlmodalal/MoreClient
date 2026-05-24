@@ -19,8 +19,8 @@ def test_english_non_answer_is_detected():
 def test_vector_rag_ignores_corrupt_hits(monkeypatch):
     monkeypatch.setattr("backend.services.ai.rag.embeddings.embed_query", lambda text: [1.0])
     monkeypatch.setattr(
-        "backend.services.ai.rag.vectorstore.query",
-        lambda embedding, k=4, tenant_key=None: [
+        "backend.services.ai.rag.retrieval.hybrid_search",
+        lambda query_text, query_embedding, k, tenant_key=None: [
             Hit(text="bad\ufffd\ufffd\ufffd\ufffd\ufffd", distance=0.05, metadata={}),
             Hit(
                 text="State diagram shows the states and transitions.",

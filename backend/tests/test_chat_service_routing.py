@@ -1,6 +1,14 @@
+import pytest
 from backend.models.tables import Document, Handoff, PurchaseOrder
 from backend.services.ai.vectorstore import Hit
 from backend.services.chat_service import ChatService
+
+
+@pytest.fixture(autouse=True)
+def mock_long_term_memory(monkeypatch):
+    monkeypatch.setattr("backend.core.long_term_memory.remember", lambda user_id, text: None)
+    monkeypatch.setattr("backend.core.long_term_memory.recall", lambda user_id, query, k=3: [])
+
 
 
 def test_chat_service_routes_purchase_intent(db_session, monkeypatch):
@@ -94,7 +102,7 @@ def test_chat_service_uses_current_tenant_knowledge(db_session, monkeypatch):
     monkeypatch.setattr("backend.services.chat_service.vectorstore.is_empty", lambda tenant_key=None: False)
     monkeypatch.setattr("backend.services.ai.rag.embeddings.embed_query", lambda text: [1.0])
 
-    def fake_query(embedding, k=4, tenant_key=None):
+    def fake_hybrid_search(query_text, query_embedding, k, tenant_key=None):
         seen["tenant_key"] = tenant_key
         if tenant_key != "telnet":
             return []
@@ -106,7 +114,7 @@ def test_chat_service_uses_current_tenant_knowledge(db_session, monkeypatch):
             )
         ]
 
-    monkeypatch.setattr("backend.services.ai.rag.vectorstore.query", fake_query)
+    monkeypatch.setattr("backend.services.ai.rag.retrieval.hybrid_search", fake_hybrid_search)
     monkeypatch.setattr(
         "backend.services.ai.rag._call_provider",
         lambda provider, messages: "يمكنك إنشاء حساب جديد بالنقر على زر التسجيل ثم اتباع التعليمات.",
@@ -163,8 +171,8 @@ def test_chat_service_reindexes_missing_document_vectors(db_session, monkeypatch
     )
     monkeypatch.setattr("backend.services.ai.rag.embeddings.embed_query", lambda text: [1.0])
     monkeypatch.setattr(
-        "backend.services.ai.rag.vectorstore.query",
-        lambda embedding, k=4, tenant_key=None: [
+        "backend.services.ai.rag.retrieval.hybrid_search",
+        lambda query_text, query_embedding, k, tenant_key=None: [
             Hit(text=indexed[0], distance=0.1, metadata={"tenant_key": tenant_key})
         ]
         if indexed

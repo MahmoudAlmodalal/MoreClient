@@ -11,7 +11,7 @@ escalates to a human when unsure. The running system is **two apps**:
 - **Backend — Python FastAPI** in [`backend/`](backend/) (git-root level), served on **:8000**. This is the real
   brain: ingestion, RAG, channels, handoff. SQLite + ChromaDB. Untracked in git but it is the
   live system.
-- **Frontend — Next.js 16** in the **nested** [`MoreClient/`](MoreClient/) subdirectory, served on **:5000**.
+- **Frontend — Next.js 16** in the **nested** [`MoreClient/`](MoreClient/) subdirectory, served on **:5001**.
   A thin dashboard/widget that talks to the FastAPI backend over HTTP.
 
 ### Beware: blueprint ≠ implementation
@@ -36,7 +36,7 @@ TS blueprint — unless the user is explicitly building the blueprint out.
 
 ## Commands
 
-Run the **whole stack** from the git root: `bash start.sh` (frontend `:5000` + backend `:8000` with reload).
+Run the **whole stack** from the git root: `bash start.sh` (frontend `:5001` + backend `:8000` with reload).
 
 ### Backend (Python, run from git root)
 
@@ -60,7 +60,7 @@ Unit tests live in `backend/tests/` — run `py -X utf8 -m pytest backend/tests`
 
 ### Frontend (Next.js, run from nested `MoreClient/`)
 
-`cd MoreClient` first. Scripts (the only ones that exist): `npm run dev` (port **5000**), `npm run build`,
+`cd MoreClient` first. Scripts (the only ones that exist): `npm run dev` (port **5001**), `npm run build`,
 `npm run start`, `npm run lint` (flat ESLint), `npm run typecheck` (`tsc --noEmit`). Minimal deps:
 `next` 16.2.6, `react` 19, `recharts`, `lucide-react`.
 
@@ -73,7 +73,7 @@ idempotent/additive create_all — **no general migration tool**; the one except
 `upgrade_existing_schema()` in [`tables.py`](backend/models/tables.py), which `ALTER`s in the newer `Setting`
 columns onto an existing DB), warms the Chroma collection, and starts Telegram long-polling if the channel
 is active (`telegram_poller.ensure_running_if_active()`, stopped on shutdown). CORS allows the frontend
-origins (`ALLOWED_ORIGINS`, default `:5000`). Routers are mounted **prefix-free** — each declares its own
+origins (`ALLOWED_ORIGINS`, default `:5001`). Routers are mounted **prefix-free** — each declares its own
 path: `admin`, `chat`, `files`, `analytics`, `handoffs`, `learn`, `purchases`, `settings` under `/api/*`;
 `channels` with **no prefix** for provider webhooks (`/telegram/webhook`, `/whatsapp/webhook`); and
 `ws` at `/ws/chat/{session_id}` for the web widget.

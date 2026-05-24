@@ -65,13 +65,16 @@ export function Hero() {
   const [messages, setMessages] = useState<Message[]>(language === "ar" ? initialMessagesAr : initialMessagesEn);
   const [dialogueIdx, setDialogueIdx] = useState(0);
   const [isTyping, setIsTyping] = useState(false);
+  const [prevLanguage, setPrevLanguage] = useState(language);
 
-  // Sync initial state if language changes
-  useEffect(() => {
+  // Reset hero state when language toggles (render-time reset — React batches
+  // this before paint, no double render).
+  if (prevLanguage !== language) {
+    setPrevLanguage(language);
     setMessages(language === "ar" ? initialMessagesAr : initialMessagesEn);
     setDialogueIdx(0);
     setIsTyping(false);
-  }, [language]);
+  }
 
   // Scroll to bottom helper
   const scrollToBottom = () => {

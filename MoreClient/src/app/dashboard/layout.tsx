@@ -20,10 +20,6 @@ import {
   ShieldAlert
 } from "lucide-react";
 
-const subscribeToRole = () => () => {};
-const getClientIsAdmin = () => sessionStorage.getItem("userRole") === "admin";
-const getServerIsAdmin = () => false;
-
 export default function DashboardLayout({
   children,
 }: {

@@ -354,7 +354,7 @@ export default function DashboardPage() {
                 margin={{ top: 10, right: 10, left: 10, bottom: 10 }}
               >
                 <XAxis
-                  dataKey={isRtl && "count" ? undefined : "name"}
+                  dataKey={isRtl ? "count" : "name"}
                   stroke="#4b5563"
                   fontSize={11}
                   tickLine={false}

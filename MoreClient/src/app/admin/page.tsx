@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useSyncExternalStore, useCallback, useEffect } from "react";
+import React, { useState, useSyncExternalStore, useCallback } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { useAsyncOnMount, usePolling } from "@/lib/use-async-effect";
 import type { TenantOut, AdminKpis, AdminHealth } from "@/lib/api";
@@ -149,9 +149,7 @@ export default function SuperAdminPage() {
   }, [loadTenants, loadKpis, loadHealth]);
 
   // Reload tenants when search or filter states change
-  useEffect(() => {
-    void loadTenants();
-  }, [loadTenants]);
+  useAsyncOnMount(loadTenants, [loadTenants]);
 
   // Initial load
   useAsyncOnMount(async () => {

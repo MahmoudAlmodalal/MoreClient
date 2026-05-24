@@ -258,12 +258,12 @@ export default function SettingsPage() {
     <div className="space-y-8 pb-12">
       {/* Toast Notification */}
       {successToast && (
-        <div className="fixed top-4 right-4 z-50 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg animate-in fade-in slide-in-from-top-4 duration-200">
+        <div className={`fixed top-4 ${language === "ar" ? "left-4" : "right-4"} z-50 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg animate-in fade-in slide-in-from-top-4 duration-200`}>
           {t("saved")}
         </div>
       )}
       {errorToast && (
-        <div className="fixed top-4 right-4 z-50 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg animate-in fade-in slide-in-from-top-4 duration-200">
+        <div className={`fixed top-4 ${language === "ar" ? "left-4" : "right-4"} z-50 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg animate-in fade-in slide-in-from-top-4 duration-200`}>
           {language === "ar" ? "فشل حفظ الإعدادات. حاول مرة أخرى." : "Failed to save settings. Please try again."}
         </div>
       )}

@@ -23,6 +23,7 @@ from backend.routers import (
     files,
     handoffs,
     learn,
+    purchases,
     settings as settings_router,
     ws,
 )
@@ -63,6 +64,7 @@ app.include_router(files.router)
 app.include_router(analytics.router)
 app.include_router(handoffs.router)
 app.include_router(learn.router)
+app.include_router(purchases.router)
 app.include_router(settings_router.router)
 app.include_router(channels.router)
 app.include_router(ws.router)

@@ -35,3 +35,4 @@ def init_db():
     from backend.models import tables  # noqa: F401  (registers models on Base)
 
     Base.metadata.create_all(bind=engine)
+    tables.upgrade_existing_schema(engine)

@@ -100,6 +100,14 @@ const translationsEn = {
   channelWhatsapp: "WhatsApp",
   channelWidget: "Web Widget",
   activeChat: "Active chat with {name}",
+  purchaseComplete: "Purchase Order",
+  complaintReason: "Customer Complaint",
+  supportRequestReason: "Support Request",
+  purchaseDetails: "Purchase Details",
+  productName: "Product",
+  quantity: "Quantity",
+  deliveryAddress: "Delivery Address",
+  orderStatus: "Order Status",
 
   // Settings & Tenant Config Page
   settingsTitle: "clientMORE Control Panel",
@@ -122,6 +130,18 @@ const translationsEn = {
   toneFormal: "Formal & Corporate",
   systemPromptExtra: "Custom System Prompt Instructions",
   systemPromptExtraPlaceholder: "e.g. Always greet with 'Marhaba', prioritize refund instructions first...",
+  purchaseFlowTitle: "Purchase Flow Automation",
+  purchaseFlowSub: "Detect buying intent, collect order details, and forward confirmed purchases to support.",
+  purchaseFlowEnabled: "Enable purchase flow",
+  purchaseCollectQuantity: "Collect quantity",
+  purchaseCollectAddress: "Collect delivery address",
+  purchaseAutoForward: "Forward confirmed orders to support",
+  purchaseConfirmationRequired: "Require customer confirmation",
+  purchaseSessionMinutes: "Session timeout minutes",
+  purchaseCurrencyLabel: "Currency label",
+  intentLlmEnabled: "Use LLM for ambiguous intent",
+  intentConfidenceThreshold: "Intent confidence threshold",
+  autoHandoffOnComplaint: "Auto-handoff complaints",
 
   // Integrations Section
   integrationsTitle: "Channel Integrations",
@@ -421,6 +441,14 @@ const translationsAr: Partial<Translations> = {
   channelWhatsapp: "واتساب Business",
   channelWidget: "المساعد للموقع",
   activeChat: "محادثة نشطة مع {name}",
+  purchaseComplete: "طلب شراء",
+  complaintReason: "شكوى عميل",
+  supportRequestReason: "طلب دعم",
+  purchaseDetails: "تفاصيل الطلب",
+  productName: "المنتج",
+  quantity: "الكمية",
+  deliveryAddress: "عنوان التوصيل",
+  orderStatus: "حالة الطلب",
 
   // Settings & Tenant Config Page
   settingsTitle: "لوحة تحكم المساعد نصيح",
@@ -443,6 +471,18 @@ const translationsAr: Partial<Translations> = {
   toneFormal: "رسمي وشركاتي",
   systemPromptExtra: "تعليمات إضافية للمساعد (System Prompt)",
   systemPromptExtraPlaceholder: "مثال: رحب دائماً بـ 'مرحباً'، أعطِ الأولوية لتعليمات الاسترجاع والدعم الفني أولاً...",
+  purchaseFlowTitle: "أتمتة مسار الشراء",
+  purchaseFlowSub: "اكتشف نية الشراء، اجمع تفاصيل الطلب، وحوّل الطلبات المؤكدة للدعم.",
+  purchaseFlowEnabled: "تفعيل مسار الشراء",
+  purchaseCollectQuantity: "جمع الكمية",
+  purchaseCollectAddress: "جمع عنوان التوصيل",
+  purchaseAutoForward: "تحويل الطلبات المؤكدة للدعم",
+  purchaseConfirmationRequired: "طلب تأكيد العميل",
+  purchaseSessionMinutes: "مهلة الجلسة بالدقائق",
+  purchaseCurrencyLabel: "اسم العملة",
+  intentLlmEnabled: "استخدام نموذج اللغة للنوايا الغامضة",
+  intentConfidenceThreshold: "حد ثقة النية",
+  autoHandoffOnComplaint: "تحويل الشكاوى تلقائياً",
 
   // Integrations Section
   integrationsTitle: "قنوات الربط والاتصال",
@@ -681,6 +721,26 @@ interface LanguageContextType {
   setBotTone: (val: string) => void;
   systemPromptExtra: string;
   setSystemPromptExtra: (val: string) => void;
+  purchaseFlowEnabled: boolean;
+  setPurchaseFlowEnabled: (val: boolean) => void;
+  purchaseCollectAddress: boolean;
+  setPurchaseCollectAddress: (val: boolean) => void;
+  purchaseCollectQuantity: boolean;
+  setPurchaseCollectQuantity: (val: boolean) => void;
+  purchaseAutoForwardToSupport: boolean;
+  setPurchaseAutoForwardToSupport: (val: boolean) => void;
+  purchaseConfirmationRequired: boolean;
+  setPurchaseConfirmationRequired: (val: boolean) => void;
+  purchaseSessionMinutes: number;
+  setPurchaseSessionMinutes: (val: number) => void;
+  purchaseCurrencyLabel: string;
+  setPurchaseCurrencyLabel: (val: string) => void;
+  intentLlmEnabled: boolean;
+  setIntentLlmEnabled: (val: boolean) => void;
+  intentConfidenceThreshold: number;
+  setIntentConfidenceThreshold: (val: number) => void;
+  autoHandoffOnComplaint: boolean;
+  setAutoHandoffOnComplaint: (val: boolean) => void;
 }
 
 const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
@@ -705,6 +765,16 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   const [botTone, setBotTone] = useState("professional");
   const [systemPromptExtra, setSystemPromptExtra] = useState("Answer briefly and use bullet points where helpful.");
+  const [purchaseFlowEnabled, setPurchaseFlowEnabled] = useState(true);
+  const [purchaseCollectAddress, setPurchaseCollectAddress] = useState(true);
+  const [purchaseCollectQuantity, setPurchaseCollectQuantity] = useState(true);
+  const [purchaseAutoForwardToSupport, setPurchaseAutoForwardToSupport] = useState(true);
+  const [purchaseConfirmationRequired, setPurchaseConfirmationRequired] = useState(true);
+  const [purchaseSessionMinutes, setPurchaseSessionMinutes] = useState(30);
+  const [purchaseCurrencyLabel, setPurchaseCurrencyLabel] = useState("ريال");
+  const [intentLlmEnabled, setIntentLlmEnabled] = useState(true);
+  const [intentConfidenceThreshold, setIntentConfidenceThreshold] = useState(0.7);
+  const [autoHandoffOnComplaint, setAutoHandoffOnComplaint] = useState(true);
 
   const isRtl = language === "ar";
 
@@ -741,6 +811,16 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setTwilioToken(s.twilioToken ?? "");
         setTwilioNumber(s.twilioNumber ?? "");
         setIsWhatsappActive(s.isWhatsappActive);
+        setPurchaseFlowEnabled(s.purchaseFlowEnabled);
+        setPurchaseCollectAddress(s.purchaseCollectAddress);
+        setPurchaseCollectQuantity(s.purchaseCollectQuantity);
+        setPurchaseAutoForwardToSupport(s.purchaseAutoForwardToSupport);
+        setPurchaseConfirmationRequired(s.purchaseConfirmationRequired);
+        setPurchaseSessionMinutes(s.purchaseSessionMinutes);
+        setPurchaseCurrencyLabel(s.purchaseCurrencyLabel);
+        setIntentLlmEnabled(s.intentLlmEnabled);
+        setIntentConfidenceThreshold(s.intentConfidenceThreshold);
+        setAutoHandoffOnComplaint(s.autoHandoffOnComplaint);
         if (s.subscriptionPlan === "pro" || s.subscriptionPlan === "ultra") {
           setSubscriptionPlan(s.subscriptionPlan);
         }
@@ -799,7 +879,27 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         botTone,
         setBotTone,
         systemPromptExtra,
-        setSystemPromptExtra
+        setSystemPromptExtra,
+        purchaseFlowEnabled,
+        setPurchaseFlowEnabled,
+        purchaseCollectAddress,
+        setPurchaseCollectAddress,
+        purchaseCollectQuantity,
+        setPurchaseCollectQuantity,
+        purchaseAutoForwardToSupport,
+        setPurchaseAutoForwardToSupport,
+        purchaseConfirmationRequired,
+        setPurchaseConfirmationRequired,
+        purchaseSessionMinutes,
+        setPurchaseSessionMinutes,
+        purchaseCurrencyLabel,
+        setPurchaseCurrencyLabel,
+        intentLlmEnabled,
+        setIntentLlmEnabled,
+        intentConfidenceThreshold,
+        setIntentConfidenceThreshold,
+        autoHandoffOnComplaint,
+        setAutoHandoffOnComplaint,
       }}
     >
       {children}

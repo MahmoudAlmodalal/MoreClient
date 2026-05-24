@@ -18,8 +18,11 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
+    JSON,
     String,
     Text,
+    inspect,
+    text,
 )
 from sqlalchemy.orm import Session, relationship
 
@@ -51,6 +54,7 @@ class Conversation(Base):
 
     messages = relationship("Message", back_populates="conversation", cascade="all, delete-orphan")
     handoffs = relationship("Handoff", back_populates="conversation", cascade="all, delete-orphan")
+    purchase_orders = relationship("PurchaseOrder", back_populates="conversation", cascade="all, delete-orphan")
 
 
 class Message(Base):
@@ -77,6 +81,24 @@ class Handoff(Base):
     resolved_at = Column(DateTime, nullable=True)
 
     conversation = relationship("Conversation", back_populates="handoffs")
+
+
+class PurchaseOrder(Base):
+    __tablename__ = "purchase_orders"
+
+    id = Column(Integer, primary_key=True, index=True)
+    conversation_id = Column(Integer, ForeignKey("conversations.id"), nullable=False, index=True)
+    customer_ref = Column(String(255), nullable=True, index=True)
+    product_name = Column(Text, nullable=True)
+    quantity = Column(Integer, nullable=True)
+    delivery_address = Column(Text, nullable=True)
+    status = Column(String(20), default="pending", nullable=False, index=True)
+    state = Column(String(40), default="collecting_product", nullable=False, index=True)
+    order_data = Column(JSON, default=dict, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False)
+
+    conversation = relationship("Conversation", back_populates="purchase_orders")
 
 
 class LearnedAnswer(Base):
@@ -132,6 +154,17 @@ class Setting(Base):
 
     confidence_threshold = Column(Float, default=0.45, nullable=False)
 
+    purchase_flow_enabled = Column(Boolean, default=True, nullable=False)
+    purchase_collect_address = Column(Boolean, default=True, nullable=False)
+    purchase_collect_quantity = Column(Boolean, default=True, nullable=False)
+    purchase_auto_forward_to_support = Column(Boolean, default=True, nullable=False)
+    purchase_confirmation_required = Column(Boolean, default=True, nullable=False)
+    purchase_session_minutes = Column(Integer, default=30, nullable=False)
+    purchase_currency_label = Column(String(20), default="ريال", nullable=False)
+    intent_llm_enabled = Column(Boolean, default=True, nullable=False)
+    intent_confidence_threshold = Column(Float, default=0.70, nullable=False)
+    auto_handoff_on_complaint = Column(Boolean, default=True, nullable=False)
+
 
 class Tenant(Base):
     """Admin-managed subscription registry. Each row represents a business
@@ -160,3 +193,46 @@ def get_or_create_settings(db: Session) -> "Setting":
         db.commit()
         db.refresh(row)
     return row
+
+
+def upgrade_existing_schema(engine) -> None:
+    """Add columns introduced after initial create_all() for existing DB files."""
+    inspector = inspect(engine)
+    tables = set(inspector.get_table_names())
+    if "settings" not in tables:
+        return
+
+    dialect = engine.dialect.name
+    settings_columns = {col["name"] for col in inspector.get_columns("settings")}
+    additions = {
+        "purchase_flow_enabled": ("BOOLEAN", True),
+        "purchase_collect_address": ("BOOLEAN", True),
+        "purchase_collect_quantity": ("BOOLEAN", True),
+        "purchase_auto_forward_to_support": ("BOOLEAN", True),
+        "purchase_confirmation_required": ("BOOLEAN", True),
+        "purchase_session_minutes": ("INTEGER", 30),
+        "purchase_currency_label": ("VARCHAR(20)", "ريال"),
+        "intent_llm_enabled": ("BOOLEAN", True),
+        "intent_confidence_threshold": ("FLOAT", 0.70),
+        "auto_handoff_on_complaint": ("BOOLEAN", True),
+    }
+
+    def sql_default(value):
+        if isinstance(value, bool):
+            if dialect == "postgresql":
+                return "TRUE" if value else "FALSE"
+            return "1" if value else "0"
+        if isinstance(value, (int, float)):
+            return str(value)
+        escaped = str(value).replace("'", "''")
+        return f"'{escaped}'"
+
+    with engine.begin() as conn:
+        for name, (sql_type, default) in additions.items():
+            if name in settings_columns:
+                continue
+            ddl = (
+                f"ALTER TABLE settings ADD COLUMN {name} {sql_type} "
+                f"DEFAULT {sql_default(default)} NOT NULL"
+            )
+            conn.execute(text(ddl))

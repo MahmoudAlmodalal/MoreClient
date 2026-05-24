@@ -32,6 +32,16 @@ class SettingsOut(_CamelModel):
     subscription_plan: str
     used_messages: int
     confidence_threshold: float
+    purchase_flow_enabled: bool
+    purchase_collect_address: bool
+    purchase_collect_quantity: bool
+    purchase_auto_forward_to_support: bool
+    purchase_confirmation_required: bool
+    purchase_session_minutes: int
+    purchase_currency_label: str
+    intent_llm_enabled: bool
+    intent_confidence_threshold: float
+    auto_handoff_on_complaint: bool
 
 
 class SettingsUpdate(_CamelModel):
@@ -51,3 +61,13 @@ class SettingsUpdate(_CamelModel):
     subscription_plan: str | None = None
     used_messages: int | None = None
     confidence_threshold: float | None = None
+    purchase_flow_enabled: bool | None = None
+    purchase_collect_address: bool | None = None
+    purchase_collect_quantity: bool | None = None
+    purchase_auto_forward_to_support: bool | None = None
+    purchase_confirmation_required: bool | None = None
+    purchase_session_minutes: int | None = None
+    purchase_currency_label: str | None = None
+    intent_llm_enabled: bool | None = None
+    intent_confidence_threshold: float | None = None
+    auto_handoff_on_complaint: bool | None = None

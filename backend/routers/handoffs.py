@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from backend.core.language import detect_language
 from backend.models.database import get_db
-from backend.models.tables import Conversation, Handoff, Message
+from backend.models.tables import Conversation, Handoff, Message, PurchaseOrder
 from backend.schemas.handoffs import HandoffMessageOut, HandoffOut, ReplyRequest
 
 router = APIRouter()
@@ -67,6 +67,24 @@ def _build_handoff_out(handoff: Handoff, db: Session) -> HandoffOut:
     customer_ref = conv.customer_ref if conv else None
     user = customer_ref or f"Session {handoff.conversation_id}"
     channel = conv.channel if conv else ""
+    metadata = {"customerRef": customer_ref} if customer_ref else {}
+
+    order = (
+        db.query(PurchaseOrder)
+        .filter(PurchaseOrder.conversation_id == handoff.conversation_id)
+        .order_by(PurchaseOrder.id.desc())
+        .first()
+    )
+    if order is not None:
+        metadata["order"] = {
+            "id": order.id,
+            "productName": order.product_name,
+            "quantity": order.quantity,
+            "deliveryAddress": order.delivery_address,
+            "status": order.status,
+            "state": order.state,
+            "orderData": order.order_data or {},
+        }
 
     return HandoffOut(
         id=handoff.id,
@@ -77,7 +95,7 @@ def _build_handoff_out(handoff: Handoff, db: Session) -> HandoffOut:
         timeAgo=_time_ago(handoff.created_at),
         unreplied=unreplied,
         messages=messages,
-        metadata={"customerRef": customer_ref} if customer_ref else {},
+        metadata=metadata,
     )
 
 

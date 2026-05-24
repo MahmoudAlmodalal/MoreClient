@@ -12,6 +12,8 @@ from difflib import SequenceMatcher
 import re
 import unicodedata
 
+from sqlalchemy.orm import Session
+
 from backend.core.config import settings as cfg
 from backend.services.ai import embeddings, retrieval, vectorstore
 

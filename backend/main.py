@@ -121,16 +121,18 @@ async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONR
     logger.exception("Unhandled error on %s %s", request.method, request.url.path)
     return JSONResponse(status_code=500, content={"detail": "internal server error"})
 
-from backend.core.security import admin_guard
+from backend.core.security import admin_guard, company_guard
+from backend.routers import auth as auth_router
 
+app.include_router(auth_router.router)
 app.include_router(admin.router, dependencies=[admin_guard])
 app.include_router(chat.router)
-app.include_router(files.router)
-app.include_router(analytics.router)
-app.include_router(handoffs.router)
-app.include_router(learn.router)
-app.include_router(purchases.router)
-app.include_router(settings_router.router)
+app.include_router(files.router, dependencies=[company_guard])
+app.include_router(analytics.router, dependencies=[company_guard])
+app.include_router(handoffs.router, dependencies=[company_guard])
+app.include_router(learn.router, dependencies=[company_guard])
+app.include_router(purchases.router, dependencies=[company_guard])
+app.include_router(settings_router.router, dependencies=[company_guard])
 app.include_router(channels.router)
 app.include_router(ws.router)
 

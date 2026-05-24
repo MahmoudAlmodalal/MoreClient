@@ -19,6 +19,7 @@ class HandoffOut(BaseModel):
     reason: str     # low_confidence | user_requested | keyword_triggered | purchase_complete | complaint | support_request
     language: str
     timeAgo: str
+    createdAt: str | None = None
     unreplied: bool
     messages: list[HandoffMessageOut]
     metadata: dict = {}

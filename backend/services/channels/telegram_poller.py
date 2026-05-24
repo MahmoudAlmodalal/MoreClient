@@ -46,6 +46,13 @@ def _poll_loop() -> None:
                 break
 
             token = crypto.decrypt(setting.telegram_token)
+            if not token:
+                # Wrong APP_SECRET or corrupted ciphertext: don't crash the
+                # thread or hammer Telegram with an empty bot token. Back off
+                # and recheck the setting on the next iteration.
+                logger.warning("Telegram token failed to decrypt; backing off 30s.")
+                time.sleep(30)
+                continue
 
             # Telegram blocks getUpdates when a webhook is set, so delete it once.
             if not _webhook_cleared:

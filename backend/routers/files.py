@@ -13,6 +13,7 @@ from backend.models.tables import Document
 from backend.schemas.files import FileOut, UploadResponse
 from backend.services.ai import vectorstore
 from backend.services.ingestion.ingest import create_document_record, index_document
+from backend.core.security import get_tenant_key
 
 router = APIRouter()
 
@@ -97,7 +98,7 @@ def _to_file_out(doc: Document) -> FileOut:
 def upload_file(
     request: Request,
     file: UploadFile = File(...),
-    tenant_key: str | None = Form(None),
+    tenant_key: str | None = Depends(get_tenant_key),
     db: Session = Depends(get_db),
 ) -> UploadResponse:
     data = file.file.read()
@@ -133,12 +134,12 @@ def upload_file(
 
 @router.get("/api/files", response_model=list[FileOut])
 def list_files(
-    tenant_key: str | None = Query(None),
+    tenant_key: str | None = Depends(get_tenant_key),
     limit: int = Query(500, ge=1, le=1000),
     offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ) -> list[FileOut]:
-    tenant = (tenant_key or cfg.DEFAULT_TENANT_KEY).strip().lower() or cfg.DEFAULT_TENANT_KEY
+    tenant = tenant_key or cfg.DEFAULT_TENANT_KEY
     docs = (
         db.query(Document)
         .filter(Document.tenant_key == tenant)

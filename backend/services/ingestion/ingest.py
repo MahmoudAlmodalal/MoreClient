@@ -128,3 +128,34 @@ def index_document(db: Session, document_id: int) -> Document:
         raise
 
     return doc
+
+
+def extract_and_index_document(
+    db: Session, document_id: int, filename: str, data: bytes
+) -> Document:
+    """Full background pipeline: extract text from raw bytes, then chunk/embed/persist.
+
+    Called by _index_document_background when the upload handler defers extraction.
+    The Document row must already exist (status="processing") before this is called.
+    """
+    doc = db.get(Document, document_id)
+    if doc is None:
+        raise ValueError(f"document {document_id} not found")
+    try:
+        ftype, text = extract(filename, data)
+        doc.content = text
+        doc.file_type = ftype
+        db.commit()
+        chunks = chunk_text(text)
+        if chunks:
+            vectors = embeddings.embed_texts(chunks)
+            vectorstore.add_document_chunks(doc.id, chunks, vectors, tenant_key=doc.tenant_key)
+        doc.chunk_count = len(chunks)
+        doc.status = "completed"
+        db.commit()
+        db.refresh(doc)
+    except Exception:
+        doc.status = "failed"
+        db.commit()
+        raise
+    return doc

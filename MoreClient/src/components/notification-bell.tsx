@@ -1,11 +1,14 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
+import { apiGet, createWebSocketUrl, createAuthenticatedWebSocketUrl, type HandoffOut, type DashboardSocketMessage } from "@/lib/api";
+import { useAsyncOnMount } from "@/lib/use-async-effect";
 
 interface NotificationItem {
-  id: string;
+  id: string;           // "handoff-{id}"
+  handoffId: number;    // numeric id for unread tracking
   eventType: string;
   title: string;
   body: string | null;
@@ -14,38 +17,40 @@ interface NotificationItem {
   createdAt: string;
 }
 
-function createDemoNotifications(): NotificationItem[] {
-  const now = Date.now();
+const LAST_SEEN_KEY = "bellLastSeenHandoffId";
 
-  return [
-    {
-      id: "demo-1",
-      eventType: "handoff.created",
-      title: "New handoff needs review",
-      body: "A WhatsApp conversation was escalated after a low-confidence answer.",
-      linkUrl: "/dashboard/handoffs",
-      readAt: null,
-      createdAt: new Date(now - 6 * 60_000).toISOString(),
-    },
-    {
-      id: "demo-2",
-      eventType: "file.processed",
-      title: "Knowledge file processed",
-      body: "returns_policy_v2.txt is ready in the demo knowledge base.",
-      linkUrl: "/dashboard/files",
-      readAt: null,
-      createdAt: new Date(now - 43 * 60_000).toISOString(),
-    },
-    {
-      id: "demo-3",
-      eventType: "settings.saved",
-      title: "Widget settings saved",
-      body: "Branding and bot tone changes are stored locally in this demo session.",
-      linkUrl: "/dashboard/settings",
-      readAt: new Date(now - 2 * 60 * 60_000).toISOString(),
-      createdAt: new Date(now - 2 * 60 * 60_000).toISOString(),
-    },
-  ];
+function getLastSeenId(): number {
+  if (typeof window === "undefined") return 0;
+  return parseInt(window.localStorage.getItem(LAST_SEEN_KEY) ?? "0", 10) || 0;
+}
+
+function setLastSeenId(id: number): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(LAST_SEEN_KEY, String(id));
+}
+
+function handoffToNotification(
+  h: HandoffOut,
+  t: (key: string) => string,
+): NotificationItem {
+  const reasonKey: Record<string, string> = {
+    low_confidence: "handoffNotificationLowConfidence",
+    complaint: "handoffNotificationComplaint",
+    support_request: "handoffNotificationSupportRequest",
+    unsafe_or_unanswered: "handoffNotificationUnsafe",
+  };
+  const titleKey = reasonKey[h.reason] ?? "handoffNotificationLowConfidence";
+  const lastSeenId = getLastSeenId();
+  return {
+    id: `handoff-${h.id}`,
+    handoffId: h.id,
+    eventType: "handoff.created",
+    title: t(titleKey),
+    body: h.messages.find((m) => m.role === "user")?.content ?? null,
+    linkUrl: "/dashboard/handoffs",
+    readAt: h.id <= lastSeenId ? new Date().toISOString() : null,
+    createdAt: h.createdAt ?? new Date().toISOString(),
+  };
 }
 
 function relativeTime(iso: string): string {
@@ -61,11 +66,85 @@ function relativeTime(iso: string): string {
 export function NotificationBell() {
   const { t, isRtl } = useLanguage();
   const [open, setOpen] = useState(false);
-  const [items, setItems] = useState<NotificationItem[]>(createDemoNotifications);
+  const [items, setItems] = useState<NotificationItem[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Unread = handoff id is above the last-seen watermark.
   const unread = items.filter((item) => !item.readAt).length;
 
-  // Close on outside click.
+  // Seed on mount from /api/handoffs (pending handoffs, newest first).
+  const loadHandoffs = useCallback(async () => {
+    try {
+      const handoffs = await apiGet<HandoffOut[]>("/api/handoffs");
+      setItems(
+        handoffs.map((h) => handoffToNotification(h, t)).reverse()
+      );
+    } catch {
+      /* network error — bell stays empty, no crash */
+    }
+  }, [t]);
+
+  useAsyncOnMount(loadHandoffs, [loadHandoffs]);
+
+  // Live updates via the shared /ws/dashboard socket.
+  useEffect(() => {
+    let ws: WebSocket | null = null;
+    let stopped = false;
+
+    const connect = () => {
+      ws = new WebSocket(createAuthenticatedWebSocketUrl("/ws/dashboard"));
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data) as DashboardSocketMessage;
+          if (msg.type !== "handoff.created") return;
+          const { id, conversationId: _cid, channel: _ch, reason, question, createdAt } = msg.data;
+          void _cid; void _ch;
+          const lastSeenId = getLastSeenId();
+          const newItem: NotificationItem = {
+            id: `handoff-${id}`,
+            handoffId: id,
+            eventType: "handoff.created",
+            title: t(
+              ({
+                low_confidence: "handoffNotificationLowConfidence",
+                complaint: "handoffNotificationComplaint",
+                support_request: "handoffNotificationSupportRequest",
+                unsafe_or_unanswered: "handoffNotificationUnsafe",
+              } as Record<string, string>)[reason] ?? "handoffNotificationLowConfidence"
+            ),
+            body: question || null,
+            linkUrl: "/dashboard/handoffs",
+            readAt: id <= lastSeenId ? new Date().toISOString() : null,
+            createdAt: createdAt ?? new Date().toISOString(),
+          };
+          setItems((prev) => {
+            // De-dup: skip if we already have this handoff id.
+            if (prev.some((n) => n.handoffId === id)) return prev;
+            return [newItem, ...prev];
+          });
+        } catch {
+          /* ignore malformed frames */
+        }
+      };
+
+      ws.onclose = () => {
+        if (stopped) return;
+        // Reconnect with a 3s delay on unexpected close.
+        setTimeout(connect, 3000);
+      };
+
+      ws.onerror = () => ws?.close();
+    };
+
+    connect();
+    return () => {
+      stopped = true;
+      ws?.close();
+    };
+  }, [t]);
+
+  // Close dropdown on outside click.
   useEffect(() => {
     if (!open) return;
     const onClick = (e: MouseEvent) => {
@@ -77,6 +156,8 @@ export function NotificationBell() {
 
   const markAllRead = () => {
     const readAt = new Date().toISOString();
+    const maxId = items.reduce((m, n) => Math.max(m, n.handoffId), 0);
+    if (maxId > 0) setLastSeenId(maxId);
     setItems((prev) => prev.map((n) => ({ ...n, readAt: n.readAt ?? readAt })));
   };
 

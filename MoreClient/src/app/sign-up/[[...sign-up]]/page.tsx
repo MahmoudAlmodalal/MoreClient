@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Apple } from "lucide-react";
-import { register, ApiError } from "@/lib/api";
+import { register } from "@/lib/api";
 
 export default function SignUpPage() {
   const { t } = useLanguage();

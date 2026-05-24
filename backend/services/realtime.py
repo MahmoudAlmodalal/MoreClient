@@ -101,3 +101,13 @@ def broadcast_dashboard_snapshot(reason: str) -> None:
         dashboard_connections.broadcast(build_dashboard_snapshot_message(reason))
     except Exception:
         logger.exception("Failed to broadcast dashboard analytics snapshot")
+
+
+def broadcast_handoff_created(payload: dict[str, Any]) -> None:
+    """Push a new-handoff event to all connected dashboards."""
+    if not dashboard_connections.has_clients():
+        return
+    try:
+        dashboard_connections.broadcast({"type": "handoff.created", "data": payload})
+    except Exception:
+        logger.exception("Failed to broadcast handoff.created event")

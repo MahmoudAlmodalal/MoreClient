@@ -206,14 +206,19 @@ def _llm_classify(message: str, history: list[dict]) -> IntentResult | None:
         f"{item.get('role', 'user')}: {item.get('content', '')}" for item in history[-6:]
     )
     prompt = (
-        "أنت مصنّف نوايا لخدمة عملاء واتساب. صنّف رسالة العميل إلى نوع واحد فقط:\n"
+        "أنت مصنّف نوايا لخدمة عملاء. صنّف رسالة العميل إلى نوع واحد فقط:\n"
         "- purchase_intent: العميل يريد شراء منتج أو طلبه صراحة\n"
-        "- support_request: العميل يطلب موظفاً أو دعماً بشرياً\n"
+        "- support_request: العميل يطلب التحدث مع موظف أو شخص حقيقي الآن (مثل: 'أريد موظف'، 'كلمني أحد') — لا تستخدم هذا إذا كان يسأل فقط عن طريقة التواصل مع الشركة\n"
         "- complaint: العميل غير راضٍ أو لديه مشكلة أو شكوى\n"
-        "- general_inquiry: سؤال عام عن المنتجات أو الخدمات، بما في ذلك السعر بدون طلب شراء واضح\n"
+        "- general_inquiry: سؤال عام عن المنتجات أو الخدمات أو طرق التواصل، بما في ذلك السعر بدون طلب شراء واضح\n"
         "- greeting: تحية فقط\n"
         "- order_status: استفسار عن حالة طلب سابق\n"
         "- spam: رسالة عشوائية، إعلانات، محتوى غير لائق، أو نص غير مفهوم / أحرف مكررة\n\n"
+        "أمثلة:\n"
+        "  'how do I contact you?' → general_inquiry\n"
+        "  'كيف أتواصل معكم؟' → general_inquiry\n"
+        "  'I want to speak to a human' → support_request\n"
+        "  'أريد التحدث مع موظف' → support_request\n\n"
         f"الرسالة: {message}\n"
         f"سياق المحادثة السابقة:\n{history_text or 'لا يوجد'}\n\n"
         'أجب بصيغة JSON فقط: {"intent":"...","confidence":0.0,"product_mentioned":null,"reasoning":"..."}'

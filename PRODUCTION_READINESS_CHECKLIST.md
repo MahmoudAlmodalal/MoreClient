@@ -1,6 +1,6 @@
 # PRODUCTION_READINESS_CHECKLIST
 
-> clientMORE (FastAPI backend `:8000` + Next.js frontend `:5000`). Deploy target: **Replit**.
+> clientMORE (FastAPI backend `:8000` + Next.js frontend `:5001`). Deploy target: **Replit**.
 > Last updated: 2026-05-24 after the P0 Security Hardening pass.
 
 **Readiness score: 5.5 / 10** — core security holes closed; infra/observability/coverage still thin.

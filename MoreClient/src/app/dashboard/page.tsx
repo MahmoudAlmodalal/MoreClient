@@ -7,6 +7,7 @@ import {
   apiGet,
   apiSend,
   createWebSocketUrl,
+  createAuthenticatedWebSocketUrl,
   type AnalyticsResponse,
   type AnalyticsSocketMessage
 } from "@/lib/api";
@@ -151,7 +152,7 @@ export default function DashboardPage() {
 
     const connect = () => {
       clearReconnectTimer();
-      const socket = new WebSocket(createWebSocketUrl("/ws/dashboard"));
+      const socket = new WebSocket(createAuthenticatedWebSocketUrl("/ws/dashboard"));
       dashboardSocketRef.current = socket;
 
       socket.onopen = () => {
@@ -354,7 +355,7 @@ export default function DashboardPage() {
                 margin={{ top: 10, right: 10, left: 10, bottom: 10 }}
               >
                 <XAxis
-                  dataKey={isRtl && "count" ? undefined : "name"}
+                  dataKey={isRtl ? "count" : "name"}
                   stroke="#4b5563"
                   fontSize={11}
                   tickLine={false}

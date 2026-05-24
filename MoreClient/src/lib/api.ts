@@ -156,6 +156,20 @@ export type AnalyticsSocketMessage = {
   data: AnalyticsResponse;
 };
 
+export type HandoffCreatedSocketMessage = {
+  type: "handoff.created";
+  data: {
+    id: number;
+    conversationId: number;
+    channel: string;
+    reason: string;
+    question: string;
+    createdAt: string | null;
+  };
+};
+
+export type DashboardSocketMessage = AnalyticsSocketMessage | HandoffCreatedSocketMessage;
+
 export function createWebSocketUrl(path: string): string {
   const configured = process.env.NEXT_PUBLIC_WS_URL;
   if (configured) return joinBasePath(configured, path);
@@ -202,6 +216,7 @@ export type HandoffOut = {
   reason: string;
   language: string;
   timeAgo: string;
+  createdAt: string | null;
   unreplied: boolean;
   messages: HandoffMessage[];
   metadata: {

@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
 from backend.models.database import get_db
-from backend.models.tables import PurchaseOrder
+from backend.models.tables import Conversation, PurchaseOrder
 from backend.schemas.purchase import PurchaseOrderOut, PurchaseStatusUpdate
+from backend.core.security import get_tenant_key
 
 router = APIRouter()
 
@@ -14,8 +15,14 @@ _ACTIVE_STATES = {"collecting_product", "collecting_quantity", "collecting_addre
 
 
 @router.get("/api/purchases", response_model=list[PurchaseOrderOut])
-def list_purchases(status: str | None = None, db: Session = Depends(get_db)):
+def list_purchases(
+    status: str | None = None,
+    tenant_key: str | None = Depends(get_tenant_key),
+    db: Session = Depends(get_db)
+):
     query = db.query(PurchaseOrder)
+    if tenant_key:
+        query = query.join(Conversation).filter(Conversation.tenant_key == tenant_key)
     if status:
         query = query.filter(PurchaseOrder.status == status)
     orders = query.order_by(PurchaseOrder.created_at.desc(), PurchaseOrder.id.desc()).all()
@@ -23,14 +30,19 @@ def list_purchases(status: str | None = None, db: Session = Depends(get_db)):
 
 
 @router.get("/api/purchases/active", response_model=list[PurchaseOrderOut])
-def list_active_purchases(db: Session = Depends(get_db)):
-    orders = (
+def list_active_purchases(
+    tenant_key: str | None = Depends(get_tenant_key),
+    db: Session = Depends(get_db)
+):
+    query = (
         db.query(PurchaseOrder)
         .filter(PurchaseOrder.status.in_(["pending", "confirmed"]))
         .filter(PurchaseOrder.state.in_(_ACTIVE_STATES))
-        .order_by(PurchaseOrder.updated_at.desc(), PurchaseOrder.id.desc())
-        .all()
     )
+    if tenant_key:
+        query = query.join(Conversation).filter(Conversation.tenant_key == tenant_key)
+    
+    orders = query.order_by(PurchaseOrder.updated_at.desc(), PurchaseOrder.id.desc()).all()
     return [PurchaseOrderOut.model_validate(order) for order in orders]
 
 

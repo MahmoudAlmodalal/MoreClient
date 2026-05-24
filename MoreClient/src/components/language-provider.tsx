@@ -24,6 +24,10 @@ const translationsEn = {
   markAllRead: "Mark all read",
   noNotifications: "No notifications yet",
   unread: "unread",
+  handoffNotificationLowConfidence: "Low-confidence question needs review",
+  handoffNotificationComplaint: "Customer complaint escalated",
+  handoffNotificationSupportRequest: "Support request escalated",
+  handoffNotificationUnsafe: "Unsafe or unanswered question escalated",
 
   // General Status
   active: "Active",
@@ -452,6 +456,10 @@ const translationsAr: Partial<Translations> = {
   markAllRead: "تعليم الكل كمقروء",
   noNotifications: "لا توجد إشعارات بعد",
   unread: "غير مقروء",
+  handoffNotificationLowConfidence: "سؤال بثقة منخفضة يحتاج مراجعة",
+  handoffNotificationComplaint: "شكوى عميل تم تصعيدها",
+  handoffNotificationSupportRequest: "طلب دعم تم تصعيده",
+  handoffNotificationUnsafe: "سؤال غير آمن أو غير مجاب تم تصعيده",
 
   // General Status
   active: "نشط",

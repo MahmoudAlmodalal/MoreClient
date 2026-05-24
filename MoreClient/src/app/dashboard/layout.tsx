@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { useSessionRole } from "@/lib/use-session-role";
+import { logout } from "@/lib/api";
 import { NotificationBell } from "@/components/notification-bell";
 import { logout } from "@/lib/api";
 import {
@@ -20,10 +21,6 @@ import {
   Activity,
   ShieldAlert
 } from "lucide-react";
-
-const subscribeToRole = () => () => {};
-const getClientIsAdmin = () => sessionStorage.getItem("userRole") === "admin";
-const getServerIsAdmin = () => false;
 
 export default function DashboardLayout({
   children,

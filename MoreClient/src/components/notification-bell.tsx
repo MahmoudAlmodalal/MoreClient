@@ -92,7 +92,7 @@ export function NotificationBell() {
     let stopped = false;
 
     const connect = () => {
-      ws = new WebSocket(createWebSocketUrl("/ws/dashboard"));
+      ws = new WebSocket(createAuthenticatedWebSocketUrl("/ws/dashboard"));
 
       ws.onmessage = (event) => {
         try {

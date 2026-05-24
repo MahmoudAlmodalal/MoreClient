@@ -151,7 +151,7 @@ export default function DashboardPage() {
 
     const connect = () => {
       clearReconnectTimer();
-      const socket = new WebSocket(createWebSocketUrl("/ws/dashboard"));
+      const socket = new WebSocket(createAuthenticatedWebSocketUrl("/ws/dashboard"));
       dashboardSocketRef.current = socket;
 
       socket.onopen = () => {

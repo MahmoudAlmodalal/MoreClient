@@ -45,7 +45,7 @@ Run the **whole stack** from the git root: `bash start.sh` (frontend `:5000` + b
 | Chat latency gate | `py -X utf8 -m backend.scripts.benchmark_chat` (fails if p95 ≥ 3s) |
 | Integration smoke | `py -X utf8 backend/_checkpoint1.py` (upload → web/telegram chat → escalation → analytics, keyless) |
 
-There is no pytest suite; `_checkpoint1.py` and the `backend/scripts/*` are the test/eval harnesses.
+Unit tests live in `backend/tests/` — run `py -X utf8 -m pytest backend/tests`. `_checkpoint1.py` and the `backend/scripts/*` are additional integration/eval harnesses.
 
 > **Windows + Arabic:** always use `py -X utf8`. curl/bash mangle Arabic UTF-8 — test Arabic paths via
 > Python (httpx/`--data-binary @file`), not raw curl string args.

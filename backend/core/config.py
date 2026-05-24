@@ -13,6 +13,22 @@ def _csv(value: str | None, default: list[str]) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+def _clamp_float(value: str | None, default: float, lo: float, hi: float) -> float:
+    try:
+        result = float(value) if value is not None else default
+    except (TypeError, ValueError):
+        result = default
+    return min(max(result, lo), hi)
+
+
+def _clamp_int(value: str | None, default: int, lo: int, hi: int) -> int:
+    try:
+        result = int(value) if value is not None else default
+    except (TypeError, ValueError):
+        result = default
+    return min(max(result, lo), hi)
+
+
 class Settings:
     # --- Persistence ---
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./backend.db")
@@ -24,6 +40,9 @@ class Settings:
     GEMINI_API_KEY: str | None = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     ANTHROPIC_API_KEY: str | None = os.getenv("ANTHROPIC_API_KEY")
     APP_SECRET: str | None = os.getenv("APP_SECRET")
+    # Optional Telegram webhook secret token (set on setWebhook); when set, inbound
+    # updates whose X-Telegram-Bot-Api-Secret-Token header mismatches are dropped.
+    TELEGRAM_WEBHOOK_SECRET: str | None = os.getenv("TELEGRAM_WEBHOOK_SECRET")
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5000").rstrip("/")
     BACKEND_PUBLIC_URL: str = os.getenv("BACKEND_PUBLIC_URL", "http://localhost:8000").rstrip("/")
     GOOGLE_CLIENT_ID: str | None = os.getenv("GOOGLE_CLIENT_ID")
@@ -55,9 +74,11 @@ class Settings:
 
     # --- RAG behaviour ---
     # Default escalate cutoff; can be overridden per-tenant via Setting.confidence_threshold.
-    CONFIDENCE_THRESHOLD: float = float(os.getenv("CONFIDENCE_THRESHOLD", "0.45"))
-    RETRIEVAL_K: int = int(os.getenv("RETRIEVAL_K", "4"))
-    MEMORY_WINDOW: int = int(os.getenv("MEMORY_WINDOW", "8"))  # last N messages fed to the model
+    CONFIDENCE_THRESHOLD: float = _clamp_float(os.getenv("CONFIDENCE_THRESHOLD"), 0.45, 0.0, 1.0)
+    RETRIEVAL_K: int = _clamp_int(os.getenv("RETRIEVAL_K"), 4, 1, 20)
+    MEMORY_WINDOW: int = _clamp_int(  # last N messages fed to the model
+        os.getenv("MEMORY_WINDOW"), 8, 1, 10_000
+    )
 
     # --- CORS ---
     ALLOWED_ORIGINS: list[str] = _csv(

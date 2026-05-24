@@ -95,13 +95,14 @@ export default function DashboardPage() {
         answer: answerInput.trim(),
         source_handoff_id: item.id
       });
+      // Only mutate the UI once the answer is actually persisted.
+      setUnansweredQuestions((prev) => prev.filter((q) => q.id !== item.id));
+      setSelectedQuestion(null);
+      setToastMessage(t("saved"));
     } catch {
-      /* best-effort: still drop it from the queue so the agent isn't blocked */
+      // Persistence failed: keep the modal open so the agent can retry.
+      setToastMessage(t("failed"));
     }
-
-    setUnansweredQuestions((prev) => prev.filter((q) => q.id !== item.id));
-    setSelectedQuestion(null);
-    setToastMessage(t("saved"));
 
     setTimeout(() => {
       setToastMessage("");

@@ -5,7 +5,7 @@ aliases while keeping snake_case attribute names that map 1:1 to the Setting
 ORM columns. populate_by_name lets the API accept either form.
 """
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
 
@@ -60,14 +60,28 @@ class SettingsUpdate(_CamelModel):
     is_whatsapp_active: bool | None = None
     subscription_plan: str | None = None
     used_messages: int | None = None
-    confidence_threshold: float | None = None
+    confidence_threshold: float | None = Field(default=None, ge=0, le=1)
     purchase_flow_enabled: bool | None = None
     purchase_collect_address: bool | None = None
     purchase_collect_quantity: bool | None = None
     purchase_auto_forward_to_support: bool | None = None
     purchase_confirmation_required: bool | None = None
-    purchase_session_minutes: int | None = None
+    purchase_session_minutes: int | None = Field(default=None, gt=0)
     purchase_currency_label: str | None = None
     intent_llm_enabled: bool | None = None
-    intent_confidence_threshold: float | None = None
+    intent_confidence_threshold: float | None = Field(default=None, ge=0, le=1)
     auto_handoff_on_complaint: bool | None = None
+
+    @field_validator("subscription_plan")
+    @classmethod
+    def _check_plan(cls, v: str | None) -> str | None:
+        if v is not None and v not in {"pro", "ultra"}:
+            raise ValueError("subscription_plan must be one of: pro, ultra")
+        return v
+
+    @field_validator("bot_tone")
+    @classmethod
+    def _check_tone(cls, v: str | None) -> str | None:
+        if v is not None and v not in {"friendly", "professional", "formal"}:
+            raise ValueError("bot_tone must be one of: friendly, professional, formal")
+        return v

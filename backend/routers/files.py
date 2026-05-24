@@ -1,6 +1,8 @@
 """/api/upload + /api/files — owned by Phase B agent B2."""
 
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from pathlib import PurePath
+
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from backend.models.database import get_db
@@ -10,6 +12,11 @@ from backend.services.ai import vectorstore
 from backend.services.ingestion.ingest import ingest_document
 
 router = APIRouter()
+
+# Upload guardrails. Extensions mirror ingest._detect_type's dispatch so we
+# reject anything ingestion would silently treat as plain text.
+_MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+_ALLOWED_EXTENSIONS = {".pdf", ".docx", ".xlsx", ".txt", ".md"}
 
 
 def _human_size(n_bytes: int | None) -> str:
@@ -52,7 +59,17 @@ def upload_file(
     file: UploadFile = File(...),
     db: Session = Depends(get_db),
 ) -> UploadResponse:
+    extension = PurePath(file.filename or "").suffix.lower()
+    if extension not in _ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=415,
+            detail="unsupported file type (allowed: pdf, docx, xlsx, txt, md)",
+        )
+
     data = file.file.read()
+    if len(data) > _MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="file too large (max 10MB)")
+
     try:
         doc = ingest_document(db, file.filename, data)
     except Exception:
@@ -66,8 +83,18 @@ def upload_file(
 
 
 @router.get("/api/files", response_model=list[FileOut])
-def list_files(db: Session = Depends(get_db)) -> list[FileOut]:
-    docs = db.query(Document).order_by(Document.created_at.desc()).all()
+def list_files(
+    limit: int = Query(500, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+) -> list[FileOut]:
+    docs = (
+        db.query(Document)
+        .order_by(Document.created_at.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
     return [_to_file_out(doc) for doc in docs]
 
 

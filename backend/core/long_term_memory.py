@@ -12,8 +12,12 @@ private history never leaks into KB retrieval. Every call is best-effort: a
 vector-store hiccup must never break the chat path.
 """
 
+import logging
+
 from backend.core.config import settings
 from backend.services.ai import embeddings
+
+logger = logging.getLogger(__name__)
 
 _collection = None
 
@@ -48,6 +52,9 @@ def remember(user_id: str, text: str) -> None:
             metadatas=[{"user_id": user_id}],
         )
     except Exception:
+        logger.warning(
+            "long-term memory write failed for user %s", user_id, exc_info=True
+        )
         pass  # best-effort: never break chat on a memory write
 
 
@@ -67,4 +74,7 @@ def recall(user_id: str, query: str, k: int = 3) -> list[str]:
         )
         return [d for d in (res.get("documents") or [[]])[0] if d]
     except Exception:
+        logger.warning(
+            "long-term memory recall failed for user %s", user_id, exc_info=True
+        )
         return []

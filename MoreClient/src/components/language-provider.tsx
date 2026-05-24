@@ -70,7 +70,7 @@ const translationsEn = {
   filesTitle: "Knowledge Base Ingestion",
   filesSub: "Upload PDFs, DOCX, TXT, or XLSX spreadsheets. clientMORE converts them to Markdown, chunks, and embeds them into ChromaDB.",
   dropzoneTitle: "Drag & drop files here, or click to browse",
-  dropzoneSub: "Supports PDF, DOCX, TXT, XLSX (Max 50MB)",
+  dropzoneSub: "Supports PDF, DOCX, TXT, XLSX (Max 10MB)",
   fileListTitle: "Parsed Documents",
   fileListSub: "Currently ingested knowledge assets used for RAG response generation.",
   fileName: "File Name",
@@ -167,6 +167,35 @@ const translationsEn = {
   usageRatio: "Usage this month: {used} of {limit} messages",
   upgradeToUltra: "Upgrade to Ultra",
   downgradeToPro: "Switch to Pro",
+
+  // Upgrade Page
+  upgradeTitle: "Upgrade Your Plan",
+  upgradeSubtitle: "Unlock more messages, channels, and priority support as your team grows.",
+  compareAllPlans: "Compare all plans",
+
+  // Plan Feature Bullets
+  featBilingualRag: "Bilingual Arabic & English RAG",
+  featChromaVector: "ChromaDB vector knowledge base",
+  featAllProBenefits: "All Pro benefits",
+  featSlaGuarantee: "SLA uptime guarantee",
+  featPriorityHandoff: "Priority human handoff routing",
+
+  // Public Pricing Page
+  planFreeName: "Free",
+  planFreePrice: "$0",
+  planFreeDesc: "For trying clientMORE with a small knowledge base.",
+  planFreeLimit: "50 AI Messages/month",
+  planProDesc: "For growing businesses that need full omnichannel support.",
+  planUltraDesc: "For high-volume teams with priority needs.",
+  featOmnichannel: "Omnichannel: Web, WhatsApp & Telegram",
+  featHumanHandoff: "Seamless human handoff",
+  featAnalyticsDash: "Analytics dashboard",
+  pricingStartFree: "Start free",
+  pricingGetPro: "Get Pro",
+  pricingGetUltra: "Get Ultra",
+  pricingPageTitle: "Plans that scale with your support",
+  pricingPageSubtitle: "Start free, then upgrade as your conversations grow. No hidden fees.",
+  pricingFooterNote: "All plans include bilingual support and a 14-day money-back guarantee.",
 
   // Chat Widget
   widgetGreeting: "Hello! I am clientMORE, your AI support advisor. How can I help you today?",
@@ -411,7 +440,7 @@ const translationsAr: Partial<Translations> = {
   filesTitle: "حقن ملفات قاعدة المعرفة",
   filesSub: "قم برفع ملفات PDF أو DOCX أو TXT أو جداول بيانات XLSX. يقوم نصيح بتحويلها إلى Markdown وتقسيمها وتخزينها كمتجهات في ChromaDB.",
   dropzoneTitle: "اسحب وأفلت الملفات هنا، أو انقر للتصفح",
-  dropzoneSub: "يدعم PDF، DOCX، TXT، XLSX (الحد الأقصى 50 ميجابايت)",
+  dropzoneSub: "يدعم PDF، DOCX، TXT، XLSX (الحد الأقصى 10 ميجابايت)",
   fileListTitle: "المستندات التي تمت معالجتها",
   fileListSub: "ملفات المعرفة المستخدمة حالياً لتوليد الإجابات الذكية (RAG).",
   fileName: "اسم الملف",
@@ -508,6 +537,35 @@ const translationsAr: Partial<Translations> = {
   usageRatio: "معدل الاستخدام هذا الشهر: {used} من أصل {limit} رسالة",
   upgradeToUltra: "الترقية للباقة القصوى",
   downgradeToPro: "التحويل للباقة الاحترافية",
+
+  // Upgrade Page
+  upgradeTitle: "ترقية باقتك",
+  upgradeSubtitle: "احصل على رسائل وقنوات ودعم ذي أولوية أكثر مع نمو فريقك.",
+  compareAllPlans: "قارن جميع الباقات",
+
+  // Plan Feature Bullets
+  featBilingualRag: "ذكاء اصطناعي ثنائي اللغة (عربي وإنجليزي)",
+  featChromaVector: "قاعدة معرفة متجهية ChromaDB",
+  featAllProBenefits: "جميع مزايا الباقة الاحترافية",
+  featSlaGuarantee: "ضمان مستوى خدمة (SLA)",
+  featPriorityHandoff: "توجيه التحويل البشري ذو الأولوية",
+
+  // Public Pricing Page
+  planFreeName: "المجانية (Free)",
+  planFreePrice: "$0",
+  planFreeDesc: "لتجربة clientMORE مع قاعدة معرفة صغيرة.",
+  planFreeLimit: "50 رسالة ذكاء اصطناعي/شهرياً",
+  planProDesc: "للأعمال المتنامية التي تحتاج دعماً متعدد القنوات بالكامل.",
+  planUltraDesc: "للفرق ذات الحجم الكبير والاحتياجات ذات الأولوية.",
+  featOmnichannel: "متعدد القنوات: الموقع وواتساب وتليجرام",
+  featHumanHandoff: "تحويل سلس للموظف البشري",
+  featAnalyticsDash: "لوحة تحليلات",
+  pricingStartFree: "ابدأ مجاناً",
+  pricingGetPro: "اشترك في الاحترافية",
+  pricingGetUltra: "اشترك في القصوى",
+  pricingPageTitle: "باقات تتوسّع مع حجم دعمك",
+  pricingPageSubtitle: "ابدأ مجاناً، ثم ترقَّ مع نمو محادثاتك. بدون رسوم خفية.",
+  pricingFooterNote: "جميع الباقات تشمل دعماً ثنائي اللغة وضمان استرداد خلال 14 يوماً.",
 
   // Chat Widget
   widgetGreeting: "مرحباً! أنا نصيح، مستشارك الذكي للدعم الفني. كيف يمكنني مساعدتك اليوم؟",

@@ -9,13 +9,14 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from backend.models.database import get_db
-from backend.models.tables import Setting, get_or_create_settings
+from backend.models.tables import get_or_create_settings
 from backend.schemas.settings import SettingsOut, SettingsUpdate
 
 router = APIRouter()
 
-# Column names we allow PUT to mutate (id is fixed at 1).
-_SETTABLE = {c.name for c in Setting.__table__.columns if c.name != "id"}
+# Fields PUT may mutate: the update schema's own fields, minus billing/internal
+# counters. used_messages is bumped only by the chat pipeline, never via this route.
+_SETTABLE = set(SettingsUpdate.model_fields) - {"used_messages"}
 
 
 @router.get("/api/settings", response_model=SettingsOut)

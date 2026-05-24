@@ -53,6 +53,8 @@ def list_tenants(
     search: str = Query("", description="Search name or email"),
     plan: str = Query("all", description="Filter by plan: all|pro|ultra|custom"),
     status: str = Query("all", description="Filter by status: all|active|inactive"),
+    limit: int = Query(500, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ) -> list[TenantOut]:
     q = select(Tenant)
@@ -67,7 +69,7 @@ def list_tenants(
     if status != "all":
         q = q.where(Tenant.status == status)
 
-    q = q.order_by(Tenant.created_at.desc())
+    q = q.order_by(Tenant.created_at.desc()).offset(offset).limit(limit)
     tenants = db.execute(q).scalars().all()
     return [_tenant_to_out(t) for t in tenants]
 

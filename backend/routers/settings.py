@@ -29,11 +29,21 @@ def update_settings(
 ) -> SettingsOut:
     row = get_or_create_settings(db)
 
+    incoming = payload.model_dump(exclude_unset=True, by_alias=False)
+
     # Apply only the fields the client actually sent (partial update).
-    for key, value in payload.model_dump(exclude_unset=True, by_alias=False).items():
+    for key, value in incoming.items():
         if key in _SETTABLE:
             setattr(row, key, value)
 
     db.commit()
     db.refresh(row)
+
+    # If Telegram-related fields were touched, restart the poller so changes
+    # (new token, activation toggle) take effect immediately.
+    if "telegram_token" in incoming or "is_telegram_active" in incoming:
+        from backend.services.channels import telegram_poller
+
+        telegram_poller.ensure_running_if_active()
+
     return SettingsOut.model_validate(row)

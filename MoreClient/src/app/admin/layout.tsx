@@ -56,6 +56,11 @@ export default function SuperAdminLayout({
     setLanguage(language === "en" ? "ar" : "en");
   };
 
+  const handleLogout = () => {
+    sessionStorage.removeItem("userRole");
+    router.push("/welcome");
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-[#050508]">
       {/* Top Header */}
@@ -146,8 +151,15 @@ export default function SuperAdminLayout({
             })}
           </nav>
 
-          {/* Footer */}
-          <div className="mt-auto border-t border-[#1f1f2e] pt-4">
+          {/* Logout & Footer */}
+          <div className="mt-auto border-t border-[#1f1f2e] pt-4 space-y-4">
+            <button
+              onClick={handleLogout}
+              className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all duration-200"
+            >
+              <LogOut className="h-5 w-5 shrink-0" />
+              <span>{t("logout")}</span>
+            </button>
             <div className="flex items-center gap-2 px-2 text-xs text-gray-500">
               <Activity className="h-4 w-4 text-purple-500 animate-pulse" />
               <span>SuperAdmin Console v1.0.0</span>
@@ -195,7 +207,10 @@ export default function SuperAdminLayout({
               </nav>
 
               <div className="absolute bottom-6 left-6 right-6">
-                <button className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 py-3 text-sm font-semibold text-red-400 hover:bg-red-500/10">
+                <button
+                  onClick={handleLogout}
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 py-3 text-sm font-semibold text-red-400 hover:bg-red-500/10"
+                >
                   <LogOut className="h-4 w-4" />
                   <span>{t("logout")}</span>
                 </button>

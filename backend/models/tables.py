@@ -119,6 +119,24 @@ class Setting(Base):
     confidence_threshold = Column(Float, default=0.45, nullable=False)
 
 
+class Tenant(Base):
+    """Admin-managed subscription registry. Each row represents a business
+    tenant with its subscription plan, usage tracking, and activation status.
+    Independent from the single-row Setting config (future: each tenant will
+    own its own Setting row)."""
+
+    __tablename__ = "tenants"
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=False, unique=True)
+    plan = Column(String(20), default="pro", nullable=False)         # pro | ultra | custom
+    status = Column(String(20), default="active", nullable=False)    # active | inactive
+    used_messages = Column(Integer, default=0, nullable=False)
+    limit_messages = Column(Integer, default=500, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
 def get_or_create_settings(db: Session) -> "Setting":
     """Return the single config row, lazily creating it with defaults."""
     row = db.get(Setting, 1)

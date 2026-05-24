@@ -126,3 +126,85 @@ export type SettingsOut = {
   usedMessages: number;
   confidenceThreshold: number;
 };
+
+// ─── Admin / Tenant types ───────────────────────────────────────────────────
+
+export type TenantOut = {
+  id: number;
+  name: string;
+  email: string;
+  plan: "pro" | "ultra" | "custom";
+  status: "active" | "inactive";
+  usedMessages: number;
+  limitMessages: number;
+  createdDate: string;
+};
+
+export type TenantCreate = {
+  name: string;
+  email: string;
+  plan: string;
+  limitMessages: number;
+};
+
+export type TenantUpdate = {
+  name?: string;
+  email?: string;
+  plan?: string;
+  limitMessages?: number;
+};
+
+export type AdminKpis = {
+  activeTenants: number;
+  totalTenants: number;
+  totalMrr: number;
+  globalMessages: number;
+};
+
+export type AdminHealth = {
+  dbLatencyMs: number;
+  chromaStatus: string;
+  memoryUsagePercent: number;
+  cpuUsagePercent: number;
+  llmProviderStatus: string;
+};
+
+// ─── Admin API functions ────────────────────────────────────────────────────
+
+export function fetchTenants(params?: {
+  search?: string;
+  plan?: string;
+  status?: string;
+}): Promise<TenantOut[]> {
+  const qs = new URLSearchParams();
+  if (params?.search) qs.set("search", params.search);
+  if (params?.plan && params.plan !== "all") qs.set("plan", params.plan);
+  if (params?.status && params.status !== "all") qs.set("status", params.status);
+  const query = qs.toString();
+  return apiGet<TenantOut[]>(`/api/admin/tenants${query ? `?${query}` : ""}`);
+}
+
+export function createTenant(data: TenantCreate): Promise<TenantOut> {
+  return apiSend<TenantOut>("/api/admin/tenants", "POST", data);
+}
+
+export function updateTenant(id: number, data: TenantUpdate): Promise<TenantOut> {
+  return apiSend<TenantOut>(`/api/admin/tenants/${id}`, "PUT", data);
+}
+
+export function deleteTenant(id: number): Promise<{ ok: boolean }> {
+  return apiSend<{ ok: boolean }>(`/api/admin/tenants/${id}`, "DELETE");
+}
+
+export function toggleTenantStatus(id: number): Promise<TenantOut> {
+  return apiSend<TenantOut>(`/api/admin/tenants/${id}/toggle`, "POST");
+}
+
+export function fetchAdminKpis(): Promise<AdminKpis> {
+  return apiGet<AdminKpis>("/api/admin/kpis");
+}
+
+export function fetchAdminHealth(): Promise<AdminHealth> {
+  return apiGet<AdminHealth>("/api/admin/health");
+}
+

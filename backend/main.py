@@ -5,7 +5,10 @@ startup, and mounts every feature router. Each router defines its own full
 paths (e.g. /api/chat), so includes are prefix-free and stable.
 """
 
+import logging
 from contextlib import asynccontextmanager
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.core.config import settings
 from backend.models.database import init_db
 from backend.routers import (
+    admin,
     analytics,
     channels,
     chat,
@@ -31,7 +35,16 @@ async def lifespan(app: FastAPI):
     from backend.services.ai import vectorstore
 
     vectorstore.get_collection()
+
+    # Start Telegram long-polling if the channel is active.
+    from backend.services.channels import telegram_poller
+
+    telegram_poller.ensure_running_if_active()
+
     yield
+
+    # Cleanly stop the poller on shutdown.
+    telegram_poller.stop()
 
 
 app = FastAPI(title="AI Support Agent", lifespan=lifespan)
@@ -44,6 +57,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(admin.router)
 app.include_router(chat.router)
 app.include_router(files.router)
 app.include_router(analytics.router)

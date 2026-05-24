@@ -8,11 +8,15 @@ so these handlers MUST always return HTTP 200. Errors are swallowed and a
 benign success/empty-TwiML body is returned instead.
 """
 
+import logging
+
 from fastapi import APIRouter, Request, Response, Depends
 from sqlalchemy.orm import Session
 
 from backend.models.database import get_db
 from backend.services.channels.factory import ChannelFactory
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -35,7 +39,7 @@ async def telegram_webhook(request: Request, db: Session = Depends(get_db)):
             channel.deliver(inbound, channel.reply(inbound, db), db)
     except Exception:
         # Swallow — webhooks must never surface a non-200 to the provider.
-        pass
+        logger.exception("Telegram webhook processing error")
     return {"ok": True}
 
 

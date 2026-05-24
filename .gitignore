@@ -52,6 +52,8 @@ next-env.d.ts
 /test-results/
 /playwright-report/
 /.vitest/
+# pytest (backend) — cache dir is otherwise only self-ignored by pytest
+.pytest_cache/
 
 # ---------------------------------------------------------------------------
 # Prisma

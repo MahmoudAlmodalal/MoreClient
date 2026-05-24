@@ -5,7 +5,7 @@ aliases while keeping snake_case attribute names that map 1:1 to the Setting
 ORM columns. populate_by_name lets the API accept either form.
 """
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic.alias_generators import to_camel
 
 
@@ -47,20 +47,20 @@ class SettingsOut(_CamelModel):
 class SettingsUpdate(_CamelModel):
     """All fields optional — PUT performs a partial update."""
 
-    company_name: str | None = None
-    bot_name: str | None = None
-    company_logo: str | None = None
+    company_name: str | None = Field(default=None, max_length=255)
+    bot_name: str | None = Field(default=None, max_length=255)
+    company_logo: str | None = Field(default=None, max_length=200_000)  # URL or base64 data URI
     bot_tone: str | None = None
-    system_prompt_extra: str | None = None
-    telegram_token: str | None = None
+    system_prompt_extra: str | None = Field(default=None, max_length=8000)
+    telegram_token: str | None = Field(default=None, max_length=255)
     is_telegram_active: bool | None = None
-    twilio_sid: str | None = None
-    twilio_token: str | None = None
-    twilio_number: str | None = None
+    twilio_sid: str | None = Field(default=None, max_length=255)
+    twilio_token: str | None = Field(default=None, max_length=255)
+    twilio_number: str | None = Field(default=None, max_length=50)
     is_whatsapp_active: bool | None = None
     subscription_plan: str | None = None
     used_messages: int | None = None
-    confidence_threshold: float | None = None
+    confidence_threshold: float | None = Field(default=None, ge=0, le=1)
     purchase_flow_enabled: bool | None = None
     purchase_collect_address: bool | None = None
     purchase_collect_quantity: bool | None = None
@@ -69,5 +69,19 @@ class SettingsUpdate(_CamelModel):
     purchase_session_minutes: int | None = None
     purchase_currency_label: str | None = None
     intent_llm_enabled: bool | None = None
-    intent_confidence_threshold: float | None = None
+    intent_confidence_threshold: float | None = Field(default=None, ge=0, le=1)
     auto_handoff_on_complaint: bool | None = None
+
+    @field_validator("subscription_plan")
+    @classmethod
+    def _check_plan(cls, v: str | None) -> str | None:
+        if v is not None and v not in {"pro", "ultra"}:
+            raise ValueError("subscription_plan must be one of: pro, ultra")
+        return v
+
+    @field_validator("bot_tone")
+    @classmethod
+    def _check_tone(cls, v: str | None) -> str | None:
+        if v is not None and v not in {"friendly", "professional", "formal"}:
+            raise ValueError("bot_tone must be one of: friendly, professional, formal")
+        return v

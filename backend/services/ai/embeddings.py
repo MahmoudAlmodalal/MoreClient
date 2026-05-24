@@ -12,8 +12,10 @@ vector dimension differs between providers.
 
 import hashlib
 import math
+from functools import lru_cache
 
 from backend.core.config import settings
+from backend.services.ai import text_normalize
 
 _clients: dict[str, object] = {}
 
@@ -45,10 +47,15 @@ def _model_for(provider: str) -> str:
 
 
 def _hash_embed(text: str) -> list[float]:
-    """Deterministic bag-of-tokens vector hashed into EMBED_DIM dimensions."""
+    """Deterministic bag-of-tokens vector hashed into EMBED_DIM dimensions.
+
+    Tokens are normalized (lowercase + Arabic folding) so AR queries that don't
+    diacritize exactly like the source still land on the same hash buckets — the
+    single biggest keyless-retrieval win without an embedding key.
+    """
     dim = settings.EMBED_DIM
     vec = [0.0] * dim
-    for token in text.lower().split():
+    for token in text_normalize.tokenize(text):
         h = int(hashlib.md5(token.encode("utf-8")).hexdigest(), 16)
         vec[h % dim] += 1.0
     norm = math.sqrt(sum(v * v for v in vec))
@@ -92,5 +99,12 @@ def _embed_texts_with_provider(provider: str, texts: list[str]) -> list[list[flo
         return out
 
 
+@lru_cache(maxsize=256)
+def _embed_query_cached(text: str) -> tuple[float, ...]:
+    return tuple(embed_texts([text])[0])
+
+
 def embed_query(text: str) -> list[float]:
-    return embed_texts([text])[0]
+    # Cache repeated queries (benchmarks, common questions) to cut latency. The
+    # active provider is process-stable, so a key change requires a restart anyway.
+    return list(_embed_query_cached(text))

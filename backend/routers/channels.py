@@ -8,12 +8,16 @@ so these handlers MUST always return HTTP 200. Errors are swallowed and a
 benign success/empty-TwiML body is returned instead.
 """
 
+import base64
+import hashlib
+import hmac
 import logging
 
 from fastapi import APIRouter, Request, Response, Depends
 from sqlalchemy.orm import Session
 
 from backend.models.database import get_db
+from backend.models.tables import get_or_create_settings
 from backend.services.channels.factory import ChannelFactory
 from backend.services.realtime import broadcast_dashboard_snapshot
 
@@ -25,13 +29,41 @@ router = APIRouter()
 _EMPTY_TWIML = "<?xml version='1.0' encoding='UTF-8'?><Response></Response>"
 
 
+def _verify_twilio_signature(token: str, url: str, params: dict, signature: str) -> bool:
+    """Validate Twilio's X-Twilio-Signature.
+
+    Prefer the SDK validator; fall back to stdlib HMAC-SHA1 when the twilio package
+    is absent (mirroring the optional-import pattern in services/channels/whatsapp.py).
+    Twilio signs: the full URL + each POST param (key+value) sorted by key, HMAC-SHA1
+    with the auth token, base64-encoded. The URL is rebuilt from BACKEND_PUBLIC_URL so
+    it matches the public https endpoint Twilio was configured with, even behind a
+    TLS-terminating proxy where request.url would show the internal http host.
+    """
+    try:
+        from twilio.request_validator import RequestValidator
+
+        return RequestValidator(token).validate(url, params, signature)
+    except ImportError:
+        data = url + "".join(k + params[k] for k in sorted(params))
+        mac = hmac.new(token.encode("utf-8"), data.encode("utf-8"), hashlib.sha1)
+        expected = base64.b64encode(mac.digest()).decode("ascii")
+        return hmac.compare_digest(expected, signature or "")
+
+
 @router.post("/telegram/webhook")
+@limiter.exempt
 async def telegram_webhook(request: Request, db: Session = Depends(get_db)):
     """Telegram Bot API update webhook (JSON body).
 
     The adapter checks the active flag + token internally and sends any reply
     via the Bot API. Always returns 200 so Telegram does not retry.
     """
+    secret = settings.TELEGRAM_WEBHOOK_SECRET
+    if secret and not hmac.compare_digest(
+        request.headers.get("X-Telegram-Bot-Api-Secret-Token", ""), secret
+    ):
+        logger.warning("Telegram webhook secret mismatch — dropping update")
+        return {"ok": True}  # drop, still 200 so Telegram does not retry
     try:
         payload = await request.json()
         channel = ChannelFactory.get("telegram")
@@ -46,6 +78,7 @@ async def telegram_webhook(request: Request, db: Session = Depends(get_db)):
 
 
 @router.post("/whatsapp/webhook")
+@limiter.exempt
 async def whatsapp_webhook(request: Request, db: Session = Depends(get_db)):
     """Twilio WhatsApp inbound webhook (application/x-www-form-urlencoded).
 
@@ -55,7 +88,7 @@ async def whatsapp_webhook(request: Request, db: Session = Depends(get_db)):
     try:
         form = await request.form()
         channel = ChannelFactory.get("whatsapp")
-        inbound = channel.parse(dict(form), db)
+        inbound = channel.parse(form_dict, db)
         twiml = (
             channel.deliver(inbound, channel.reply(inbound, db), db)
             if inbound is not None

@@ -6,6 +6,7 @@ can retrieve it.
 """
 
 from datetime import datetime
+import logging
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -16,6 +17,8 @@ from backend.models.tables import Conversation, Handoff, LearnedAnswer
 from backend.schemas.learn import LearnRequest, LearnResponse
 from backend.services.ai import embeddings, vectorstore
 from backend.services.realtime import broadcast_dashboard_snapshot
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -58,7 +61,8 @@ def learn(body: LearnRequest, db: Session = Depends(get_db)) -> LearnResponse:
         embedding = embeddings.embed_query(f"{body.question}\n{body.answer}")
         vectorstore.add_learned(la.id, body.question, body.answer, embedding, tenant_key=tenant_key)
     except Exception:
-        pass
+        # Row is saved but not yet retrievable — log so the orphan is diagnosable.
+        logger.warning("learned answer %s saved but KB embed/add failed", la.id, exc_info=True)
 
     broadcast_dashboard_snapshot("learn.answer")
     return LearnResponse(id=la.id, status="learned")

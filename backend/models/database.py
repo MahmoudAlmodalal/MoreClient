@@ -11,9 +11,17 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./backend.db")
 
+# check_same_thread=False is required: the WS handler and Telegram poller open their
+# own SessionLocal() off the request thread. timeout avoids indefinite blocking on a
+# locked SQLite write; pool_pre_ping recycles stale connections (matters for Postgres).
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
+    connect_args=(
+        {"check_same_thread": False, "timeout": 15}
+        if DATABASE_URL.startswith("sqlite")
+        else {}
+    ),
+    pool_pre_ping=True,
 )
 
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)

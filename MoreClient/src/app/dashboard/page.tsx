@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useLanguage } from "@/components/language-provider";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   apiGet,
   apiSend,
@@ -37,6 +38,50 @@ const subscribeToClientReady = () => () => {};
 const getClientReady = () => true;
 const getServerReady = () => false;
 
+/** Mirrors the analytics layout (KPI row → charts → queue) so the page doesn't
+ *  flash zero-value cards before the backend fetch resolves. */
+function DashboardSkeleton() {
+  return (
+    <div aria-busy="true" aria-live="polite" className="space-y-8">
+      <span className="sr-only">Loading analytics…</span>
+      {/* KPI cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="rounded-xl border border-[#1f1f2e] bg-[#0d0d15] p-6">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-5 w-5 rounded-md" />
+            </div>
+            <Skeleton className="mt-4 h-7 w-20" />
+          </div>
+        ))}
+      </div>
+      {/* Charts row */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 rounded-xl border border-[#1f1f2e] bg-[#0d0d15] p-6">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="mt-6 h-64 w-full rounded-xl" />
+        </div>
+        <div className="rounded-xl border border-[#1f1f2e] bg-[#0d0d15] p-6">
+          <Skeleton className="h-5 w-32" />
+          <div className="mt-8 flex justify-center">
+            <Skeleton className="h-40 w-40 rounded-full" />
+          </div>
+        </div>
+      </div>
+      {/* Queue */}
+      <div className="rounded-xl border border-[#1f1f2e] bg-[#0d0d15] p-6">
+        <Skeleton className="h-5 w-56" />
+        <div className="mt-6 space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { t, isRtl } = useLanguage();
   const isClient = useSyncExternalStore(
@@ -64,6 +109,7 @@ export default function DashboardPage() {
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttemptRef = useRef(0);
   const dashboardSocketRef = useRef<WebSocket | null>(null);
+  const [loading, setLoading] = useState(true);
 
   const applyAnalyticsData = useCallback((data: AnalyticsResponse) => {
     setKpis(data.kpis);
@@ -82,6 +128,9 @@ export default function DashboardPage() {
       })
       .catch(() => {
         /* graceful fallback: leave zeros/empty arrays in place */
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
     return () => {
       active = false;
@@ -167,13 +216,14 @@ export default function DashboardPage() {
         answer: answerInput.trim(),
         source_handoff_id: item.id
       });
+      // Only mutate the UI once the answer is actually persisted.
+      setUnansweredQuestions((prev) => prev.filter((q) => q.id !== item.id));
+      setSelectedQuestion(null);
+      setToastMessage(t("saved"));
     } catch {
-      /* best-effort: still drop it from the queue so the agent isn't blocked */
+      // Persistence failed: keep the modal open so the agent can retry.
+      setToastMessage(t("failed"));
     }
-
-    setUnansweredQuestions((prev) => prev.filter((q) => q.id !== item.id));
-    setSelectedQuestion(null);
-    setToastMessage(t("saved"));
 
     setTimeout(() => {
       setToastMessage("");
@@ -253,6 +303,10 @@ export default function DashboardPage() {
         </p>
       </div>
 
+      {loading ? (
+        <DashboardSkeleton />
+      ) : (
+      <>
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => {
@@ -446,6 +500,8 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+      </>
+      )}
 
       {/* Answer Injector Modal */}
       {selectedQuestion && (

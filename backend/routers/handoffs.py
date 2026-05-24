@@ -7,7 +7,7 @@ let an agent reply (appends an "agent" message), and resolve a ticket
 
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from backend.core.language import detect_language
@@ -110,7 +110,12 @@ def _build_handoff_out(
 
 
 @router.get("/api/handoffs", response_model=list[HandoffOut])
-def list_handoffs(channel: str | None = None, db: Session = Depends(get_db)):
+def list_handoffs(
+    channel: str | None = None,
+    limit: int = Query(500, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
+    db: Session = Depends(get_db),
+):
     """List pending handoffs, newest first, optionally filtered by channel."""
     query = db.query(Handoff).filter(Handoff.status == "pending")
 
@@ -119,7 +124,12 @@ def list_handoffs(channel: str | None = None, db: Session = Depends(get_db)):
             Conversation, Conversation.id == Handoff.conversation_id
         ).filter(Conversation.channel == channel)
 
-    handoffs = query.order_by(Handoff.created_at.desc(), Handoff.id.desc()).all()
+    handoffs = (
+        query.order_by(Handoff.created_at.desc(), Handoff.id.desc())
+        .offset(offset)
+        .limit(limit)
+        .all()
+    )
     return [_build_handoff_out(h, db) for h in handoffs]
 
 

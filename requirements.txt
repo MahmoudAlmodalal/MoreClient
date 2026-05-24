@@ -24,6 +24,10 @@ openpyxl>=3.0.0
 python-telegram-bot>=21   # verified 22.7 (Telegram send done via raw Bot API/httpx)
 twilio>=9                 # verified 9.10.9
 
+# Security
+cryptography>=42         # Fernet encryption for at-rest channel secrets (core/crypto.py)
+slowapi>=0.1.9           # per-IP rate limiting (chat/upload/admin)
+
 # System / ops
 psutil>=5.9              # backend/routers/admin.py health endpoint (process/system stats)
 

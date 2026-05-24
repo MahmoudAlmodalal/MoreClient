@@ -26,6 +26,10 @@ the running app.** Specifically, these are NOT implemented and you should not tr
 - The top-level [`frontend/`](frontend/) directory is a separate, unused Vite SPA prototype — **dead scaffold**.
 - The planning docs (`fullstack-plan.md`, `backend-plan.md`, `REPLIT-ADMIN-PROMPT.md`) are CTO-approved
   *intent/roadmap*. The implemented code is a much smaller, Python-based subset. **Trust the code.**
+- **Auth is half-scaffolded, not wired.** There is a `sign-up` page with Google/Apple buttons, OAuth
+  config keys (`GOOGLE_CLIENT_ID`/`APPLE_CLIENT_ID`…), and an `AuthUser` table — but **no backend auth
+  router and no working login flow**. Treat auth as not-yet-functional unless you're building it out.
+  Likewise `admin.py` and the `/admin` page expose tenant CRUD with **no real authentication** guarding them.
 
 If you're asked to "follow the architecture," follow the **Python backend** described below, not the
 TS blueprint — unless the user is explicitly building the blueprint out.
@@ -45,7 +49,7 @@ Run the **whole stack** from the git root: `bash start.sh` (frontend `:5000` + b
 | Chat latency gate | `py -X utf8 -m backend.scripts.benchmark_chat` (fails if p95 ≥ 3s) |
 | Integration smoke | `py -X utf8 backend/_checkpoint1.py` (upload → web/telegram chat → escalation → analytics, keyless) |
 
-There is no pytest suite; `_checkpoint1.py` and the `backend/scripts/*` are the test/eval harnesses.
+Unit tests live in `backend/tests/` — run `py -X utf8 -m pytest backend/tests`. `_checkpoint1.py` and the `backend/scripts/*` are additional integration/eval harnesses.
 
 > **Windows + Arabic:** always use `py -X utf8`. curl/bash mangle Arabic UTF-8 — test Arabic paths via
 > Python (httpx/`--data-binary @file`), not raw curl string args.
@@ -65,10 +69,14 @@ There is no pytest suite; `_checkpoint1.py` and the `backend/scripts/*` are the 
 ### Entry + layering
 
 [`backend/main.py`](backend/main.py) is the app: a `lifespan` hook runs `init_db()` (creates SQLite tables,
-idempotent/additive — **no migration tool**) and warms the Chroma collection; CORS allows the frontend
+idempotent/additive create_all — **no general migration tool**; the one exception is
+`upgrade_existing_schema()` in [`tables.py`](backend/models/tables.py), which `ALTER`s in the newer `Setting`
+columns onto an existing DB), warms the Chroma collection, and starts Telegram long-polling if the channel
+is active (`telegram_poller.ensure_running_if_active()`, stopped on shutdown). CORS allows the frontend
 origins (`ALLOWED_ORIGINS`, default `:5000`). Routers are mounted **prefix-free** — each declares its own
-path. `/api/*` for app endpoints, **no prefix** for provider webhooks (`/telegram/webhook`, `/whatsapp/webhook`),
-and `/ws/chat/{session_id}` for the web widget.
+path: `admin`, `chat`, `files`, `analytics`, `handoffs`, `learn`, `purchases`, `settings` under `/api/*`;
+`channels` with **no prefix** for provider webhooks (`/telegram/webhook`, `/whatsapp/webhook`); and
+`ws` at `/ws/chat/{session_id}` for the web widget.
 
 Each module follows a **3-layer-lite** pattern: `routers/<x>.py` (HTTP shape, Pydantic parse) →
 `services/...` (business logic) → SQLAlchemy ORM **directly** (there is no repository layer). Services
@@ -79,8 +87,12 @@ take a `db: Session`, mutate, and **commit explicitly**.
 - [`backend/models/database.py`](backend/models/database.py): SQLAlchemy engine + `SessionLocal` + `get_db()`.
   SQLite at `./backend.db` by default (`DATABASE_URL` to override).
 - [`backend/models/tables.py`](backend/models/tables.py): `Document`, `Conversation`, `Message`, `Handoff`,
-  `LearnedAnswer`, and a **single-row `Setting`** (id=1) holding all tenant/bot config. Always read/write it
-  via `get_or_create_settings(db)` — never instantiate a second row.
+  `LearnedAnswer`, `PurchaseOrder` (per-conversation order with a `state` collection machine + `order_data`
+  JSON), `AuthUser` (auth scaffold, see above), `Tenant` (admin subscription registry, **separate** from
+  `Setting`), and a **single-row `Setting`** (id=1) holding all tenant/bot config — including the
+  purchase-flow / intent / complaint toggles (`purchase_flow_enabled`, `intent_llm_enabled`,
+  `auto_handoff_on_complaint`, …). Always read/write `Setting` via `get_or_create_settings(db)` — never
+  instantiate a second row.
 - [`backend/services/ai/vectorstore.py`](backend/services/ai/vectorstore.py): ChromaDB persistent store
   (`CHROMA_DIR`, default `./chroma_store`), collection `knowledge_base` (cosine). Chunk IDs are
   **deterministic** — `doc-{document_id}-{i}` and `learned-{learned_id}` — so deletion uses a metadata
@@ -94,19 +106,38 @@ take a `db: Session`, mutate, and **commit explicitly**.
 else `VectorRagStrategy` retrieves top-`RETRIEVAL_K` (4) chunks and **escalates if top confidence <
 `Setting.confidence_threshold`** (default 0.45). A `Handoff` row is created on escalation.
 
-**Embeddings have a keyless fallback** ([`backend/services/ai/embeddings.py`](backend/services/ai/embeddings.py)):
-with `OPENAI_API_KEY` → `text-embedding-3-small` (and GPT-4o generation); without a key → an MD5 **hash
-embedding** and the bot returns the top chunk verbatim (no LLM). This lets the app boot/demo with no secrets.
-**Caveat:** hash-embed confidence is lexical and floors ~0.50, so confidence-based escalation does **not**
-separate cleanly in keyless mode — drive escalation demos via the "talk to a human" keyword, and keep the
-threshold at 0.45 so genuine questions still answer. (Raise to ~0.6 only when running with a real OpenAI key.)
+**Multi-provider, with a keyless fallback.** Generation and embeddings each resolve a provider from whichever
+keys are present (all via OpenAI-compatible endpoints — no extra SDKs):
+- **Chat** ([`config.chat_provider_chain()`](backend/core/config.py)): `LLM_PROVIDER=auto` tries
+  **Gemini → DeepSeek (NVIDIA) → OpenAI**, using the first key that exists; pin one with
+  `LLM_PROVIDER=gemini|deepseek|openai`. Defaults: `GEMINI_CHAT_MODEL=gemini-2.5-flash`,
+  `DEEPSEEK_MODEL=deepseek-ai/deepseek-v4-flash`, `CHAT_MODEL=gpt-4o`.
+- **Embeddings** ([`config.embed_provider`](backend/core/config.py) + [`embeddings.py`](backend/services/ai/embeddings.py)):
+  Gemini (`gemini-embedding-001`, **3072-dim**) preferred → OpenAI (`text-embedding-3-small`, 1536-dim) →
+  **MD5 hash embedding** when no key is set. In hash mode the bot returns the top chunk verbatim (no LLM),
+  so the app boots/demos with zero secrets. NVIDIA/DeepSeek has no embeddings endpoint, so a DeepSeek-only
+  setup still uses hash embeddings.
 
-[`backend/services/chat_service.py`](backend/services/chat_service.py) orchestrates each turn: get/create
-`Conversation` (keyed by channel+session), detect language (EN/AR, [`core/language.py`](backend/core/language.py)),
-pull short-term memory ([`core/memory.py`](backend/core/memory.py), in-process deque) and long-term memory
-([`core/long_term_memory.py`](backend/core/long_term_memory.py), a separate `user_memory` Chroma collection,
-fed as *context only* — never as a KB source), run the strategy, persist messages, create handoffs, and
-bump `Setting.used_messages`.
+**Keyless caveat:** hash-embed confidence is lexical and floors ~0.50, so confidence-based escalation does
+**not** separate cleanly — drive escalation demos via the "talk to a human" keyword, and keep the threshold
+at 0.45 so genuine questions still answer. (Raise to ~0.6 only when running with a real embedding key.)
+
+[`backend/services/chat_service.py`](backend/services/chat_service.py) orchestrates each turn through an
+**ordered gate chain** (first match wins, RAG is the fallback) — read `handle()` before changing routing:
+1. **Already in handoff** (`conv.status == "handoff"`) → canned "agent will reply" message.
+2. **Active purchase order** ([`purchase_flow.advance_purchase_flow`](backend/services/purchase_flow.py)) →
+   continue the product → quantity → address → confirmation state machine.
+3. **Intent classification** ([`intent_classifier.classify_intent`](backend/services/intent_classifier.py),
+   bilingual keyword + optional LLM, gated by `intent_llm_enabled`): `PURCHASE_INTENT` starts a purchase flow;
+   `SUPPORT_REQUEST` (or `COMPLAINT` when `auto_handoff_on_complaint`) flips the conversation to handoff.
+4. **Else → RAG** (`rag.resolve_strategy(...).run(...)`).
+
+Throughout it: get/creates the `Conversation` (channel+session), detects language (EN/AR,
+[`core/language.py`](backend/core/language.py)), pulls short-term memory ([`core/memory.py`](backend/core/memory.py),
+in-process deque) + long-term memory ([`core/long_term_memory.py`](backend/core/long_term_memory.py), a separate
+`user_memory` Chroma collection, fed as *context only* — never a KB source), persists messages, creates
+handoffs, and bumps `Setting.used_messages`. Both channel webhooks and the web route funnel through this one
+`handle()`.
 
 ### Channels — one brain, many transports
 
@@ -115,21 +146,32 @@ and a `ChannelFactory` registry. All channels converge on the same `ChatService.
 channel-scoped: `web:<id>`, `tg:<chat_id>`, `wa:<from>`. **Webhooks must always return HTTP 200** (providers
 retry otherwise) — errors are swallowed. Telegram/WhatsApp activation is gated purely by DB `Setting` fields
 (`telegram_token`+`is_telegram_active`, Twilio fields+`is_whatsapp_active`) plus webhook registration — there
-are no code-level test restrictions.
+are no code-level test restrictions. Webhook signature checks in [`routers/channels.py`](backend/routers/channels.py)
+are **optional/gated**: enforced only when `TELEGRAM_WEBHOOK_SECRET` / `Setting.twilio_token` are set, and a
+failed check **drops** the update (still 200 / empty TwiML) — so keyless demos are unaffected.
 
 ### Ingestion
 
 [`backend/services/ingestion/ingest.py`](backend/services/ingestion/ingest.py) `ingest_document(db, filename, data)`
-is the single entry point (reuse it; don't reimplement): extract (PyMuPDF / python-docx / UTF-8 txt&md) →
-`chunk_text` (RecursiveCharacterTextSplitter, ~800 chars / 120 overlap) → embed → add to Chroma → commit the
+is the single entry point (reuse it; don't reimplement): extract (PyMuPDF / python-docx / openpyxl `.xlsx` /
+UTF-8 txt&md) → `chunk_text` (RecursiveCharacterTextSplitter, ~800 chars / 120 overlap) → embed → add to Chroma → commit the
 `Document` row. The row is created `status="processing"` first so a mid-way failure is recorded as `"failed"`.
 
 ### Config
 
-[`backend/core/config.py`](backend/core/config.py) loads from env / `.env` / Replit Secrets: `OPENAI_API_KEY`,
-`ANTHROPIC_API_KEY`, `APP_SECRET`, `DATABASE_URL`, `CHROMA_DIR`, `CHAT_MODEL` (gpt-4o), `EMBED_MODEL`/`EMBED_DIM`,
-`CONFIDENCE_THRESHOLD` (0.45), `RETRIEVAL_K` (4), `MEMORY_WINDOW` (8), `ALLOWED_ORIGINS`. Clients no-op gracefully
-when keys are absent so the app runs in keyless dev mode.
+[`backend/core/config.py`](backend/core/config.py) loads from env / `.env` / Replit Secrets. Beyond the basics
+(`APP_SECRET`, `DATABASE_URL`, `CHROMA_DIR`, `CONFIDENCE_THRESHOLD` 0.45, `RETRIEVAL_K` 4, `MEMORY_WINDOW` 8,
+`ALLOWED_ORIGINS`):
+- **LLM providers:** `LLM_PROVIDER` (auto), `OPENAI_API_KEY`/`CHAT_MODEL`, `GEMINI_API_KEY`(/`GOOGLE_API_KEY`)
+  +`GEMINI_BASE_URL`/`GEMINI_CHAT_MODEL`/`GEMINI_EMBED_MODEL`, `NVIDIA_API_KEY`+`NVIDIA_BASE_URL`/`DEEPSEEK_MODEL`,
+  `ANTHROPIC_API_KEY`, `EMBED_MODEL`/`EMBED_DIM` — see the provider-routing notes above.
+- **URLs / channels:** `FRONTEND_URL`, `BACKEND_PUBLIC_URL` (used to rebuild the public URL for Twilio
+  signature checks), `TELEGRAM_WEBHOOK_SECRET` (optional Telegram webhook header check).
+- **Auth scaffold (unused by backend yet):** `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET`,
+  `APPLE_CLIENT_ID`/`APPLE_CLIENT_SECRET`.
+
+Numeric envs go through `_clamp_float`/`_clamp_int` (bad values fall back to the default, not a crash).
+Clients no-op gracefully when keys are absent so the app runs in keyless dev mode.
 
 ## Frontend (`MoreClient/`)
 
@@ -139,9 +181,19 @@ prefixes `NEXT_PUBLIC_API_URL` (default `http://localhost:8000`) and surfaces ba
 as the error message. The TS response types in that file **mirror `backend/schemas/*`** (camelCase ↔ the
 backend's camelCase Pydantic aliases) — keep them in sync when you change a schema.
 
-- Pages live under `MoreClient/src/app/dashboard/*` (files, handoffs, settings, analytics) plus `widget/`.
+- Pages: `dashboard/*` (home, `files`, `handoffs`, `settings`, `upgrade`), the embeddable `widget/`, a public
+  per-business chat at `(public)/t/[handle]/`, the `admin/` tenant console, plus marketing/onboarding routes
+  (`pricing/`, `sign-up/`, `welcome/`). (`src/app/api/v1/*` is the dead TS-backend stub — ignore it.)
 - Bilingual EN/AR with RTL via a **hand-rolled** [`src/components/language-provider.tsx`](MoreClient/src/components/language-provider.tsx)
   (typed translations object + context — not next-intl). The product brand string is **"clientMORE"**.
+- Components are grouped by surface: `components/ui/*` (primitives), `components/landing/*` (the composed
+  marketing home), `components/auth/*`, `components/dashboard/*`.
+- **Client-side data & role hooks (`src/lib/`)** — the `react-hooks/set-state-in-effect` lint rule is
+  kept **on** to catch synchronous-setState bugs, so the legitimate patterns it would otherwise flag are
+  factored into hooks: fetch-on-mount loaders go through [`useAsyncOnMount`/`usePolling`](MoreClient/src/lib/use-async-effect.ts)
+  (don't hand-roll a `useEffect` + `setState` loader), and the logged-in role is read from `sessionStorage`
+  via [`useSessionRole`](MoreClient/src/lib/use-session-role.ts) — a `useSyncExternalStore` wrapper that is
+  SSR-safe (server snapshot `null`) and propagates cross-tab logout. The dashboard gates layouts on this role.
 - Path alias `@/*` → `src/*`; Tailwind 4 via `@tailwindcss/postcss`; TypeScript strict.
 
 ## Conventions

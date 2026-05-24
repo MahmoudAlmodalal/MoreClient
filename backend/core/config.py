@@ -13,7 +13,35 @@ def _csv(value: str | None, default: list[str]) -> list[str]:
     return [item.strip() for item in value.split(",") if item.strip()]
 
 
+def _clamp_float(value: str | None, default: float, lo: float, hi: float) -> float:
+    try:
+        result = float(value) if value is not None else default
+    except (TypeError, ValueError):
+        result = default
+    return min(max(result, lo), hi)
+
+
+def _clamp_int(value: str | None, default: int, lo: int, hi: int) -> int:
+    try:
+        result = int(value) if value is not None else default
+    except (TypeError, ValueError):
+        result = default
+    return min(max(result, lo), hi)
+
+
+def _bool(value: str | None, default: bool = False) -> bool:
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 class Settings:
+    # --- Runtime environment ---
+    # ENV gates fail-closed behaviour: in "dev" the app stays bootable with zero
+    # secrets (keyless demo); in any other value (prod/staging) missing critical
+    # secrets fail fast and insecure fallbacks are refused.
+    ENV: str = os.getenv("ENV", "dev").strip().lower()
+
     # --- Persistence ---
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./backend.db")
     CHROMA_DIR: str = os.getenv("CHROMA_DIR", "./chroma_store")
@@ -26,6 +54,13 @@ class Settings:
     ANTHROPIC_API_KEY: str | None = os.getenv("ANTHROPIC_API_KEY")
     MISTRAL_API_KEY: str | None = os.getenv("MISTRAL_API_KEY")
     APP_SECRET: str | None = os.getenv("APP_SECRET")
+    # Admin API key: guards every /api/admin/* route. When unset, admin access is
+    # denied unless ALLOW_INSECURE_ADMIN=1 (only honoured in ENV=dev) — see core/security.py.
+    ADMIN_API_KEY: str | None = os.getenv("ADMIN_API_KEY")
+    ALLOW_INSECURE_ADMIN: bool = _bool(os.getenv("ALLOW_INSECURE_ADMIN"), False)
+    # Optional Telegram webhook secret token (set on setWebhook); when set, inbound
+    # updates whose X-Telegram-Bot-Api-Secret-Token header mismatches are dropped.
+    TELEGRAM_WEBHOOK_SECRET: str | None = os.getenv("TELEGRAM_WEBHOOK_SECRET")
     FRONTEND_URL: str = os.getenv("FRONTEND_URL", "http://localhost:5000").rstrip("/")
     BACKEND_PUBLIC_URL: str = os.getenv("BACKEND_PUBLIC_URL", "http://localhost:8000").rstrip("/")
     GOOGLE_CLIENT_ID: str | None = os.getenv("GOOGLE_CLIENT_ID")
@@ -36,7 +71,8 @@ class Settings:
     # --- AI models ---
     CHAT_MODEL: str = os.getenv("CHAT_MODEL", "gpt-4o")
     EMBED_MODEL: str = os.getenv("EMBED_MODEL", "text-embedding-3-small")
-    EMBED_DIM: int = int(os.getenv("EMBED_DIM", "1536"))  # text-embedding-3-small / hash fallback
+    # text-embedding-3-small / hash fallback; clamp so a bad env value can't crash boot.
+    EMBED_DIM: int = _clamp_int(os.getenv("EMBED_DIM"), 1536, 1, 8192)
 
     # --- Provider routing (OpenAI-compatible endpoints; no extra SDK needed) ---
     # auto = try Gemini, then DeepSeek (NVIDIA), then OpenAI — whichever keys exist.
@@ -64,15 +100,27 @@ class Settings:
 
     # --- RAG behaviour ---
     # Default escalate cutoff; can be overridden per-tenant via Setting.confidence_threshold.
-    CONFIDENCE_THRESHOLD: float = float(os.getenv("CONFIDENCE_THRESHOLD", "0.45"))
-    RETRIEVAL_K: int = int(os.getenv("RETRIEVAL_K", "4"))
-    MEMORY_WINDOW: int = int(os.getenv("MEMORY_WINDOW", "8"))  # last N messages fed to the model
+    CONFIDENCE_THRESHOLD: float = _clamp_float(os.getenv("CONFIDENCE_THRESHOLD"), 0.45, 0.0, 1.0)
+    RETRIEVAL_K: int = _clamp_int(os.getenv("RETRIEVAL_K"), 4, 1, 20)
+    MEMORY_WINDOW: int = _clamp_int(  # last N messages fed to the model
+        os.getenv("MEMORY_WINDOW"), 8, 1, 10_000
+    )
 
     # --- CORS ---
     ALLOWED_ORIGINS: list[str] = _csv(
         os.getenv("ALLOWED_ORIGINS"),
         ["http://localhost:5000", "http://127.0.0.1:5000"],
     )
+
+    @property
+    def is_dev(self) -> bool:
+        return self.ENV == "dev"
+
+    @property
+    def admin_insecure_allowed(self) -> bool:
+        """True only when there is no ADMIN_API_KEY AND the operator explicitly
+        opted into insecure admin in a dev environment. Never true in prod."""
+        return self.is_dev and self.ALLOW_INSECURE_ADMIN and not self.ADMIN_API_KEY
 
     @property
     def has_any_llm(self) -> bool:

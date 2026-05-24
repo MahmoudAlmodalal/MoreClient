@@ -1,7 +1,11 @@
 """Language detection — collapses everything to the two languages the UI
 supports: Arabic ("ar") and English ("en", the default)."""
 
+import logging
+
 from langdetect import DetectorFactory, detect
+
+logger = logging.getLogger(__name__)
 
 # Make langdetect deterministic across runs.
 DetectorFactory.seed = 0
@@ -18,6 +22,7 @@ def detect_language(text: str) -> str:
     try:
         return "ar" if detect(text) == "ar" else "en"
     except Exception:
+        logger.debug("language detection failed, defaulting to en", exc_info=True)
         return "en"
 
 

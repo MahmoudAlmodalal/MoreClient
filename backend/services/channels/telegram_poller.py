@@ -17,6 +17,7 @@ import time
 import httpx
 from sqlalchemy.orm import Session
 
+from backend.core import crypto
 from backend.models.database import SessionLocal
 from backend.models.tables import get_or_create_settings
 from backend.services.channels.telegram import TelegramChannel
@@ -44,7 +45,7 @@ def _poll_loop() -> None:
                 logger.info("Telegram channel deactivated; stopping poller.")
                 break
 
-            token = setting.telegram_token
+            token = crypto.decrypt(setting.telegram_token)
 
             # Telegram blocks getUpdates when a webhook is set, so delete it once.
             if not _webhook_cleared:

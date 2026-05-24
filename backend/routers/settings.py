@@ -8,8 +8,9 @@ the SettingsOut/SettingsUpdate aliases.
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
+from backend.core import crypto
 from backend.models.database import get_db
-from backend.models.tables import Setting, get_or_create_settings
+from backend.models.tables import get_or_create_settings
 from backend.schemas.settings import SettingsOut, SettingsUpdate
 
 router = APIRouter()
@@ -20,7 +21,7 @@ _SETTABLE = {c.name for c in Setting.__table__.columns if c.name != "id"}
 
 @router.get("/api/settings", response_model=SettingsOut)
 def get_settings(db: Session = Depends(get_db)) -> SettingsOut:
-    return SettingsOut.model_validate(get_or_create_settings(db))
+    return _masked_out(get_or_create_settings(db))
 
 
 @router.put("/api/settings", response_model=SettingsOut)
@@ -33,8 +34,15 @@ def update_settings(
 
     # Apply only the fields the client actually sent (partial update).
     for key, value in incoming.items():
-        if key in _SETTABLE:
-            setattr(row, key, value)
+        if key not in _SETTABLE:
+            continue
+        if key in _SECRET_FIELDS:
+            # Ignore an echoed mask placeholder (••••1234) so it never clobbers
+            # the stored secret; otherwise encrypt the new value at rest.
+            if crypto.is_masked(value):
+                continue
+            value = crypto.encrypt(value)
+        setattr(row, key, value)
 
     db.commit()
     db.refresh(row)
@@ -46,4 +54,4 @@ def update_settings(
 
         telegram_poller.ensure_running_if_active()
 
-    return SettingsOut.model_validate(row)
+    return _masked_out(row)

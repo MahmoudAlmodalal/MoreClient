@@ -1,11 +1,13 @@
 """/api/upload + /api/files — owned by Phase B agent B2."""
 
 from threading import Thread
+from pathlib import PurePath
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, UploadFile, Request
 from sqlalchemy.orm import Session
 
 from backend.core.config import settings as cfg
+from backend.core.ratelimit import UPLOAD_LIMIT, limiter
 from backend.models.database import SessionLocal, get_db
 from backend.models.tables import Document
 from backend.schemas.files import FileOut, UploadResponse
@@ -60,7 +62,9 @@ def _to_file_out(doc: Document) -> FileOut:
 
 
 @router.post("/api/upload", response_model=UploadResponse)
+@limiter.limit(UPLOAD_LIMIT)
 def upload_file(
+    request: Request,
     file: UploadFile = File(...),
     tenant_key: str | None = Form(None),
     db: Session = Depends(get_db),
@@ -81,6 +85,8 @@ def upload_file(
 @router.get("/api/files", response_model=list[FileOut])
 def list_files(
     tenant_key: str | None = Query(None),
+    limit: int = Query(500, ge=1, le=1000),
+    offset: int = Query(0, ge=0),
     db: Session = Depends(get_db),
 ) -> list[FileOut]:
     tenant = (tenant_key or cfg.DEFAULT_TENANT_KEY).strip().lower() or cfg.DEFAULT_TENANT_KEY
@@ -88,6 +94,8 @@ def list_files(
         db.query(Document)
         .filter(Document.tenant_key == tenant)
         .order_by(Document.created_at.desc())
+        .offset(offset)
+        .limit(limit)
         .all()
     )
     return [_to_file_out(doc) for doc in docs]
@@ -98,8 +106,12 @@ def delete_file(file_id: int, db: Session = Depends(get_db)) -> dict:
     doc = db.get(Document, file_id)
     if doc is None:
         raise HTTPException(status_code=404, detail="file not found")
-    # keep Chroma + SQL consistent
-    vectorstore.delete_document(file_id)
+    # keep Chroma + SQL consistent: delete vectors first so a Chroma failure leaves
+    # the SQL row intact (and surfaces a clean error) rather than orphaning vectors.
+    try:
+        vectorstore.delete_document(file_id)
+    except Exception:
+        raise HTTPException(status_code=502, detail="could not delete file vectors")
     db.delete(doc)
     db.commit()
     return {"ok": True}

@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { apiGet, apiUpload, apiSend, type FileOut, type UploadResponse } from "@/lib/api";
+import { useAsyncOnMount } from "@/lib/use-async-effect";
 import {
   UploadCloud,
   File,
@@ -61,31 +62,7 @@ export default function FilesPage() {
     }
   };
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadInitialFiles = async () => {
-      try {
-        const rows = await fetchFiles();
-        if (cancelled) return;
-        setFiles(rows);
-        setError(null);
-      } catch (err) {
-        if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Failed to load files");
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    void loadInitialFiles();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  useAsyncOnMount(loadFiles, []);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();

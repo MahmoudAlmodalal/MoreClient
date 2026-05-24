@@ -9,6 +9,7 @@ import httpx
 from sqlalchemy.orm import Session
 
 from backend.core.config import settings as cfg
+from backend.core import crypto
 from backend.models.tables import get_or_create_settings
 from backend.schemas.chat import ChatResponse
 from backend.services.channels.base import Channel, Inbound
@@ -49,7 +50,7 @@ class TelegramChannel(Channel):
             text=text,
             meta={
                 "chat_id": chat_id,
-                "token": setting.telegram_token,
+                "token": crypto.decrypt(setting.telegram_token),
                 "username": username,
                 "tenant_key": cfg.DEFAULT_TENANT_KEY,
             },

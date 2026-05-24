@@ -16,7 +16,7 @@ clientMORE is a **two-app system**. This is the load-bearing fact; do not blur i
 | App | Stack | Port | Role |
 |---|---|---|---|
 | **Backend** | Python 3.14, FastAPI | `:8000` | The brain — ingestion, RAG, channels, handoff. SQLite + ChromaDB. |
-| **Frontend** | Next.js 16 (App Router), React 19 | `:5000` | Thin dashboard + widget. Owns **no** data; calls the backend over HTTP. |
+| **Frontend** | Next.js 16 (App Router), React 19 | `:5001` | Thin dashboard + widget. Owns **no** data; calls the backend over HTTP. |
 
 Run the stack from the git root via `bash start.sh`.
 

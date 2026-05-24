@@ -1,0 +1,42 @@
+
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: backend.Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend_data:/app/backend/backend_data
+      - ./chroma_store:/app/backend/chroma_store
+    environment:
+      # Set environment variables for the backend
+      # These should ideally be managed via .env file or Docker secrets in production
+      ENV: production
+      DATABASE_URL: sqlite:///./backend_data/backend.db
+      CHROMA_DIR: ./chroma_store
+      FRONTEND_URL: http://localhost:5001
+      BACKEND_PUBLIC_URL: http://localhost:8000
+      # Add other necessary environment variables like APP_SECRET, ADMIN_API_KEY, etc.
+      # APP_SECRET: your_app_secret
+      # ADMIN_API_KEY: your_admin_api_key
+    depends_on:
+      - frontend
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend.Dockerfile
+    ports:
+      - "5001:5001"
+    environment:
+      # Set environment variables for the frontend
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+    depends_on:
+      - backend
+
+volumes:
+  backend_data:
+  chroma_store:

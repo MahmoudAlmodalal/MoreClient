@@ -8,9 +8,10 @@ HTTPExceptions untouched, normalize anything unexpected to a 500.
 
 import time
 
-from fastapi import APIRouter, Depends, HTTPException, Response
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 
+from backend.core.ratelimit import CHAT_LIMIT, limiter
 from backend.models.database import get_db
 from backend.schemas.chat import ChatRequest, ChatResponse
 from backend.services.chat_service import ChatService
@@ -19,8 +20,9 @@ router = APIRouter()
 
 
 @router.post("/api/chat", response_model=ChatResponse)
+@limiter.limit(CHAT_LIMIT)
 def post_chat(
-    payload: ChatRequest, response: Response, db: Session = Depends(get_db)
+    request: Request, payload: ChatRequest, response: Response, db: Session = Depends(get_db)
 ) -> ChatResponse:
     start = time.perf_counter()
     try:

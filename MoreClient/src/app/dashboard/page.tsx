@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useSyncExternalStore } from "react";
 import { useLanguage } from "@/components/language-provider";
+import { Skeleton } from "@/components/ui/skeleton";
 import { apiGet, apiSend, type AnalyticsResponse } from "@/lib/api";
 import {
   MessageSquare,
@@ -31,6 +32,50 @@ const subscribeToClientReady = () => () => {};
 const getClientReady = () => true;
 const getServerReady = () => false;
 
+/** Mirrors the analytics layout (KPI row → charts → queue) so the page doesn't
+ *  flash zero-value cards before the backend fetch resolves. */
+function DashboardSkeleton() {
+  return (
+    <div aria-busy="true" aria-live="polite" className="space-y-8">
+      <span className="sr-only">Loading analytics…</span>
+      {/* KPI cards */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="rounded-xl border border-[#1f1f2e] bg-[#0d0d15] p-6">
+            <div className="flex items-center justify-between">
+              <Skeleton className="h-4 w-24" />
+              <Skeleton className="h-5 w-5 rounded-md" />
+            </div>
+            <Skeleton className="mt-4 h-7 w-20" />
+          </div>
+        ))}
+      </div>
+      {/* Charts row */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2 rounded-xl border border-[#1f1f2e] bg-[#0d0d15] p-6">
+          <Skeleton className="h-5 w-40" />
+          <Skeleton className="mt-6 h-64 w-full rounded-xl" />
+        </div>
+        <div className="rounded-xl border border-[#1f1f2e] bg-[#0d0d15] p-6">
+          <Skeleton className="h-5 w-32" />
+          <div className="mt-8 flex justify-center">
+            <Skeleton className="h-40 w-40 rounded-full" />
+          </div>
+        </div>
+      </div>
+      {/* Queue */}
+      <div className="rounded-xl border border-[#1f1f2e] bg-[#0d0d15] p-6">
+        <Skeleton className="h-5 w-56" />
+        <div className="mt-6 space-y-3">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <Skeleton key={i} className="h-12 w-full rounded-lg" />
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DashboardPage() {
   const { t, isRtl } = useLanguage();
   const isClient = useSyncExternalStore(
@@ -55,6 +100,7 @@ export default function DashboardPage() {
   const [selectedQuestion, setSelectedQuestion] = useState<UnansweredItem | null>(null);
   const [answerInput, setAnswerInput] = useState("");
   const [toastMessage, setToastMessage] = useState("");
+  const [loading, setLoading] = useState(true);
 
   // Fetch real analytics on mount; on failure, keep graceful zero/empty defaults.
   useEffect(() => {
@@ -69,6 +115,9 @@ export default function DashboardPage() {
       })
       .catch(() => {
         /* graceful fallback: leave zeros/empty arrays in place */
+      })
+      .finally(() => {
+        if (active) setLoading(false);
       });
     return () => {
       active = false;
@@ -182,6 +231,10 @@ export default function DashboardPage() {
         </p>
       </div>
 
+      {loading ? (
+        <DashboardSkeleton />
+      ) : (
+      <>
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => {
@@ -375,6 +428,8 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+      </>
+      )}
 
       {/* Answer Injector Modal */}
       {selectedQuestion && (

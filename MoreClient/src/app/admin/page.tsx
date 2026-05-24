@@ -12,6 +12,8 @@ import {
   toggleTenantStatus,
   fetchAdminKpis,
   fetchAdminHealth,
+  ApiError,
+  ADMIN_KEY_STORAGE,
 } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
@@ -51,6 +53,13 @@ export default function SuperAdminPage() {
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
 
+  // Admin key gate — shown only when the backend rejects the request with 401.
+  // (In a keyless dev backend with ALLOW_INSECURE_ADMIN=1, no 401 is returned
+  // and this never appears.)
+  const [needsKey, setNeedsKey] = useState(false);
+  const [keyInput, setKeyInput] = useState("");
+  const [keyError, setKeyError] = useState<string | null>(null);
+
   // Real data from backend
   const [tenants, setTenants] = useState<TenantOut[]>([]);
   const [kpis, setKpis] = useState<AdminKpis | null>(null);
@@ -75,6 +84,16 @@ export default function SuperAdminPage() {
 
   // ── Data fetching ───────────────────────────────────────────────────────
 
+  // A 401 means the admin key is missing/invalid: clear it and show the gate.
+  const handleAuthError = useCallback((err: unknown): boolean => {
+    if (err instanceof ApiError && err.status === 401) {
+      if (typeof window !== "undefined") window.sessionStorage.removeItem(ADMIN_KEY_STORAGE);
+      setNeedsKey(true);
+      return true;
+    }
+    return false;
+  }, []);
+
   const loadTenants = useCallback(async () => {
     try {
       const data = await fetchTenants({
@@ -84,31 +103,50 @@ export default function SuperAdminPage() {
       });
       setTenants(data);
     } catch (err) {
-      console.error("Failed to load tenants", err);
+      if (!handleAuthError(err)) console.error("Failed to load tenants", err);
     }
-  }, [searchQuery, selectedPlanFilter, selectedStatusFilter]);
+  }, [searchQuery, selectedPlanFilter, selectedStatusFilter, handleAuthError]);
 
   const loadKpis = useCallback(async () => {
     try {
       setKpis(await fetchAdminKpis());
     } catch (err) {
-      console.error("Failed to load KPIs", err);
+      if (!handleAuthError(err)) console.error("Failed to load KPIs", err);
     }
-  }, []);
+  }, [handleAuthError]);
 
   const loadHealth = useCallback(async () => {
     try {
       setHealth(await fetchAdminHealth());
     } catch (err) {
-      console.error("Failed to load health", err);
+      if (!handleAuthError(err)) console.error("Failed to load health", err);
     }
-  }, []);
+  }, [handleAuthError]);
 
-  // Initial load
-  useAsyncOnMount(async () => {
+  const loadAll = useCallback(async () => {
     await Promise.all([loadTenants(), loadKpis(), loadHealth()]);
     setLoading(false);
   }, [loadTenants, loadKpis, loadHealth]);
+
+  // Initial load
+  useAsyncOnMount(async () => {
+    await loadAll();
+  }, [loadAll]);
+
+  const handleSubmitKey = (e: React.FormEvent) => {
+    e.preventDefault();
+    const key = keyInput.trim();
+    if (!key) {
+      setKeyError(isRtl ? "مفتاح المشرف مطلوب" : "Admin key is required");
+      return;
+    }
+    if (typeof window !== "undefined") window.sessionStorage.setItem(ADMIN_KEY_STORAGE, key);
+    setKeyInput("");
+    setKeyError(null);
+    setNeedsKey(false);
+    setLoading(true);
+    void loadAll();
+  };
 
   // Poll health every 10s when on the overview tab
   usePolling(loadHealth, 10000, activeTab === "overview");
@@ -248,6 +286,44 @@ export default function SuperAdminPage() {
       iconColor: highLoad ? "text-amber-400" : "text-purple-400"
     }
   ];
+
+  if (isClient && needsKey) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center px-4" dir={isRtl ? "rtl" : "ltr"}>
+        <form
+          onSubmit={handleSubmitKey}
+          className="w-full max-w-sm rounded-2xl border border-[#1f1f2e] bg-[#0d0d15] p-6 shadow-2xl space-y-4"
+        >
+          <div className="flex items-center gap-2">
+            <Server className="h-5 w-5 text-purple-400" />
+            <h2 className="text-lg font-bold text-white">
+              {isRtl ? "دخول لوحة المشرف" : "Admin access"}
+            </h2>
+          </div>
+          <p className="text-xs text-gray-400">
+            {isRtl
+              ? "أدخل مفتاح المشرف للوصول إلى لوحة التحكم."
+              : "Enter the admin key to access the console."}
+          </p>
+          <input
+            type="password"
+            autoFocus
+            value={keyInput}
+            onChange={(e) => setKeyInput(e.target.value)}
+            placeholder={isRtl ? "مفتاح المشرف" : "Admin key"}
+            className="w-full rounded-xl border border-[#1f1f2e] bg-[#050508] p-2.5 text-sm text-white placeholder-gray-600 focus:border-purple-500 focus:outline-none"
+          />
+          {keyError && <p className="text-xs font-semibold text-red-400">{keyError}</p>}
+          <button
+            type="submit"
+            className="w-full rounded-xl bg-purple-600 px-5 py-2 text-sm font-semibold text-white hover:bg-purple-500 shadow-md shadow-purple-600/10"
+          >
+            {isRtl ? "دخول" : "Unlock"}
+          </button>
+        </form>
+      </div>
+    );
+  }
 
   if (!isClient || loading) {
     return (

@@ -186,6 +186,14 @@ backend's camelCase Pydantic aliases) — keep them in sync when you change a sc
   (`pricing/`, `sign-up/`, `welcome/`). (`src/app/api/v1/*` is the dead TS-backend stub — ignore it.)
 - Bilingual EN/AR with RTL via a **hand-rolled** [`src/components/language-provider.tsx`](MoreClient/src/components/language-provider.tsx)
   (typed translations object + context — not next-intl). The product brand string is **"clientMORE"**.
+- Components are grouped by surface: `components/ui/*` (primitives), `components/landing/*` (the composed
+  marketing home), `components/auth/*`, `components/dashboard/*`.
+- **Client-side data & role hooks (`src/lib/`)** — the `react-hooks/set-state-in-effect` lint rule is
+  kept **on** to catch synchronous-setState bugs, so the legitimate patterns it would otherwise flag are
+  factored into hooks: fetch-on-mount loaders go through [`useAsyncOnMount`/`usePolling`](MoreClient/src/lib/use-async-effect.ts)
+  (don't hand-roll a `useEffect` + `setState` loader), and the logged-in role is read from `sessionStorage`
+  via [`useSessionRole`](MoreClient/src/lib/use-session-role.ts) — a `useSyncExternalStore` wrapper that is
+  SSR-safe (server snapshot `null`) and propagates cross-tab logout. The dashboard gates layouts on this role.
 - Path alias `@/*` → `src/*`; Tailwind 4 via `@tailwindcss/postcss`; TypeScript strict.
 
 ## Conventions

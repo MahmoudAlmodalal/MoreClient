@@ -59,21 +59,39 @@ def _is_no_answer(answer: str) -> bool:
     return len(a) <= 160 and any(h in a for h in _NO_ANSWER_HINTS)
 
 
+# Lazily-built, process-cached chat clients keyed by provider. Reusing the client
+# (and its httpx connection pool) across turns avoids re-establishing TLS on every
+# message — a real per-request latency saving. Keys are process-stable (a key change
+# requires a restart), mirroring the embeddings client cache.
+_chat_clients: dict[str, object] = {}
+
+
+def _chat_client(provider: str):
+    if provider not in _chat_clients:
+        from openai import OpenAI
+
+        if provider == "gemini":
+            _chat_clients[provider] = OpenAI(
+                api_key=cfg.GEMINI_API_KEY, base_url=cfg.GEMINI_BASE_URL, timeout=20.0
+            )
+        elif provider == "deepseek":
+            _chat_clients[provider] = OpenAI(
+                api_key=cfg.NVIDIA_API_KEY, base_url=cfg.NVIDIA_BASE_URL, timeout=60.0
+            )
+        else:  # openai
+            _chat_clients[provider] = OpenAI(api_key=cfg.OPENAI_API_KEY, timeout=15.0)
+    return _chat_clients[provider]
+
+
 def _call_provider(provider: str, messages: list[dict]) -> str:
     """Run a chat completion against one OpenAI-compatible provider. Raises on failure."""
-    from openai import OpenAI
+    client = _chat_client(provider)
 
     if provider == "gemini":
-        client = OpenAI(
-            api_key=cfg.GEMINI_API_KEY, base_url=cfg.GEMINI_BASE_URL, timeout=20.0
-        )
         resp = client.chat.completions.create(
             model=cfg.GEMINI_CHAT_MODEL, messages=messages, temperature=0.2
         )
     elif provider == "deepseek":
-        client = OpenAI(
-            api_key=cfg.NVIDIA_API_KEY, base_url=cfg.NVIDIA_BASE_URL, timeout=60.0
-        )
         resp = client.chat.completions.create(
             model=cfg.DEEPSEEK_MODEL,
             messages=messages,
@@ -84,7 +102,6 @@ def _call_provider(provider: str, messages: list[dict]) -> str:
             stream=False,
         )
     else:  # openai
-        client = OpenAI(api_key=cfg.OPENAI_API_KEY, timeout=15.0)
         resp = client.chat.completions.create(
             model=cfg.CHAT_MODEL, messages=messages, temperature=0.2
         )

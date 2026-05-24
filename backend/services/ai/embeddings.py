@@ -1,7 +1,7 @@
 """Embeddings with a provider switch and a deterministic offline fallback.
 
 Provider is chosen by ``settings.embed_provider``:
-- "gemini": Gemini's OpenAI-compatible endpoint (text-embedding-004, 768-dim).
+- "gemini": Gemini's OpenAI-compatible endpoint (gemini-embedding-001, 3072-dim).
 - "openai": OpenAI (text-embedding-3-small, 1536-dim).
 - "hash"  : a keyless MD5 pseudo-embedding so the app still boots/demos without secrets.
 

@@ -26,8 +26,20 @@ async function parseError(res: Response): Promise<never> {
   throw new ApiError(message, res.status);
 }
 
-export async function apiGet<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { headers: { Accept: "application/json" } });
+/** sessionStorage key holding the admin API key (set on the /admin gate). */
+export const ADMIN_KEY_STORAGE = "adminKey";
+
+/** Header carrying the admin key, when present. Sent only on admin requests. */
+function adminKeyHeader(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const key = window.sessionStorage.getItem(ADMIN_KEY_STORAGE);
+  return key ? { "X-Admin-Key": key } : {};
+}
+
+export async function apiGet<T>(path: string, headers?: Record<string, string>): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    headers: { Accept: "application/json", ...headers },
+  });
   if (!res.ok) return parseError(res);
   return res.json() as Promise<T>;
 }
@@ -36,10 +48,11 @@ export async function apiSend<T>(
   path: string,
   method: "POST" | "PUT" | "DELETE" | "PATCH",
   body?: unknown,
+  headers?: Record<string, string>,
 ): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
     method,
-    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    headers: { "Content-Type": "application/json", Accept: "application/json", ...headers },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) return parseError(res);
@@ -219,29 +232,29 @@ export function fetchTenants(params?: {
   if (params?.plan && params.plan !== "all") qs.set("plan", params.plan);
   if (params?.status && params.status !== "all") qs.set("status", params.status);
   const query = qs.toString();
-  return apiGet<TenantOut[]>(`/api/admin/tenants${query ? `?${query}` : ""}`);
+  return apiGet<TenantOut[]>(`/api/admin/tenants${query ? `?${query}` : ""}`, adminKeyHeader());
 }
 
 export function createTenant(data: TenantCreate): Promise<TenantOut> {
-  return apiSend<TenantOut>("/api/admin/tenants", "POST", data);
+  return apiSend<TenantOut>("/api/admin/tenants", "POST", data, adminKeyHeader());
 }
 
 export function updateTenant(id: number, data: TenantUpdate): Promise<TenantOut> {
-  return apiSend<TenantOut>(`/api/admin/tenants/${id}`, "PUT", data);
+  return apiSend<TenantOut>(`/api/admin/tenants/${id}`, "PUT", data, adminKeyHeader());
 }
 
 export function deleteTenant(id: number): Promise<{ ok: boolean }> {
-  return apiSend<{ ok: boolean }>(`/api/admin/tenants/${id}`, "DELETE");
+  return apiSend<{ ok: boolean }>(`/api/admin/tenants/${id}`, "DELETE", undefined, adminKeyHeader());
 }
 
 export function toggleTenantStatus(id: number): Promise<TenantOut> {
-  return apiSend<TenantOut>(`/api/admin/tenants/${id}/toggle`, "POST");
+  return apiSend<TenantOut>(`/api/admin/tenants/${id}/toggle`, "POST", undefined, adminKeyHeader());
 }
 
 export function fetchAdminKpis(): Promise<AdminKpis> {
-  return apiGet<AdminKpis>("/api/admin/kpis");
+  return apiGet<AdminKpis>("/api/admin/kpis", adminKeyHeader());
 }
 
 export function fetchAdminHealth(): Promise<AdminHealth> {
-  return apiGet<AdminHealth>("/api/admin/health");
+  return apiGet<AdminHealth>("/api/admin/health", adminKeyHeader());
 }

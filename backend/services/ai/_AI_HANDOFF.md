@@ -11,11 +11,11 @@ extended behind the existing contracts.
 | File | Change |
 |---|---|
 | `ingestion/chunker.py` | Structure-aware chunking for markdown FAQ/heading docs (one Q&A per unit, prefixed with `Title — Section`). Unstructured text still uses the old 800/120 splitter. |
-| `ai/text_normalize.py` (new) | Shared AR/EN normalizer + tokenizer (lowercase, Arabic alef/hamza/yaa/teh-marbuta folding, diacritic/tatweel stripping). |
+| `ai/text_normalize.py` (new) | Shared AR/EN normalizer + tokenizer (lowercase, Arabic alef/hamza/yaa/teh-marbuta folding, diacritic/tatweel stripping, **Arabic-Indic + Persian digit→ASCII folding** so `٥`/`۵` match `5` for numeric facts — hours, registration IDs, phone numbers). |
 | `ai/retrieval.py` (new) | Hybrid retrieval: dense vector + BM25 lexical fused with Reciprocal Rank Fusion, then MMR for diversity/dedup. Pure-Python, no deps. |
 | `ai/vectorstore.py` | Added `Hit.id`, embedding-dimension guard + sidecar signature, `all_chunks()`, `reset_collection()`, `embedding_signature()`, and write→index cache invalidation. |
 | `ai/embeddings.py` | `_hash_embed` now tokenizes via the shared normalizer (better keyless/AR matching); `embed_query` is LRU-cached. |
-| `ai/rag.py` | Routes retrieval through `hybrid_search`; stricter bilingual grounding prompts; `__NO_ANSWER__` sentinel → honest escalation (closes the "silent unknown" gap). |
+| `ai/rag.py` | Routes retrieval through `hybrid_search`; stricter bilingual grounding prompts; `__NO_ANSWER__` sentinel → honest escalation (closes the "silent unknown" gap). **Chat clients are now process-cached per provider** (reused httpx connection pool) instead of rebuilt per turn — cuts per-request latency. |
 | `ai/_eval.py` (new) | Repeatable AR+EN retrieval (hit@1/hit@3/MRR) + answer-grounding eval. |
 
 ## Dependencies
@@ -65,8 +65,11 @@ py -X utf8 -m backend.scripts.seed_demo     # before starting uvicorn
 
 Re-seed is required because:
 1. **Chunking changed** — chunk text/boundaries differ (Q&A units + heading prefix).
-2. **Keyless hash embeddings changed** — tokens are now normalized, so hash vectors
-   differ for keyless stores. (Real Gemini/OpenAI vectors are unchanged.)
+2. **Keyless hash embeddings changed** — tokens are now normalized (incl. Arabic-Indic
+   digit folding), so hash vectors differ for keyless stores. (Real Gemini/OpenAI
+   vectors are unchanged — they embed raw text, not the normalized tokens.) The BM25
+   lexical index re-tokenizes stored chunk text at build time, so it picks up the
+   digit-folding win immediately, with **no re-seed needed** for keyed setups.
 
 ### Embedding-dimension guard
 

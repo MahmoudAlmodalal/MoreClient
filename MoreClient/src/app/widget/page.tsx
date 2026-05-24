@@ -44,9 +44,13 @@ export default function WidgetPage() {
   const [isEscalated, setIsEscalated] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom of chats
+  // Auto-scroll to bottom of chats. Honor reduced-motion so the view jumps
+  // instead of animating for users who ask their OS to limit motion.
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const reduceMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    messagesEndRef.current?.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });
   };
 
   useEffect(() => {
@@ -181,25 +185,33 @@ export default function WidgetPage() {
           {/* Language Switch */}
           <button
             onClick={handleLanguageToggle}
-            className="flex items-center gap-1 rounded-md border border-[#1f1f2e] bg-[#0d0d15] px-2 py-1 text-[10px] text-gray-400 hover:text-white transition-colors cursor-pointer"
+            aria-label={language === "en" ? "التبديل إلى العربية" : "Switch to English"}
+            className="flex items-center gap-1 rounded-md border border-[#1f1f2e] bg-[#0d0d15] px-2 py-1 text-[10px] text-gray-400 hover:text-white transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60"
           >
-            <Globe className="h-3.5 w-3.5 text-purple-400" />
+            <Globe className="h-3.5 w-3.5 text-purple-400" aria-hidden="true" />
             <span>{language === "en" ? "AR" : "EN"}</span>
           </button>
 
           {/* Close Widget Button */}
           <button
             onClick={() => window.parent.postMessage("clientmore-close-widget", "*")}
-            className="rounded-md p-1 text-gray-400 hover:bg-[#1f1f2e] hover:text-white transition-colors cursor-pointer"
-            title="Close chat"
+            className="rounded-md p-1 text-gray-400 hover:bg-[#1f1f2e] hover:text-white transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60"
+            aria-label={language === "ar" ? "إغلاق المحادثة" : "Close chat"}
+            title={language === "ar" ? "إغلاق المحادثة" : "Close chat"}
           >
-            <X className="h-4 w-4" />
+            <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </div>
       </div>
 
-      {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {/* Messages Scroll Area — a live region so screen readers announce new replies */}
+      <div
+        role="log"
+        aria-live="polite"
+        aria-relevant="additions text"
+        aria-label={language === "ar" ? "سجل المحادثة" : "Conversation"}
+        className="flex-1 overflow-y-auto p-4 space-y-4"
+      >
         {messages.map((msg) => {
           const isUser = msg.sender === "user";
           return (
@@ -270,7 +282,7 @@ export default function WidgetPage() {
 
         {/* Typing Loading State */}
         {loading && (
-          <div className="flex items-center gap-2 text-xs text-gray-500 italic max-w-xs mr-auto ml-1.5">
+          <div role="status" className="flex items-center gap-2 text-xs text-gray-500 italic max-w-xs mr-auto ml-1.5">
             <div className="h-2 w-2 rounded-full bg-purple-500 animate-ping" />
             <span>{language === "ar" ? t("aiSearchingAr") : t("aiSearching")}</span>
           </div>
@@ -296,14 +308,17 @@ export default function WidgetPage() {
           type="text"
           value={inputVal}
           onChange={(e) => setInputVal(e.target.value)}
+          aria-label={language === "ar" ? t("widgetInputPlaceholderAr") : t("widgetPlaceholder")}
           placeholder={language === "ar" ? t("widgetInputPlaceholderAr") : t("widgetPlaceholder")}
-          className="flex-1 rounded-xl border border-[#1f1f2e] bg-[#0d0d15] px-3.5 py-2.5 text-xs text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none transition-colors"
+          className="flex-1 rounded-xl border border-[#1f1f2e] bg-[#0d0d15] px-3.5 py-2.5 text-xs text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/40 transition-colors"
         />
         <button
           type="submit"
-          className="rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 p-2.5 text-white hover:brightness-110 active:scale-95 transition-all shadow-md shadow-purple-600/10 shrink-0 cursor-pointer"
+          disabled={!inputVal.trim() || loading}
+          aria-label={language === "ar" ? "إرسال" : "Send message"}
+          className="rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 p-2.5 text-white hover:brightness-110 active:scale-95 transition-all shadow-md shadow-purple-600/10 shrink-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
         >
-          <Send className="h-4.5 w-4.5" />
+          <Send className="h-4.5 w-4.5" aria-hidden="true" />
         </button>
       </form>
     </div>

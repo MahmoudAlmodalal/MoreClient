@@ -29,7 +29,19 @@ def _clamp_int(value: str | None, default: int, lo: int, hi: int) -> int:
     return min(max(result, lo), hi)
 
 
+def _bool(value: str | None, default: bool = False) -> bool:
+    if value is None:
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "on"}
+
+
 class Settings:
+    # --- Runtime environment ---
+    # ENV gates fail-closed behaviour: in "dev" the app stays bootable with zero
+    # secrets (keyless demo); in any other value (prod/staging) missing critical
+    # secrets fail fast and insecure fallbacks are refused.
+    ENV: str = os.getenv("ENV", "dev").strip().lower()
+
     # --- Persistence ---
     DATABASE_URL: str = os.getenv("DATABASE_URL", "sqlite:///./backend.db")
     CHROMA_DIR: str = os.getenv("CHROMA_DIR", "./chroma_store")
@@ -40,6 +52,10 @@ class Settings:
     GEMINI_API_KEY: str | None = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
     ANTHROPIC_API_KEY: str | None = os.getenv("ANTHROPIC_API_KEY")
     APP_SECRET: str | None = os.getenv("APP_SECRET")
+    # Admin API key: guards every /api/admin/* route. When unset, admin access is
+    # denied unless ALLOW_INSECURE_ADMIN=1 (only honoured in ENV=dev) — see core/security.py.
+    ADMIN_API_KEY: str | None = os.getenv("ADMIN_API_KEY")
+    ALLOW_INSECURE_ADMIN: bool = _bool(os.getenv("ALLOW_INSECURE_ADMIN"), False)
     # Optional Telegram webhook secret token (set on setWebhook); when set, inbound
     # updates whose X-Telegram-Bot-Api-Secret-Token header mismatches are dropped.
     TELEGRAM_WEBHOOK_SECRET: str | None = os.getenv("TELEGRAM_WEBHOOK_SECRET")
@@ -86,6 +102,16 @@ class Settings:
         os.getenv("ALLOWED_ORIGINS"),
         ["http://localhost:5000", "http://127.0.0.1:5000"],
     )
+
+    @property
+    def is_dev(self) -> bool:
+        return self.ENV == "dev"
+
+    @property
+    def admin_insecure_allowed(self) -> bool:
+        """True only when there is no ADMIN_API_KEY AND the operator explicitly
+        opted into insecure admin in a dev environment. Never true in prod."""
+        return self.is_dev and self.ALLOW_INSECURE_ADMIN and not self.ADMIN_API_KEY
 
     @property
     def has_any_llm(self) -> bool:

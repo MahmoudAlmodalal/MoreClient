@@ -8,6 +8,7 @@ token comes from the Setting row, so it is configurable from the dashboard.
 import httpx
 from sqlalchemy.orm import Session
 
+from backend.core import crypto
 from backend.models.tables import get_or_create_settings
 from backend.schemas.chat import ChatResponse
 from backend.services.channels.base import Channel, Inbound
@@ -45,7 +46,7 @@ class TelegramChannel(Channel):
         return Inbound(
             session_id=f"tg:{chat_id}",
             text=text,
-            meta={"chat_id": chat_id, "token": setting.telegram_token, "username": username},
+            meta={"chat_id": chat_id, "token": crypto.decrypt(setting.telegram_token), "username": username},
         )
 
     def deliver(self, inbound: Inbound, response: ChatResponse, db: Session) -> None:

@@ -16,7 +16,9 @@ import logging
 from fastapi import APIRouter, Request, Response, Depends
 from sqlalchemy.orm import Session
 
+from backend.core import crypto
 from backend.core.config import settings
+from backend.core.ratelimit import limiter
 from backend.models.database import get_db
 from backend.models.tables import get_or_create_settings
 from backend.services.channels.factory import ChannelFactory
@@ -51,6 +53,7 @@ def _verify_twilio_signature(token: str, url: str, params: dict, signature: str)
 
 
 @router.post("/telegram/webhook")
+@limiter.exempt
 async def telegram_webhook(request: Request, db: Session = Depends(get_db)):
     """Telegram Bot API update webhook (JSON body).
 
@@ -76,6 +79,7 @@ async def telegram_webhook(request: Request, db: Session = Depends(get_db)):
 
 
 @router.post("/whatsapp/webhook")
+@limiter.exempt
 async def whatsapp_webhook(request: Request, db: Session = Depends(get_db)):
     """Twilio WhatsApp inbound webhook (application/x-www-form-urlencoded).
 
@@ -86,8 +90,9 @@ async def whatsapp_webhook(request: Request, db: Session = Depends(get_db)):
         form = await request.form()
         form_dict = dict(form)
         setting = get_or_create_settings(db)
-        if setting.twilio_token and not _verify_twilio_signature(
-            token=setting.twilio_token,
+        twilio_token = crypto.decrypt(setting.twilio_token)
+        if twilio_token and not _verify_twilio_signature(
+            token=twilio_token,
             url=settings.BACKEND_PUBLIC_URL + request.url.path,
             params=form_dict,
             signature=request.headers.get("X-Twilio-Signature", ""),

@@ -90,6 +90,20 @@ class LearnedAnswer(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
+class AuthUser(Base):
+    __tablename__ = "auth_users"
+
+    id = Column(Integer, primary_key=True, index=True)
+    email = Column(String(255), unique=True, index=True, nullable=False)
+    name = Column(String(255), nullable=True)
+    password_hash = Column(Text, nullable=True)
+    provider = Column(String(20), default="password", nullable=False)
+    provider_subject = Column(String(255), nullable=True, index=True)
+    role = Column(String(20), default="user", nullable=False)  # user | admin
+    created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+    last_login_at = Column(DateTime, nullable=True)
+
+
 class Setting(Base):
     """Single-row tenant/bot config (id is always 1). Mirrors the fields that
     live in the frontend's language-provider context."""

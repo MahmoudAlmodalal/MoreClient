@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
-import { Button } from "@/components/ui/button";
+import { Apple } from "lucide-react";
 
 const SLIDES = 3;
 
@@ -36,6 +37,11 @@ export default function WelcomePage() {
         router.push("/dashboard");
       }
     }, 1200);
+  };
+
+  const handleSocialLogin = () => {
+    sessionStorage.setItem("userRole", "user");
+    router.push("/dashboard");
   };
 
   useEffect(() => {
@@ -154,35 +160,37 @@ export default function WelcomePage() {
                 )}
               </button>
 
+              <div className="grid gap-3">
+                <button
+                  type="button"
+                  onClick={handleSocialLogin}
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[var(--border-light)] bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-[var(--surface-muted)]"
+                >
+                  <span className="flex h-5 w-5 items-center justify-center rounded-full text-sm font-bold text-[#4285F4]">
+                    G
+                  </span>
+                  <span>{t("continueWithGoogle")}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleSocialLogin}
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[var(--border-light)] bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-[var(--surface-muted)]"
+                >
+                  <Apple className="h-5 w-5 text-gray-900" />
+                  <span>{t("continueWithApple")}</span>
+                </button>
+              </div>
+
               <div className="text-center mt-4">
-                <a
+                <Link
                   href="/sign-up"
                   className="text-xs font-semibold text-brand-700 hover:text-brand-800 transition-colors"
                 >
                   {t("dontHaveAccount")}
-                </a>
+                </Link>
               </div>
             </form>
-
-            <div className="my-7 flex items-center gap-3 text-xs text-gray-400">
-              <span className="h-px flex-1 bg-[var(--border-light)]" />
-              {t("orExplore")}
-              <span className="h-px flex-1 bg-[var(--border-light)]" />
-            </div>
-
-            <a
-              href="/dashboard"
-              onClick={() => sessionStorage.setItem("userRole", "user")}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--surface-muted)] px-5 py-3.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-brand-100"
-            >
-              {t("takeTour")}
-            </a>
-
-            <p className="mt-10 text-center text-xs text-gray-400">
-              <a href="/legal/privacy" className="hover:text-gray-600">{t("footerPrivacy")}</a>
-              <span className="mx-2">·</span>
-              <a href="/legal/terms" className="hover:text-gray-600">{t("footerTerms")}</a>
-            </p>
           </div>
         </div>
       </div>

@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { AuthShell } from "@/components/auth/auth-shell";
+import { Apple } from "lucide-react";
 
 export default function SignUpPage() {
   const { t } = useLanguage();
@@ -43,10 +45,37 @@ export default function SignUpPage() {
     }, 1500);
   };
 
+  const handleSocialSignUp = () => {
+    sessionStorage.setItem("userRole", "user");
+    router.push("/dashboard");
+  };
+
   return (
     <AuthShell>
       <div className="rounded-2xl border border-[#1f1f2e] bg-[#0d0d15] p-8">
         <h1 className="text-xl font-semibold text-white text-center mb-6">{t("createAccountBtn")}</h1>
+
+        <div className="mb-6 grid gap-3">
+          <button
+            type="button"
+            onClick={handleSocialSignUp}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#1f1f2e] bg-white px-4 text-sm font-semibold text-gray-800 transition-colors hover:bg-gray-100"
+          >
+            <span className="flex h-5 w-5 items-center justify-center rounded-full text-sm font-bold text-[#4285F4]">
+              G
+            </span>
+            <span>{t("signUpWithGoogle")}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSocialSignUp}
+            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#1f1f2e] bg-white px-4 text-sm font-semibold text-gray-800 transition-colors hover:bg-gray-100"
+          >
+            <Apple className="h-5 w-5 text-gray-900" />
+            <span>{t("signUpWithApple")}</span>
+          </button>
+        </div>
         
         <form onSubmit={handleSignUpSubmit} className="space-y-4">
           <div>
@@ -130,12 +159,12 @@ export default function SignUpPage() {
           </button>
 
           <div className="text-center mt-4">
-            <a
+            <Link
               href="/welcome"
               className="text-xs font-semibold text-brand-400 hover:text-brand-300 transition-colors"
             >
               {t("alreadyHaveAccount")}
-            </a>
+            </Link>
           </div>
         </form>
       </div>

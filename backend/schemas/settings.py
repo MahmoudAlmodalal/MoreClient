@@ -66,8 +66,8 @@ class SettingsUpdate(_CamelModel):
     purchase_collect_quantity: bool | None = None
     purchase_auto_forward_to_support: bool | None = None
     purchase_confirmation_required: bool | None = None
-    purchase_session_minutes: int | None = Field(default=None, gt=0)
-    purchase_currency_label: str | None = Field(default=None, max_length=20)
+    purchase_session_minutes: int | None = None
+    purchase_currency_label: str | None = None
     intent_llm_enabled: bool | None = None
     intent_confidence_threshold: float | None = Field(default=None, ge=0, le=1)
     auto_handoff_on_complaint: bool | None = None

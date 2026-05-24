@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { NotificationBell } from "@/components/notification-bell";
 import {
@@ -26,6 +26,25 @@ export default function SuperAdminLayout({
   const { language, setLanguage, t, isRtl, companyLogo } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const role = sessionStorage.getItem("userRole");
+    if (role !== "admin") {
+      router.push("/dashboard");
+    } else {
+      setIsAuthorized(true);
+    }
+  }, [router]);
+
+  if (isAuthorized === null) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#050508]">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-500/50 border-t-purple-500" />
+      </div>
+    );
+  }
 
   const navigation = [
     { name: t("superAdminTitle"), href: "/admin", icon: ShieldAlert },

@@ -8,7 +8,7 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
           client<span className="text-blue-600">MORE</span>
         </Link>
         <div className="flex items-center gap-3 text-sm">
-          <Link href="/sign-in" className="text-gray-600 hover:text-gray-900">Sign in</Link>
+          <Link href="/welcome" className="text-gray-600 hover:text-gray-900">Sign in</Link>
           <Link
             href="/sign-up"
             className="px-3 py-1.5 rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors"

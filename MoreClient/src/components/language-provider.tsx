@@ -309,6 +309,18 @@ const translationsEn = {
   allPlans: "All Plans",
   filterStatus: "Filter Status",
   searchPlaceholder: "Search tenants by name or email...",
+
+  // Auth Forms
+  emailLabel: "Email Address",
+  passwordLabel: "Password",
+  confirmPasswordLabel: "Confirm Password",
+  nameLabel: "Full Name",
+  signInSuccess: "Signing in...",
+  signUpSuccess: "Creating account...",
+  dontHaveAccount: "Don't have an account? Create one",
+  alreadyHaveAccount: "Already have an account? Sign in",
+  requiredFields: "Please fill in all fields",
+  passwordsDontMatch: "Passwords do not match",
 };
 
 // Arabic may omit keys; the `t()` lookup falls back to English for any missing key.
@@ -614,6 +626,18 @@ const translationsAr: Partial<Translations> = {
   allPlans: "كل الباقات",
   filterStatus: "تصفية الحالة",
   searchPlaceholder: "البحث عن المستأجرين بالاسم أو البريد...",
+
+  // Auth Forms
+  emailLabel: "البريد الإلكتروني",
+  passwordLabel: "كلمة المرور",
+  confirmPasswordLabel: "تأكيد كلمة المرور",
+  nameLabel: "الاسم الكامل",
+  signInSuccess: "جاري تسجيل الدخول...",
+  signUpSuccess: "جاري إنشاء الحساب...",
+  dontHaveAccount: "ليس لديك حساب؟ أنشئ حساباً جديداً",
+  alreadyHaveAccount: "لديك حساب بالفعل؟ تسجيل الدخول",
+  requiredFields: "يرجى ملء جميع الحقول",
+  passwordsDontMatch: "كلمات المرور غير متطابقة",
 };
 
 interface LanguageContextType {

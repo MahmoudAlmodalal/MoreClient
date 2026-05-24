@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
@@ -27,6 +27,11 @@ export default function DashboardLayout({
   const { language, setLanguage, t, isRtl, companyName, companyLogo } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    setIsAdmin(sessionStorage.getItem("userRole") === "admin");
+  }, []);
 
   const navigation = [
     { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
@@ -34,7 +39,7 @@ export default function DashboardLayout({
     { name: t("handoffs"), href: "/dashboard/handoffs", icon: MessageSquareShare },
     { name: t("settings"), href: "/dashboard/settings", icon: SettingsIcon },
     { name: t("widgetPreview"), href: "/widget", icon: Eye, target: "_blank" },
-    { name: t("superAdminTitle"), href: "/admin", icon: ShieldAlert },
+    ...(isAdmin ? [{ name: t("superAdminTitle"), href: "/admin", icon: ShieldAlert }] : []),
   ];
 
   const handleLanguageToggle = () => {

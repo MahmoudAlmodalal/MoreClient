@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 
@@ -9,6 +10,33 @@ const SLIDES = 3;
 export default function WelcomePage() {
   const { t, language, setLanguage } = useLanguage();
   const [slide, setSlide] = useState(0);
+  const router = useRouter();
+
+  // Login form state
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!email || !password) {
+      setError(t("requiredFields"));
+      return;
+    }
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      if (email.toLowerCase().includes("admin")) {
+        sessionStorage.setItem("userRole", "admin");
+        router.push("/admin");
+      } else {
+        sessionStorage.setItem("userRole", "user");
+        router.push("/dashboard");
+      }
+    }, 1200);
+  };
 
   useEffect(() => {
     const id = setInterval(() => setSlide((s) => (s + 1) % SLIDES), 4500);
@@ -73,19 +101,68 @@ export default function WelcomePage() {
               {t("welcomeSubtitle")}
             </p>
 
-            <div className="mt-9 space-y-3">
-              <Button href="/sign-in" size="lg" className="w-full">
-                {t("signInBtn")}
-              </Button>
-              <Button
-                href="/sign-up"
-                size="lg"
-                className="w-full border border-[var(--border-light)] !text-brand-700 hover:!bg-[var(--surface-muted)]"
-                variant="ghost"
+            <form onSubmit={handleLoginSubmit} className="mt-8 space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  {t("emailLabel")}
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full bg-[var(--surface-muted)] text-[var(--foreground-light)] border border-[var(--border-light)] rounded-xl px-4 py-3.5 text-sm outline-none transition-all duration-200 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10 placeholder:text-gray-400"
+                  placeholder="name@company.com"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                  {t("passwordLabel")}
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-[var(--surface-muted)] text-[var(--foreground-light)] border border-[var(--border-light)] rounded-xl px-4 py-3.5 text-sm outline-none transition-all duration-200 focus:border-brand-500 focus:bg-white focus:ring-4 focus:ring-brand-500/10 placeholder:text-gray-400"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+
+              {error && (
+                <div className="text-xs text-red-600 font-semibold bg-red-50 p-3 rounded-lg border border-red-200">
+                  {error}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full bg-[#4F00C8] hover:bg-[#3B00A0] text-white font-bold py-3.5 px-6 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 shadow-lg shadow-purple-600/20 hover:shadow-purple-600/30 hover:scale-[1.01] cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {t("createAccountBtn")}
-              </Button>
-            </div>
+                {loading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>{t("signInSuccess")}</span>
+                  </>
+                ) : (
+                  <span>{t("signInBtn")}</span>
+                )}
+              </button>
+
+              <div className="text-center mt-4">
+                <a
+                  href="/sign-up"
+                  className="text-xs font-semibold text-brand-700 hover:text-brand-800 transition-colors"
+                >
+                  {t("dontHaveAccount")}
+                </a>
+              </div>
+            </form>
 
             <div className="my-7 flex items-center gap-3 text-xs text-gray-400">
               <span className="h-px flex-1 bg-[var(--border-light)]" />
@@ -95,6 +172,7 @@ export default function WelcomePage() {
 
             <a
               href="/dashboard"
+              onClick={() => sessionStorage.setItem("userRole", "user")}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-[var(--surface-muted)] px-5 py-3.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-brand-100"
             >
               {t("takeTour")}

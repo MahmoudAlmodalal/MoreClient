@@ -336,9 +336,42 @@ class VectorRagStrategy(RagStrategy):
         return context.split("\n\n---\n\n")[0].strip()
 
 
-def resolve_strategy(query: str, setting, kb_empty: bool, tenant_key: str | None = None) -> RagStrategy:
+def resolve_strategy(
+    query: str,
+    setting,
+    kb_empty: bool,
+    tenant_key: str | None = None,
+    db: Session | None = None,
+) -> RagStrategy:
     if _wants_human(query):
         return FallbackStrategy(reason="user_requested", confidence=1.0)
+
     if kb_empty:
+        # If the KB is empty, check if there are any documents still in 'processing' status.
+        # If so, we ask the user to wait a moment instead of escalating to a human.
+        if db is not None:
+            from sqlalchemy import select
+            from backend.models.tables import Document
+
+            stmt = select(Document).where(
+                Document.tenant_key == (tenant_key or cfg.DEFAULT_TENANT_KEY),
+                Document.status == "processing",
+            )
+            processing_doc = db.scalars(stmt).first()
+            if processing_doc:
+                lang = "ar" if any(re.search(r"[\u0600-\u06ff]", query) for _ in [1]) else "en"
+                msg = (
+                    "جاري معالجة المستندات التي قمت برفعها، يرجى الانتظار لحظة ثم المحاولة مرة أخرى."
+                    if lang == "ar"
+                    else "Your uploaded documents are still being processed. Please wait a moment and try again."
+                )
+                return FallbackStrategy(
+                    reason="processing_files",
+                    confidence=0.0,
+                    escalate=False,
+                    message=msg,
+                )
+
         return FallbackStrategy(reason="low_confidence", confidence=0.0)
+
     return VectorRagStrategy(tenant_key=tenant_key)

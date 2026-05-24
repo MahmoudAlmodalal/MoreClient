@@ -17,6 +17,37 @@ from backend.services.ingestion.ingest import create_document_record, index_docu
 router = APIRouter()
 
 
+# Upload guardrails. Extensions mirror ingest._detect_type's dispatch so we
+# reject anything ingestion would silently treat as plain text.
+_MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
+_ALLOWED_EXTENSIONS = {".pdf", ".docx", ".xlsx", ".txt", ".md"}
+_MAX_FILENAME_LEN = 200
+
+# Magic-byte signatures: a declared extension must match the file's real header,
+# so a binary renamed to .pdf can't slip past the extension whitelist. Text
+# formats (.txt/.md) have no reliable signature and are left to ingestion.
+_PDF_MAGIC = b"%PDF"
+_ZIP_MAGIC = b"PK\x03\x04"  # docx/xlsx are zip containers
+
+
+def _sanitize_filename(raw: str | None) -> str:
+    """Strip path components and control chars; cap length. Never trust the
+    client-supplied name for storage or display."""
+    name = PurePath(raw or "").name  # drops any directory traversal segments
+    name = "".join(ch for ch in name if ch.isprintable() and ch not in '\r\n\t').strip()
+    name = name[:_MAX_FILENAME_LEN]
+    return name or "upload"
+
+
+def _content_matches_extension(extension: str, data: bytes) -> bool:
+    """Lightweight magic-byte check for binary formats."""
+    if extension == ".pdf":
+        return data[:4] == _PDF_MAGIC
+    if extension in (".docx", ".xlsx"):
+        return data[:4] == _ZIP_MAGIC
+    return True  # .txt / .md — no signature to verify
+
+
 def _index_document_background(document_id: int) -> None:
     db = SessionLocal()
     try:
@@ -70,8 +101,26 @@ def upload_file(
     db: Session = Depends(get_db),
 ) -> UploadResponse:
     data = file.file.read()
+    safe_name = _sanitize_filename(file.filename)
+    extension = PurePath(safe_name).suffix.lower()
+
+    if extension not in _ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=415,
+            detail="unsupported file type (allowed: pdf, docx, xlsx, txt, md)",
+        )
+
+    if len(data) > _MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="file too large (max 10MB)")
+
+    if not _content_matches_extension(extension, data):
+        raise HTTPException(
+            status_code=415,
+            detail="file content does not match its extension",
+        )
+
     try:
-        doc = create_document_record(db, file.filename, data, tenant_key=tenant_key)
+        doc = create_document_record(db, safe_name, data, tenant_key=tenant_key)
     except Exception:
         raise HTTPException(status_code=400, detail="could not process file")
     Thread(target=_index_document_background, args=(doc.id,), daemon=True).start()

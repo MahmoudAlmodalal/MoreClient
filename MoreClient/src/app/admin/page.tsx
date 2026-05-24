@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useSyncExternalStore, useCallback } from "react";
+import React, { useState, useSyncExternalStore, useCallback, useEffect } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { useAsyncOnMount, usePolling } from "@/lib/use-async-effect";
 import type { TenantOut, AdminKpis, AdminHealth } from "@/lib/api";
@@ -77,6 +77,7 @@ export default function SuperAdminPage() {
   const [needsKey, setNeedsKey] = useState(false);
   const [keyInput, setKeyInput] = useState("");
   const [keyError, setKeyError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
 
   // Real data from backend
   const [tenants, setTenants] = useState<TenantOut[]>([]);

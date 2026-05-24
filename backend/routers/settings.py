@@ -15,8 +15,21 @@ from backend.schemas.settings import SettingsOut, SettingsUpdate
 
 router = APIRouter()
 
-# Column names we allow PUT to mutate (id is fixed at 1).
-_SETTABLE = {c.name for c in Setting.__table__.columns if c.name != "id"}
+# Fields PUT may mutate: the update schema's own fields, minus billing/internal
+# counters. used_messages is bumped only by the chat pipeline, never via this route.
+_SETTABLE = set(SettingsUpdate.model_fields) - {"used_messages"}
+
+# Secret fields encrypted at rest and masked in responses (core/crypto.py).
+_SECRET_FIELDS = ("telegram_token", "twilio_token")
+
+
+def _masked_out(row) -> SettingsOut:
+    """Serialize the config row, replacing at-rest secrets with masked display
+    values so raw credentials never leave the backend."""
+    out = SettingsOut.model_validate(row)
+    out.telegram_token = crypto.mask(row.telegram_token)
+    out.twilio_token = crypto.mask(row.twilio_token)
+    return out
 
 
 @router.get("/api/settings", response_model=SettingsOut)

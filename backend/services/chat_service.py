@@ -210,6 +210,7 @@ class ChatService:
             setting,
             kb_empty=vectorstore.is_empty(tenant),
             tenant_key=tenant,
+            db=self.db,
         )
         result = strategy.run(message, lang, setting, history, user_memory)
 

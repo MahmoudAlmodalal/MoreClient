@@ -33,6 +33,9 @@ async function parseError(res: Response): Promise<never> {
 /** sessionStorage key holding the admin API key (set on the /admin gate). */
 export const ADMIN_KEY_STORAGE = "adminKey";
 
+/** JWT storage key */
+export const JWT_TOKEN_STORAGE = "authToken";
+
 /** Header carrying the admin key, when present. Sent only on admin requests. */
 export function adminKeyHeader(): Record<string, string> {
   if (typeof window === "undefined") return {};
@@ -40,9 +43,16 @@ export function adminKeyHeader(): Record<string, string> {
   return key ? { "X-Admin-Key": key } : {};
 }
 
+/** Header carrying the JWT token, when present. */
+export function authHeader(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const token = window.sessionStorage.getItem(JWT_TOKEN_STORAGE);
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 export async function apiGet<T>(path: string, headers?: Record<string, string>): Promise<T> {
   const res = await fetch(joinBasePath(BASE, path), {
-    headers: { Accept: "application/json", ...headers },
+    headers: { Accept: "application/json", ...authHeader(), ...headers },
   });
   if (!res.ok) return parseError(res);
   return res.json() as Promise<T>;
@@ -56,7 +66,12 @@ export async function apiSend<T>(
 ): Promise<T> {
   const res = await fetch(joinBasePath(BASE, path), {
     method,
-    headers: { "Content-Type": "application/json", Accept: "application/json", ...headers },
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+      ...authHeader(),
+      ...headers,
+    },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) return parseError(res);
@@ -64,15 +79,29 @@ export async function apiSend<T>(
 }
 
 /** Multipart upload. Do NOT set Content-Type — the browser sets the boundary. */
-export async function apiUpload<T>(path: string, file: File): Promise<T> {
+export async function apiUpload<T>(path: string, file: File, headers?: Record<string, string>): Promise<T> {
   const fd = new FormData();
   fd.append("file", file);
-  const res = await fetch(joinBasePath(BASE, path), { method: "POST", body: fd });
+  const res = await fetch(joinBasePath(BASE, path), {
+    method: "POST",
+    headers: { ...authHeader(), ...headers },
+    body: fd,
+  });
   if (!res.ok) return parseError(res);
   return res.json() as Promise<T>;
 }
 
 // ─── Response types (mirror backend/schemas/*) ──────────────────────────────
+
+export type AuthSessionOut = {
+  token: string;
+  userId: number;
+  email: string;
+  name: string | null;
+  role: "admin" | "company";
+  redirectTo: string;
+  tenantKey: string | null;
+};
 
 export type ChatResponse = {
   reply: string;
@@ -143,6 +172,15 @@ export function createWebSocketUrl(path: string): string {
     }
     return path;
   }
+}
+
+export function createAuthenticatedWebSocketUrl(path: string): string {
+  const wsUrl = createWebSocketUrl(path);
+  if (typeof window === "undefined") return wsUrl;
+  const token = window.sessionStorage.getItem(JWT_TOKEN_STORAGE);
+  if (!token) return wsUrl;
+  const separator = wsUrl.includes("?") ? "&" : "?";
+  return `${wsUrl}${separator}token=${token}`;
 }
 
 export type HandoffMessage = { id: string; role: string; content: string; time: string };
@@ -257,6 +295,44 @@ export type AdminHealth = {
   cpuUsagePercent: number;
   llmProviderStatus: string;
 };
+
+// ─── Auth functions ─────────────────────────────────────────────────────────
+
+export async function login(email: string, password: string): Promise<AuthSessionOut> {
+  const session = await apiSend<AuthSessionOut>("/api/auth/login", "POST", { email, password });
+  if (typeof window !== "undefined") {
+    window.sessionStorage.setItem(JWT_TOKEN_STORAGE, session.token);
+    window.sessionStorage.setItem("userRole", session.role);
+  }
+  return session;
+}
+
+export async function register(
+  name: string,
+  email: string,
+  password: string,
+  companyName: string,
+): Promise<AuthSessionOut> {
+  const session = await apiSend<AuthSessionOut>("/api/auth/register", "POST", {
+    name,
+    email,
+    password,
+    companyName,
+  });
+  if (typeof window !== "undefined") {
+    window.sessionStorage.setItem(JWT_TOKEN_STORAGE, session.token);
+    window.sessionStorage.setItem("userRole", session.role);
+  }
+  return session;
+}
+
+export function logout(): void {
+  if (typeof window !== "undefined") {
+    window.sessionStorage.removeItem(JWT_TOKEN_STORAGE);
+    window.sessionStorage.removeItem("userRole");
+    window.sessionStorage.removeItem(ADMIN_KEY_STORAGE);
+  }
+}
 
 // ─── Admin API functions ────────────────────────────────────────────────────
 

@@ -36,7 +36,7 @@ export default function WelcomePage() {
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
-        setError(t("loginFailed") || "Login failed. Please try again.");
+        setError("Login failed. Please try again.");
       }
     }
   };

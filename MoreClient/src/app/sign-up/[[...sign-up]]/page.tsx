@@ -42,7 +42,7 @@ export default function SignUpPage() {
       if (err instanceof ApiError) {
         setError(err.message);
       } else {
-        setError(t("signUpFailed") || "Sign up failed. Please try again.");
+        setError("Sign up failed. Please try again.");
       }
     }
   };

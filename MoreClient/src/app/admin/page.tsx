@@ -65,7 +65,7 @@ export default function SuperAdminPage() {
   );
 
   // States
-  const [activeTab, setActiveTab] = useState<"overview" | "subscriptions">("overview");
+  const [activeTab, setActiveTab] = useState<"overview" | "subscriptions">("subscriptions");
   const [toast, setToast] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedPlanFilter, setSelectedPlanFilter] = useState<string>("all");
@@ -431,16 +431,6 @@ export default function SuperAdminPage() {
 
       {/* Tabs Menu */}
       <div className="flex border-b border-[#1f1f2e] gap-4">
-        <button
-          onClick={() => setActiveTab("overview")}
-          className={`pb-3 text-sm font-semibold transition-all border-b-2 px-1 ${
-            activeTab === "overview"
-              ? "border-purple-500 text-white"
-              : "border-transparent text-gray-400 hover:text-white"
-          }`}
-        >
-          {t("tabOverview")}
-        </button>
         <button
           onClick={() => setActiveTab("subscriptions")}
           className={`pb-3 text-sm font-semibold transition-all border-b-2 px-1 ${

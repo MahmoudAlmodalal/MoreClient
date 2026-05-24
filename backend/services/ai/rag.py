@@ -124,14 +124,32 @@ class VectorRagStrategy(RagStrategy):
         if cfg.NVIDIA_API_KEY:
             client = OpenAI(
                 base_url="https://integrate.api.nvidia.com/v1",
-                api_key=cfg.NVIDIA_API_KEY
+                api_key=cfg.NVIDIA_API_KEY,
+                timeout=15.0
             )
+            try:
+                resp = client.chat.completions.create(
+                    model=cfg.CHAT_MODEL,
+                    messages=messages,
+                    temperature=1.0,
+                    top_p=0.95,
+                    max_tokens=16384,
+                    extra_body={"chat_template_kwargs": {"thinking": False}},
+                    stream=False
+                )
+            except Exception as e:
+                return f"عذراً، خدمة الذكاء الاصطناعي (NVIDIA/DeepSeek) لا تستجيب حالياً. يُرجى المحاولة لاحقاً."
         else:
-            client = OpenAI(api_key=cfg.OPENAI_API_KEY)
+            client = OpenAI(api_key=cfg.OPENAI_API_KEY, timeout=15.0)
+            try:
+                resp = client.chat.completions.create(
+                    model=cfg.CHAT_MODEL, 
+                    messages=messages, 
+                    temperature=0.2
+                )
+            except Exception as e:
+                return f"عذراً، خدمة الذكاء الاصطناعي لا تستجيب حالياً. يُرجى المحاولة لاحقاً."
 
-        resp = client.chat.completions.create(
-            model=cfg.CHAT_MODEL, messages=messages, temperature=0.2
-        )
         return resp.choices[0].message.content.strip()
 
 

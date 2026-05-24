@@ -1,6 +1,10 @@
 modules = ["nodejs-20", "python-3.11"]
 run = "bash start.sh"
 
+[agent]
+expertMode = true
+stack = "BEST_EFFORT_FALLBACK"
+
 [nix]
 channel = "stable-25_05"
 

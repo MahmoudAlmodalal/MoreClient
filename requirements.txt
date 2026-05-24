@@ -24,5 +24,8 @@ openpyxl>=3.0.0
 python-telegram-bot>=21   # verified 22.7 (Telegram send done via raw Bot API/httpx)
 twilio>=9                 # verified 9.10.9
 
+# System / ops
+psutil>=5.9              # backend/routers/admin.py health endpoint (process/system stats)
+
 # Demo tooling
 qrcode[pil]>=7            # QR code for the live Telegram bot link (backend/scripts/make_qr.py)

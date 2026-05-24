@@ -87,9 +87,13 @@ export default function DashboardPage() {
     const item = selectedQuestion;
     try {
       // Teach the bot: persist + embed the approved answer into the KB.
+      // The unanswered queue is built from pending handoffs, so item.id is the
+      // handoff id (analytics sets UnansweredItem.id = Handoff.id) — pass it as
+      // provenance to restore the audit trail, matching the handoffs page.
       await apiSend("/api/learn", "POST", {
         question: item.question,
-        answer: answerInput.trim()
+        answer: answerInput.trim(),
+        source_handoff_id: item.id
       });
     } catch {
       /* best-effort: still drop it from the queue so the agent isn't blocked */

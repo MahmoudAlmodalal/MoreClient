@@ -19,3 +19,16 @@ def detect_language(text: str) -> str:
         return "ar" if detect(text) == "ar" else "en"
     except Exception:
         return "en"
+
+
+_ERROR = {
+    "en": "Sorry, something went wrong. Please try again.",
+    "ar": "عذراً، حدث خطأ ما. يرجى المحاولة مرة أخرى.",
+}
+
+
+def error_message(lang: str | None = None) -> str:
+    """Bilingual error text. Known lang -> that language; otherwise a combined EN/AR string."""
+    if lang in _ERROR:
+        return _ERROR[lang]
+    return f'{_ERROR["en"]} {_ERROR["ar"]}'

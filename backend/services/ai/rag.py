@@ -39,6 +39,39 @@ def _threshold(setting) -> float:
     return getattr(setting, "confidence_threshold", None) or cfg.CONFIDENCE_THRESHOLD
 
 
+def _call_provider(provider: str, messages: list[dict]) -> str:
+    """Run a chat completion against one OpenAI-compatible provider. Raises on failure."""
+    from openai import OpenAI
+
+    if provider == "gemini":
+        client = OpenAI(
+            api_key=cfg.GEMINI_API_KEY, base_url=cfg.GEMINI_BASE_URL, timeout=20.0
+        )
+        resp = client.chat.completions.create(
+            model=cfg.GEMINI_CHAT_MODEL, messages=messages, temperature=0.2
+        )
+    elif provider == "deepseek":
+        client = OpenAI(
+            api_key=cfg.NVIDIA_API_KEY, base_url=cfg.NVIDIA_BASE_URL, timeout=60.0
+        )
+        resp = client.chat.completions.create(
+            model=cfg.DEEPSEEK_MODEL,
+            messages=messages,
+            temperature=0.6,
+            top_p=0.95,
+            max_tokens=4096,
+            extra_body={"chat_template_kwargs": {"thinking": False}},
+            stream=False,
+        )
+    else:  # openai
+        client = OpenAI(api_key=cfg.OPENAI_API_KEY, timeout=15.0)
+        resp = client.chat.completions.create(
+            model=cfg.CHAT_MODEL, messages=messages, temperature=0.2
+        )
+
+    return resp.choices[0].message.content.strip()
+
+
 class RagStrategy(ABC):
     @abstractmethod
     def run(
@@ -85,72 +118,68 @@ class VectorRagStrategy(RagStrategy):
         )
 
     def _generate(self, query, lang, setting, context, history, user_memory=None) -> str:
-        # Offline (no key): extractive — return the top retrieved chunk verbatim.
-        if not cfg.has_openai:
+        # Offline (no provider key): extractive — return the top retrieved chunk verbatim.
+        if not cfg.has_any_llm:
             return context.split("\n\n---\n\n")[0].strip()
-
-        from openai import OpenAI
 
         tone = getattr(setting, "bot_tone", "professional")
         extra = getattr(setting, "system_prompt_extra", "") or ""
         bot_name = getattr(setting, "bot_name", "the assistant")
-        lang_name = "Arabic" if lang == "ar" else "English"
         # Long-term memory is context about the *user*, never a grounding source —
         # the bot still answers ONLY from the KB, but may use it to stay relevant.
-        memory_block = ""
-        if user_memory:
-            joined = "\n- ".join(user_memory)
-            memory_block = (
-                f"\n\nWhat you already know about this user from past chats "
-                f"(for context only, do not treat as facts to answer from):\n- {joined}"
+        if lang == "ar":
+            memory_block = ""
+            if user_memory:
+                joined = "\n- ".join(user_memory)
+                memory_block = (
+                    f"\n\nما تعرفه مسبقاً عن هذا المستخدم من محادثات سابقة "
+                    f"(للسياق فقط، لا تعتبره حقائق تُبنى عليها الإجابة):\n- {joined}"
+                )
+            system = (
+                f"أنت {bot_name}، مساعد دعم عملاء بأسلوب {tone}. "
+                f"أجب دائماً باللغة العربية. {extra}\n\n"
+                f"القواعد:\n"
+                f"- أجب فقط باستخدام محتوى قاعدة المعرفة الموضّح أدناه.\n"
+                f"- صُغ إجابتك بأسلوب طبيعي ومباشر ومحادثي.\n"
+                f"- استخرج الإجابة المحددة ولا تنسخ النصوص حرفياً مثل عناوين المستندات أو المقدمات أو أرقام الأسئلة.\n"
+                f"- لا تذكر أنك تستخدم سياقاً أو دليلاً أو مستنداً.\n"
+                f"- إذا لم يحتوِ السياق على الإجابة، قل إنك لا تعرف.\n\n"
+                f"السياق:\n{context}{memory_block}"
             )
-        system = (
-            f"You are {bot_name}, a {tone} customer-support assistant. "
-            f"Always respond in {lang_name}. {extra}\n\n"
-            f"RULES:\n"
-            f"- Answer ONLY using the knowledge base context below.\n"
-            f"- Formulate your answer in a natural, direct conversational way.\n"
-            f"- Extract the specific answer and do NOT verbatim copy-paste texts like document titles, intros, or question numbers.\n"
-            f"- Do NOT mention that you are using a context, guide, or document.\n"
-            f"- If the context does not contain the answer, say you don't know.\n\n"
-            f"Context:\n{context}{memory_block}"
-        )
+        else:
+            memory_block = ""
+            if user_memory:
+                joined = "\n- ".join(user_memory)
+                memory_block = (
+                    f"\n\nWhat you already know about this user from past chats "
+                    f"(for context only, do not treat as facts to answer from):\n- {joined}"
+                )
+            system = (
+                f"You are {bot_name}, a {tone} customer-support assistant. "
+                f"Always respond in English. {extra}\n\n"
+                f"RULES:\n"
+                f"- Answer ONLY using the knowledge base context below.\n"
+                f"- Formulate your answer in a natural, direct conversational way.\n"
+                f"- Extract the specific answer and do NOT verbatim copy-paste texts like document titles, intros, or question numbers.\n"
+                f"- Do NOT mention that you are using a context, guide, or document.\n"
+                f"- If the context does not contain the answer, say you don't know.\n\n"
+                f"Context:\n{context}{memory_block}"
+            )
         messages = [{"role": "system", "content": system}]
         for m in history[-cfg.MEMORY_WINDOW:]:
             role = "assistant" if m.get("role") in ("assistant", "agent") else "user"
             messages.append({"role": role, "content": m.get("content", "")})
         messages.append({"role": "user", "content": query})
 
-        if cfg.NVIDIA_API_KEY:
-            client = OpenAI(
-                base_url="https://integrate.api.nvidia.com/v1",
-                api_key=cfg.NVIDIA_API_KEY,
-                timeout=15.0
-            )
+        # Try each provider in order (Gemini -> DeepSeek -> OpenAI for "auto"); on any
+        # failure fall through to the next, and finally to the extractive top chunk so
+        # the user always gets a grounded answer rather than an error string.
+        for provider in cfg.chat_provider_chain():
             try:
-                resp = client.chat.completions.create(
-                    model=cfg.CHAT_MODEL,
-                    messages=messages,
-                    temperature=1.0,
-                    top_p=0.95,
-                    max_tokens=16384,
-                    extra_body={"chat_template_kwargs": {"thinking": False}},
-                    stream=False
-                )
-            except Exception as e:
-                return f"عذراً، خدمة الذكاء الاصطناعي (NVIDIA/DeepSeek) لا تستجيب حالياً. يُرجى المحاولة لاحقاً."
-        else:
-            client = OpenAI(api_key=cfg.OPENAI_API_KEY, timeout=15.0)
-            try:
-                resp = client.chat.completions.create(
-                    model=cfg.CHAT_MODEL, 
-                    messages=messages, 
-                    temperature=0.2
-                )
-            except Exception as e:
-                return f"عذراً، خدمة الذكاء الاصطناعي لا تستجيب حالياً. يُرجى المحاولة لاحقاً."
-
-        return resp.choices[0].message.content.strip()
+                return _call_provider(provider, messages)
+            except Exception:
+                continue
+        return context.split("\n\n---\n\n")[0].strip()
 
 
 def resolve_strategy(query: str, setting, kb_empty: bool) -> RagStrategy:

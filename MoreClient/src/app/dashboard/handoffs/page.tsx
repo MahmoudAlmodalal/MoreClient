@@ -45,7 +45,7 @@ export default function HandoffsPage() {
   const loadTickets = useCallback(async () => {
     try {
       setError(null);
-      const data = await apiGet<HandoffOut[]>("/api/handoffs?channel=");
+      const data = await apiGet<HandoffOut[]>("/api/handoffs");
       setTickets(data);
       // Auto-select the first ticket (keep current selection if still present).
       setSelectedTicketId(prev =>

@@ -52,11 +52,16 @@ class ChatService:
 
         self._add_message(conv, role="assistant", content=result.answer)
 
-        # Keep the short-term cache warm with this turn (user + bot reply).
-        memory.remember(mem_key, "user", message)
-        memory.remember(mem_key, "assistant", result.answer)
-        # Persist the user's question as a cross-session topic for next time.
-        long_term_memory.remember(session_id, message)
+        # Best-effort: a memory write must never propagate and roll back the
+        # already-added assistant message before the commit below.
+        try:
+            # Keep the short-term cache warm with this turn (user + bot reply).
+            memory.remember(mem_key, "user", message)
+            memory.remember(mem_key, "assistant", result.answer)
+            # Persist the user's question as a cross-session topic for next time.
+            long_term_memory.remember(session_id, message)
+        except Exception:
+            pass
 
         # Track usage for the dashboard meter.
         setting.used_messages = (setting.used_messages or 0) + 1
@@ -115,3 +120,6 @@ class ChatService:
         ).first()
         if existing is None:
             self.db.add(Handoff(conversation_id=conv.id, reason=reason, status="pending"))
+            # Commit immediately so a decided escalation is durable even if a
+            # later side-effect raises before handle()'s final commit.
+            self.db.commit()

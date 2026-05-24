@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { useSessionRole } from "@/lib/use-session-role";
 import { NotificationBell } from "@/components/notification-bell";
+import { logout } from "@/lib/api";
 import {
   LayoutDashboard,
   FileText,
@@ -65,7 +66,7 @@ export default function DashboardLayout({
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem("userRole");
+    logout();
     router.push("/welcome");
   };
 

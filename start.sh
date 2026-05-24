@@ -5,7 +5,7 @@ set -e
 # demo); in any other ENV it aborts the boot on missing critical secrets.
 python check_env.py
 
-# Frontend: the real app is the Next.js project in MoreClient/ on :5000.
+# Frontend: the real app is the Next.js project in MoreClient/ on :5001.
 ( cd MoreClient && pnpm install && pnpm dev ) &
 
 # Backend (FastAPI) on :8000, foreground. Disable --reload outside dev.

@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useSyncExternalStore, useCallback } from "react";
+import React, { useState, useSyncExternalStore, useCallback } from "react";
 import { useLanguage } from "@/components/language-provider";
+import { useAsyncOnMount, usePolling } from "@/lib/use-async-effect";
 import type { TenantOut, AdminKpis, AdminHealth } from "@/lib/api";
 import {
   fetchTenants,
@@ -34,7 +35,7 @@ const getClientReady = () => true;
 const getServerReady = () => false;
 
 export default function SuperAdminPage() {
-  const { t, isRtl, language } = useLanguage();
+  const { t, isRtl } = useLanguage();
   
   const isClient = useSyncExternalStore(
     subscribeToClientReady,
@@ -104,18 +105,13 @@ export default function SuperAdminPage() {
   }, []);
 
   // Initial load
-  useEffect(() => {
-    Promise.all([loadTenants(), loadKpis(), loadHealth()]).finally(() =>
-      setLoading(false)
-    );
+  useAsyncOnMount(async () => {
+    await Promise.all([loadTenants(), loadKpis(), loadHealth()]);
+    setLoading(false);
   }, [loadTenants, loadKpis, loadHealth]);
 
-  // Poll health every 10s when on overview tab
-  useEffect(() => {
-    if (activeTab !== "overview") return;
-    const interval = setInterval(loadHealth, 10000);
-    return () => clearInterval(interval);
-  }, [activeTab, loadHealth]);
+  // Poll health every 10s when on the overview tab
+  usePolling(loadHealth, 10000, activeTab === "overview");
 
   // Show customized Toast notifications
   const triggerToast = (msg: string) => {
@@ -253,7 +249,7 @@ export default function SuperAdminPage() {
     }
   ];
 
-  if (!isClient) {
+  if (!isClient || loading) {
     return (
       <div className="flex h-64 items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-500 border-t-transparent" />

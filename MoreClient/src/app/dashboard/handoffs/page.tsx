@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useCallback } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { apiGet, apiSend, type HandoffOut } from "@/lib/api";
+import { useAsyncOnMount } from "@/lib/use-async-effect";
 import {
   MessageSquare,
   Send,
@@ -61,9 +62,7 @@ export default function HandoffsPage() {
     }
   }, []);
 
-  useEffect(() => {
-    loadTickets();
-  }, [loadTickets]);
+  useAsyncOnMount(loadTickets, [loadTickets]);
 
   const activeTicket = tickets.find(t => t.id === selectedTicketId);
   const activeOrder = activeTicket?.metadata.order;

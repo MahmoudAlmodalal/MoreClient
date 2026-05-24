@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useLanguage } from "@/components/language-provider";
 import { apiGet, apiUpload, apiSend, type FileOut, type UploadResponse } from "@/lib/api";
+import { useAsyncOnMount } from "@/lib/use-async-effect";
 import {
   UploadCloud,
   File,
@@ -46,9 +47,7 @@ export default function FilesPage() {
     }
   };
 
-  useEffect(() => {
-    loadFiles();
-  }, []);
+  useAsyncOnMount(loadFiles, []);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();

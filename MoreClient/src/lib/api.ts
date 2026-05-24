@@ -98,6 +98,16 @@ export type AnalyticsResponse = {
 
 export type HandoffMessage = { id: string; role: string; content: string; time: string };
 
+export type HandoffOrderMetadata = {
+  id: number;
+  productName: string | null;
+  quantity: number | null;
+  deliveryAddress: string | null;
+  status: string;
+  state: string;
+  orderData: Record<string, unknown>;
+};
+
 export type HandoffOut = {
   id: number;
   user: string;
@@ -107,7 +117,11 @@ export type HandoffOut = {
   timeAgo: string;
   unreplied: boolean;
   messages: HandoffMessage[];
-  metadata: Record<string, unknown>;
+  metadata: {
+    customerRef?: string;
+    order?: HandoffOrderMetadata;
+    [key: string]: unknown;
+  };
 };
 
 export type SettingsOut = {
@@ -125,6 +139,30 @@ export type SettingsOut = {
   subscriptionPlan: string;
   usedMessages: number;
   confidenceThreshold: number;
+  purchaseFlowEnabled: boolean;
+  purchaseCollectAddress: boolean;
+  purchaseCollectQuantity: boolean;
+  purchaseAutoForwardToSupport: boolean;
+  purchaseConfirmationRequired: boolean;
+  purchaseSessionMinutes: number;
+  purchaseCurrencyLabel: string;
+  intentLlmEnabled: boolean;
+  intentConfidenceThreshold: number;
+  autoHandoffOnComplaint: boolean;
+};
+
+export type PurchaseOrderOut = {
+  id: number;
+  conversationId: number;
+  customerRef: string | null;
+  productName: string | null;
+  quantity: number | null;
+  deliveryAddress: string | null;
+  status: string;
+  state: string;
+  orderData: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
 };
 
 // ─── Admin / Tenant types ───────────────────────────────────────────────────
@@ -207,4 +245,3 @@ export function fetchAdminKpis(): Promise<AdminKpis> {
 export function fetchAdminHealth(): Promise<AdminHealth> {
   return apiGet<AdminHealth>("/api/admin/health");
 }
-

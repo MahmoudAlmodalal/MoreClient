@@ -16,7 +16,7 @@ class HandoffOut(BaseModel):
     id: int
     user: str
     channel: str
-    reason: str     # low_confidence | user_requested | keyword_triggered
+    reason: str     # low_confidence | user_requested | keyword_triggered | purchase_complete | complaint | support_request
     language: str
     timeAgo: str
     unreplied: bool

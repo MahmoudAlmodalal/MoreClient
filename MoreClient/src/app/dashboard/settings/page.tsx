@@ -17,7 +17,8 @@ import {
   Check,
   Upload,
   Trash2,
-  Link as LinkIcon
+  Link as LinkIcon,
+  ShoppingCart
 } from "lucide-react";
 
 const fallbackOrigin = "http://localhost:5000";
@@ -54,7 +55,27 @@ export default function SettingsPage() {
     botTone,
     setBotTone,
     systemPromptExtra,
-    setSystemPromptExtra
+    setSystemPromptExtra,
+    purchaseFlowEnabled,
+    setPurchaseFlowEnabled,
+    purchaseCollectAddress,
+    setPurchaseCollectAddress,
+    purchaseCollectQuantity,
+    setPurchaseCollectQuantity,
+    purchaseAutoForwardToSupport,
+    setPurchaseAutoForwardToSupport,
+    purchaseConfirmationRequired,
+    setPurchaseConfirmationRequired,
+    purchaseSessionMinutes,
+    setPurchaseSessionMinutes,
+    purchaseCurrencyLabel,
+    setPurchaseCurrencyLabel,
+    intentLlmEnabled,
+    setIntentLlmEnabled,
+    intentConfidenceThreshold,
+    setIntentConfidenceThreshold,
+    autoHandoffOnComplaint,
+    setAutoHandoffOnComplaint
   } = useLanguage();
 
   const [saving, setSaving] = useState(false);
@@ -172,6 +193,16 @@ export default function SettingsPage() {
       twilioNumber,
       isWhatsappActive,
       subscriptionPlan,
+      purchaseFlowEnabled,
+      purchaseCollectAddress,
+      purchaseCollectQuantity,
+      purchaseAutoForwardToSupport,
+      purchaseConfirmationRequired,
+      purchaseSessionMinutes,
+      purchaseCurrencyLabel,
+      intentLlmEnabled,
+      intentConfidenceThreshold,
+      autoHandoffOnComplaint,
     };
 
     try {
@@ -190,6 +221,16 @@ export default function SettingsPage() {
       setTwilioToken(saved.twilioToken ?? "");
       setTwilioNumber(saved.twilioNumber ?? "");
       setIsWhatsappActive(saved.isWhatsappActive);
+      setPurchaseFlowEnabled(saved.purchaseFlowEnabled);
+      setPurchaseCollectAddress(saved.purchaseCollectAddress);
+      setPurchaseCollectQuantity(saved.purchaseCollectQuantity);
+      setPurchaseAutoForwardToSupport(saved.purchaseAutoForwardToSupport);
+      setPurchaseConfirmationRequired(saved.purchaseConfirmationRequired);
+      setPurchaseSessionMinutes(saved.purchaseSessionMinutes);
+      setPurchaseCurrencyLabel(saved.purchaseCurrencyLabel);
+      setIntentLlmEnabled(saved.intentLlmEnabled);
+      setIntentConfidenceThreshold(saved.intentConfidenceThreshold);
+      setAutoHandoffOnComplaint(saved.autoHandoffOnComplaint);
       if (saved.subscriptionPlan === "pro" || saved.subscriptionPlan === "ultra") {
         setSubscriptionPlan(saved.subscriptionPlan);
       }
@@ -518,6 +559,83 @@ export default function SettingsPage() {
                 </div>
               </div>
             )}
+          </div>
+        </div>
+
+        {/* Purchase Flow Automation */}
+        <div className="rounded-xl border border-[#1f1f2e] bg-[#0d0d15] p-6 space-y-6">
+          <div>
+            <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5 text-emerald-400" />
+              {t("purchaseFlowTitle")}
+            </h3>
+            <p className="mt-1 text-xs text-gray-400">{t("purchaseFlowSub")}</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[
+              [t("purchaseFlowEnabled"), purchaseFlowEnabled, setPurchaseFlowEnabled],
+              [t("purchaseCollectQuantity"), purchaseCollectQuantity, setPurchaseCollectQuantity],
+              [t("purchaseCollectAddress"), purchaseCollectAddress, setPurchaseCollectAddress],
+              [t("purchaseAutoForward"), purchaseAutoForwardToSupport, setPurchaseAutoForwardToSupport],
+              [t("purchaseConfirmationRequired"), purchaseConfirmationRequired, setPurchaseConfirmationRequired],
+              [t("intentLlmEnabled"), intentLlmEnabled, setIntentLlmEnabled],
+              [t("autoHandoffOnComplaint"), autoHandoffOnComplaint, setAutoHandoffOnComplaint],
+            ].map(([label, checked, setter]) => (
+              <label
+                key={String(label)}
+                className="flex items-center justify-between gap-4 rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-3"
+              >
+                <span className="text-sm font-semibold text-gray-200">{String(label)}</span>
+                <input
+                  type="checkbox"
+                  checked={Boolean(checked)}
+                  onChange={(e) => (setter as (val: boolean) => void)(e.target.checked)}
+                  className="h-4 w-4 rounded border-[#1f1f2e] bg-[#0d0d15] text-purple-600 focus:ring-purple-500"
+                />
+              </label>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-[11px] font-bold text-gray-500 uppercase mb-2">
+                {t("purchaseSessionMinutes")}
+              </label>
+              <input
+                type="number"
+                min={5}
+                max={240}
+                value={purchaseSessionMinutes}
+                onChange={(e) => setPurchaseSessionMinutes(Number(e.target.value))}
+                className="w-full rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-gray-500 uppercase mb-2">
+                {t("purchaseCurrencyLabel")}
+              </label>
+              <input
+                type="text"
+                value={purchaseCurrencyLabel}
+                onChange={(e) => setPurchaseCurrencyLabel(e.target.value)}
+                className="w-full rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-bold text-gray-500 uppercase mb-2">
+                {t("intentConfidenceThreshold")}
+              </label>
+              <input
+                type="number"
+                min={0}
+                max={1}
+                step={0.05}
+                value={intentConfidenceThreshold}
+                onChange={(e) => setIntentConfidenceThreshold(Number(e.target.value))}
+                className="w-full rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none"
+              />
+            </div>
           </div>
         </div>
 

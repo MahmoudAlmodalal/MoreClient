@@ -13,7 +13,10 @@ import {
   User,
   ShieldAlert,
   Bot,
-  BookPlus
+  BookPlus,
+  PackageCheck,
+  Hash,
+  MapPin
 } from "lucide-react";
 
 // The backend HandoffOut shape (from @/lib/api) is the source of truth for a
@@ -63,6 +66,15 @@ export default function HandoffsPage() {
   }, [loadTickets]);
 
   const activeTicket = tickets.find(t => t.id === selectedTicketId);
+  const activeOrder = activeTicket?.metadata.order;
+  const reasonText = (reason: string) => {
+    if (reason === "low_confidence") return t("lowConfidence");
+    if (reason === "keyword_triggered") return t("keywordTriggered");
+    if (reason === "purchase_complete") return t("purchaseComplete");
+    if (reason === "complaint") return t("complaintReason");
+    if (reason === "support_request") return t("supportRequestReason");
+    return t("userRequested");
+  };
 
   // Filters
   const filteredTickets = tickets.filter(ticket => {
@@ -228,7 +240,7 @@ export default function HandoffsPage() {
                         ? "bg-red-500/10 text-red-400 ring-1 ring-inset ring-red-500/20"
                         : "bg-purple-500/10 text-purple-400 ring-1 ring-inset ring-purple-500/20"
                     }`}>
-                      {ticket.reason === "low_confidence" ? t("lowConfidence") : ticket.reason === "keyword_triggered" ? t("keywordTriggered") : t("userRequested")}
+                      {reasonText(ticket.reason)}
                     </span>
 
                     {ticket.unreplied && (
@@ -251,7 +263,7 @@ export default function HandoffsPage() {
                   </h3>
                   <p className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1.5">
                     <ShieldAlert className="h-3.5 w-3.5 text-purple-400" />
-                    {t("reason")}: {activeTicket.reason === "low_confidence" ? t("lowConfidence") : t("userRequested")}
+                    {t("reason")}: {reasonText(activeTicket.reason)}
                   </p>
                 </div>
 
@@ -278,6 +290,45 @@ export default function HandoffsPage() {
                   </button>
                 </div>
               </div>
+
+              {activeOrder && (
+                <div className="border-b border-[#1f1f2e] bg-emerald-500/5 px-6 py-4">
+                  <h4 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-emerald-300">
+                    <PackageCheck className="h-4 w-4" />
+                    {t("purchaseDetails")}
+                  </h4>
+                  <div className="grid grid-cols-1 gap-3 text-xs text-gray-300 md:grid-cols-2">
+                    <div className="flex items-start gap-2">
+                      <PackageCheck className="mt-0.5 h-4 w-4 text-emerald-400" />
+                      <span>
+                        <span className="font-bold text-gray-500">{t("productName")}: </span>
+                        {activeOrder.productName || "-"}
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Hash className="mt-0.5 h-4 w-4 text-emerald-400" />
+                      <span>
+                        <span className="font-bold text-gray-500">{t("quantity")}: </span>
+                        {activeOrder.quantity ?? "-"}
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2 md:col-span-2">
+                      <MapPin className="mt-0.5 h-4 w-4 text-emerald-400" />
+                      <span>
+                        <span className="font-bold text-gray-500">{t("deliveryAddress")}: </span>
+                        {activeOrder.deliveryAddress || "-"}
+                      </span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <ShieldAlert className="mt-0.5 h-4 w-4 text-emerald-400" />
+                      <span>
+                        <span className="font-bold text-gray-500">{t("orderStatus")}: </span>
+                        {activeOrder.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Chat Messages Log */}
               <div className="flex-1 overflow-y-auto p-6 space-y-4 max-h-[350px]">

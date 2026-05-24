@@ -26,3 +26,4 @@ twilio>=9                 # verified 9.10.9
 
 # Demo tooling
 qrcode[pil]>=7            # QR code for the live Telegram bot link (backend/scripts/make_qr.py)
+pytest>=8

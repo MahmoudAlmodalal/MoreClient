@@ -11,10 +11,10 @@ export function LandingFooter() {
     {
       heading: t("footerProduct"),
       links: [
-        { label: t("navFeatures"), href: "#features" },
-        { label: t("navHowItWorks"), href: "#how" },
-        { label: t("navPricing"), href: "#pricing" },
-        { label: t("navFaq"), href: "#faq" },
+        { label: t("navFeatures"), href: "/#features" },
+        { label: t("navHowItWorks"), href: "/#how" },
+        { label: t("navPricing"), href: "/pricing" },
+        { label: t("navFaq"), href: "/#faq" },
       ],
     },
     {

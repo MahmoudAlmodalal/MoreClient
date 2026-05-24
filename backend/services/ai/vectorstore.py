@@ -61,6 +61,11 @@ def add_document_chunks(
     get_collection().add(ids=ids, documents=chunks, embeddings=embeddings, metadatas=metadatas)
 
 
+def has_document(document_id: int) -> bool:
+    result = get_collection().get(where={"document_id": document_id}, limit=1)
+    return bool(result.get("ids"))
+
+
 def add_learned(
     learned_id: int,
     question: str,

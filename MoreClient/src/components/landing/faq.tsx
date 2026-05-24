@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { Section, SectionHeading } from "@/components/ui/section";
 
@@ -24,7 +25,7 @@ export function Faq() {
           return (
             <div
               key={i}
-              className="overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--card-bg)]"
+              className="overflow-hidden rounded-lg border border-[var(--border)] bg-[var(--card-bg)]"
             >
               <button
                 onClick={() => setOpenIdx(isOpen ? null : i)}
@@ -32,16 +33,11 @@ export function Faq() {
                 aria-expanded={isOpen}
               >
                 <span className="font-medium text-white">{item.q}</span>
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
+                <ChevronDown
+                  size={20}
                   className={`shrink-0 text-brand-400 transition-transform ${isOpen ? "rotate-180" : ""}`}
                   aria-hidden="true"
-                >
-                  <path d="m6 9 6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
+                />
               </button>
               {isOpen ? (
                 <p className="px-5 pb-5 text-sm leading-relaxed text-gray-400">{item.a}</p>

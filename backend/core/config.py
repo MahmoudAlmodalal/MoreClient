@@ -55,6 +55,13 @@ class Settings:
     # is the practical fallback default. Override with DEEPSEEK_MODEL=deepseek-ai/deepseek-v4-pro.
     DEEPSEEK_MODEL: str = os.getenv("DEEPSEEK_MODEL", "deepseek-ai/deepseek-v4-flash")
 
+    # Mistral's API exposes OpenAI-compatible chat completions. Its default text
+    # embedding model is 1024-dim, so embeddings are used only when EMBED_DIM
+    # matches the returned vector size.
+    MISTRAL_BASE_URL: str = os.getenv("MISTRAL_BASE_URL", "https://api.mistral.ai/v1")
+    MISTRAL_CHAT_MODEL: str = os.getenv("MISTRAL_CHAT_MODEL", "mistral-small-latest")
+    MISTRAL_EMBED_MODEL: str = os.getenv("MISTRAL_EMBED_MODEL", "mistral-embed")
+
     # --- RAG behaviour ---
     # Default escalate cutoff; can be overridden per-tenant via Setting.confidence_threshold.
     CONFIDENCE_THRESHOLD: float = float(os.getenv("CONFIDENCE_THRESHOLD", "0.45"))
@@ -70,7 +77,12 @@ class Settings:
     @property
     def has_any_llm(self) -> bool:
         """Any chat-capable provider key is present (else we use extractive fallback)."""
-        return bool(self.GEMINI_API_KEY or self.NVIDIA_API_KEY or self.OPENAI_API_KEY)
+        return bool(
+            self.GEMINI_API_KEY
+            or self.MISTRAL_API_KEY
+            or self.NVIDIA_API_KEY
+            or self.OPENAI_API_KEY
+        )
 
     # Back-compat alias: older callers (e.g. admin health) read `has_openai`.
     @property
@@ -87,20 +99,38 @@ class Settings:
         """
         if self.GEMINI_API_KEY:
             return "gemini"
+        if self.MISTRAL_API_KEY:
+            return "mistral"
         if self.OPENAI_API_KEY:
             return "openai"
         return "hash"
 
+    def embedding_provider_chain(self) -> list[str]:
+        """Providers to try for embeddings, ending with hash as a local fallback."""
+        requested = os.getenv("EMBED_PROVIDER")
+        if requested in ("gemini", "mistral", "openai", "hash"):
+            return [requested]
+        chain: list[str] = []
+        if self.GEMINI_API_KEY:
+            chain.append("gemini")
+        if self.MISTRAL_API_KEY:
+            chain.append("mistral")
+        if self.OPENAI_API_KEY:
+            chain.append("openai")
+        chain.append("hash")
+        return chain
+
     def chat_provider_chain(self) -> list[str]:
         """Ordered list of chat providers to try. `auto` falls back across all keys set."""
-        if self.LLM_PROVIDER in ("gemini", "deepseek", "openai"):
+        if self.LLM_PROVIDER in ("gemini", "mistral", "deepseek", "openai"):
             return [self.LLM_PROVIDER]
         available = {
             "gemini": bool(self.GEMINI_API_KEY),
+            "mistral": bool(self.MISTRAL_API_KEY),
             "deepseek": bool(self.NVIDIA_API_KEY),
             "openai": bool(self.OPENAI_API_KEY),
         }
-        return [p for p in ("gemini", "deepseek", "openai") if available[p]]
+        return [p for p in ("gemini", "mistral", "deepseek", "openai") if available[p]]
 
 
 settings = Settings()

@@ -10,6 +10,7 @@ import {
   FileText,
   MessageSquareShare,
   Settings as SettingsIcon,
+  CreditCard,
   LogOut,
   Menu,
   X,
@@ -41,6 +42,7 @@ export default function DashboardLayout({
     { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
     { name: t("files"), href: "/dashboard/files", icon: FileText },
     { name: t("handoffs"), href: "/dashboard/handoffs", icon: MessageSquareShare },
+    { name: t("billingNav"), href: "/dashboard/upgrade", icon: CreditCard },
     { name: t("settings"), href: "/dashboard/settings", icon: SettingsIcon },
     ...(isAdmin ? [{ name: t("superAdminTitle"), href: "/admin", icon: ShieldAlert }] : []),
   ];

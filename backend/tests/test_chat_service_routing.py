@@ -1,4 +1,4 @@
-from backend.models.tables import Handoff, PurchaseOrder
+from backend.models.tables import Document, Handoff, PurchaseOrder
 from backend.services.ai.vectorstore import Hit
 from backend.services.chat_service import ChatService
 
@@ -122,3 +122,66 @@ def test_chat_service_uses_current_tenant_knowledge(db_session, monkeypatch):
     assert seen["tenant_key"] == "telnet"
     assert response.escalate is False
     assert "إنشاء حساب" in response.reply
+
+
+def test_chat_service_reindexes_missing_document_vectors(db_session, monkeypatch):
+    db_session.add(
+        Document(
+            title="logic.pdf",
+            tenant_key="telnet",
+            content=(
+                "Problem Set #7\n"
+                "State diagram: a state diagram represents states and transitions "
+                "for the sequential circuit."
+            ),
+            source="upload",
+            file_size=120,
+            file_type="pdf",
+            chunk_count=1,
+            status="completed",
+        )
+    )
+    db_session.commit()
+
+    indexed: list[str] = []
+    monkeypatch.setattr("backend.services.ai.knowledge_sync.vectorstore.has_document", lambda document_id: False)
+    monkeypatch.setattr(
+        "backend.services.ai.knowledge_sync.embeddings.embed_texts",
+        lambda texts: [[1.0] for _ in texts],
+    )
+
+    def fake_add_document_chunks(document_id, chunks, embeddings, tenant_key=None):
+        indexed.extend(chunks)
+
+    monkeypatch.setattr(
+        "backend.services.ai.knowledge_sync.vectorstore.add_document_chunks",
+        fake_add_document_chunks,
+    )
+    monkeypatch.setattr(
+        "backend.services.chat_service.vectorstore.is_empty",
+        lambda tenant_key=None: not indexed,
+    )
+    monkeypatch.setattr("backend.services.ai.rag.embeddings.embed_query", lambda text: [1.0])
+    monkeypatch.setattr(
+        "backend.services.ai.rag.vectorstore.query",
+        lambda embedding, k=4, tenant_key=None: [
+            Hit(text=indexed[0], distance=0.1, metadata={"tenant_key": tenant_key})
+        ]
+        if indexed
+        else [],
+    )
+    monkeypatch.setattr(
+        "backend.services.ai.rag._call_provider",
+        lambda provider, messages: "A state diagram represents states and transitions for the sequential circuit.",
+    )
+
+    response = ChatService(db_session).handle(
+        session_id="reindex-user",
+        message="What is state digram?",
+        channel="web",
+        tenant_key="telnet",
+    )
+
+    assert indexed
+    assert response.escalate is False
+    assert "state diagram" in response.reply.lower()

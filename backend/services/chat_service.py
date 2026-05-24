@@ -17,7 +17,7 @@ from backend.models.tables import (
     get_or_create_settings,
 )
 from backend.schemas.chat import ChatResponse
-from backend.services.ai import rag, vectorstore
+from backend.services.ai import knowledge_sync, rag, vectorstore
 from backend.services.intent_classifier import CustomerIntent, classify_intent
 from backend.services.purchase_flow import advance_purchase_flow, get_active_purchase_order
 
@@ -150,6 +150,12 @@ class ChatService:
 
         # Long-term memory: recall what we know about this user across sessions.
         user_memory = long_term_memory.recall(session_id, message)
+
+        try:
+            knowledge_sync.ensure_tenant_documents_indexed(self.db, tenant)
+        except Exception:
+            # Retrieval will fall back normally if vector repair cannot run.
+            pass
 
         strategy = rag.resolve_strategy(
             message,

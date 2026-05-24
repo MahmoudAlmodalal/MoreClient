@@ -1,25 +1,30 @@
 "use client";
 
 import { useState } from "react";
+import { Globe2, LogIn, Menu, X } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { Logo } from "@/components/ui/logo";
 import { Button } from "@/components/ui/button";
 
 export function LandingNav() {
   const { t, language, setLanguage } = useLanguage();
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
+  const sectionHref = (hash: string) => (pathname === "/" ? hash : `/${hash}`);
+
   const links = [
-    { href: "#features", label: t("navFeatures") },
-    { href: "#how", label: t("navHowItWorks") },
-    { href: "#pricing", label: t("navPricing") },
-    { href: "#faq", label: t("navFaq") },
+    { href: sectionHref("#features"), label: t("navFeatures") },
+    { href: sectionHref("#how"), label: t("navHowItWorks") },
+    { href: "/pricing", label: t("navPricing") },
+    { href: sectionHref("#faq"), label: t("navFaq") },
   ];
 
   return (
     <header className="sticky top-0 z-50 border-b border-white/5 bg-[#050508]/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center justify-between px-5 sm:px-8">
-        <a href="#top" aria-label="clientMORE">
+        <a href={pathname === "/" ? "#top" : "/#top"} aria-label="clientMORE">
           <Logo variant="dark" size="sm" />
         </a>
 
@@ -38,27 +43,28 @@ export function LandingNav() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setLanguage(language === "ar" ? "en" : "ar")}
-            className="rounded-lg border border-white/10 px-2.5 py-1.5 text-xs font-medium text-gray-300 transition-colors hover:bg-white/5"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 px-2.5 py-1.5 text-xs font-medium text-gray-300 transition-colors hover:bg-white/5"
+            aria-label="Switch language"
           >
+            <Globe2 size={14} aria-hidden="true" />
             {language === "ar" ? "EN" : "ع"}
           </button>
           <a
             href="/welcome"
-            className="hidden text-sm text-gray-300 transition-colors hover:text-white sm:block"
+            className="hidden items-center gap-1.5 text-sm text-gray-300 transition-colors hover:text-white sm:flex"
           >
+            <LogIn size={15} aria-hidden="true" />
             {t("navLogin")}
           </a>
           <Button href="/welcome" size="sm" className="hidden sm:inline-flex">
             {t("navGetStarted")}
           </Button>
           <button
-            className="md:hidden text-gray-300"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-white/10 text-gray-300 transition-colors hover:bg-white/5 md:hidden"
             aria-label="menu"
             onClick={() => setOpen((v) => !v)}
           >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-            </svg>
+            {open ? <X size={19} aria-hidden="true" /> : <Menu size={19} aria-hidden="true" />}
           </button>
         </div>
       </div>

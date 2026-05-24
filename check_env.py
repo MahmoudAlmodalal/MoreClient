@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 load_dotenv()  # read keys from a local .env in dev (no-op if absent)
 
 # At least one chat-capable LLM key is required (any of these satisfies it).
-LLM_KEYS = ["GEMINI_API_KEY", "NVIDIA_API_KEY", "OPENAI_API_KEY"]
+LLM_KEYS = ["GEMINI_API_KEY", "MISTRAL_API_KEY", "NVIDIA_API_KEY", "OPENAI_API_KEY"]
 REQUIRED = ["APP_SECRET"]
 OPTIONAL = ["ANTHROPIC_API_KEY", "DATABASE_URL"]
 

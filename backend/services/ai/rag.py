@@ -8,6 +8,7 @@ asks for a human.
 
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from difflib import SequenceMatcher
 import re
 import unicodedata
 
@@ -47,7 +48,13 @@ def _looks_unanswered(answer: str, lang: str) -> bool:
         return True
     if lang == "ar":
         return bool(re.search(r"(لا\s+أعرف|لا\s+اعرف|لا\s+أملك|لا\s+تتوفر|غير\s+متوفر)", normalized))
-    return "i don't know" in normalized or "i do not know" in normalized or "not enough information" in normalized
+    return (
+        "i don't know" in normalized
+        or "i do not know" in normalized
+        or "not enough information" in normalized
+        or "don't have information" in normalized
+        or "do not have information" in normalized
+    )
 
 
 def _looks_corrupt(answer: str) -> bool:
@@ -92,9 +99,22 @@ def _has_lexical_anchor(query: str, context: str) -> bool:
     if not query_tokens:
         return True
     context_tokens = _tokens(context)
-    overlap = query_tokens & context_tokens
+    overlap = {token for token in query_tokens if _token_in_context(token, context_tokens)}
     required = 1 if len(query_tokens) <= 1 else 2
     return len(overlap) >= min(required, len(query_tokens))
+
+
+def _token_in_context(token: str, context_tokens: set[str]) -> bool:
+    if token in context_tokens:
+        return True
+    if len(token) < 5:
+        return False
+    for candidate in context_tokens:
+        if len(candidate) < 5 or token[0] != candidate[0]:
+            continue
+        if SequenceMatcher(None, token, candidate).ratio() >= 0.84:
+            return True
+    return False
 
 
 def _call_provider(provider: str, messages: list[dict]) -> str:
@@ -107,6 +127,13 @@ def _call_provider(provider: str, messages: list[dict]) -> str:
         )
         resp = client.chat.completions.create(
             model=cfg.GEMINI_CHAT_MODEL, messages=messages, temperature=0.2
+        )
+    elif provider == "mistral":
+        client = OpenAI(
+            api_key=cfg.MISTRAL_API_KEY, base_url=cfg.MISTRAL_BASE_URL, timeout=30.0
+        )
+        resp = client.chat.completions.create(
+            model=cfg.MISTRAL_CHAT_MODEL, messages=messages, temperature=0.2
         )
     elif provider == "deepseek":
         client = OpenAI(
@@ -166,6 +193,7 @@ class VectorRagStrategy(RagStrategy):
             k=cfg.RETRIEVAL_K,
             tenant_key=self.tenant_key,
         )
+        hits = [hit for hit in hits if not _looks_corrupt(hit.text)]
         if not hits:
             return FallbackStrategy("low_confidence", 0.0).run(query, lang, setting, history)
 

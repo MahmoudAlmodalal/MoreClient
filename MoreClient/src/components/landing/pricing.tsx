@@ -1,54 +1,49 @@
 "use client";
 
+import { Check } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { Section, SectionHeading } from "@/components/ui/section";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-
-function Check() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="mt-0.5 shrink-0 text-brand-400">
-      <path d="m5 13 4 4L19 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 export function Pricing() {
   const { t } = useLanguage();
 
   const plans = [
     {
-      name: t("planStarterName"),
-      price: t("planStarterPrice"),
-      desc: t("planStarterDesc"),
+      name: t("planFreeName"),
+      price: t("planFreePrice"),
+      desc: t("planFreeDesc"),
       featured: false,
-      cta: t("pricingChoosePlan"),
-      features: [t("pricingFeatInstant"), t("pricingFeatChannels"), t("pricingFeatAnalytics")],
+      cta: t("pricingStartFree"),
+      features: [t("planFreeLimit"), t("featBilingualRag"), t("featOmnichannel")],
     },
     {
-      name: t("planGrowthName"),
-      price: t("planGrowthPrice"),
-      desc: t("planGrowthDesc"),
+      name: t("planPro"),
+      price: t("proPrice"),
+      desc: t("planProDesc"),
       featured: true,
-      cta: t("pricingChoosePlan"),
+      cta: t("pricingGetPro"),
       features: [
-        t("pricingFeatInstant"),
-        t("pricingFeatChannels"),
-        t("pricingFeatAnalytics"),
-        t("pricingFeatHandoff"),
-        t("pricingFeatPriority"),
+        t("proLimit"),
+        t("featBilingualRag"),
+        t("featChromaVector"),
+        t("featOmnichannel"),
+        t("featHumanHandoff"),
+        t("featAnalyticsDash"),
       ],
     },
     {
-      name: t("planEnterpriseName"),
-      price: t("planEnterprisePrice"),
-      desc: t("planEnterpriseDesc"),
+      name: t("planUltra"),
+      price: t("ultraPrice"),
+      desc: t("planUltraDesc"),
       featured: false,
-      cta: t("pricingContactSales"),
+      cta: t("pricingGetUltra"),
       features: [
-        t("pricingFeatHandoff"),
-        t("pricingFeatPriority"),
-        t("pricingFeatSso"),
+        t("ultraLimit"),
+        t("featAllProBenefits"),
+        t("featSlaGuarantee"),
+        t("featPriorityHandoff"),
       ],
     },
   ];
@@ -64,7 +59,7 @@ export function Pricing() {
         {plans.map((p) => (
           <div
             key={p.name}
-            className={`relative rounded-2xl border p-7 ${
+            className={`relative rounded-xl border p-7 ${
               p.featured
                 ? "border-brand-500/40 bg-[#0d0d15] shadow-[var(--shadow-brand)] lg:-mt-4 lg:mb-4"
                 : "border-[var(--border)] bg-[var(--card-bg)]"
@@ -79,14 +74,14 @@ export function Pricing() {
             <p className="mt-1 text-sm text-gray-400">{p.desc}</p>
             <div className="mt-5 flex items-baseline gap-1">
               <span className="text-4xl font-bold text-white">{p.price}</span>
-              {p.price.startsWith("$") ? (
+              {p.price.startsWith("$") && !p.price.includes("/") ? (
                 <span className="text-sm text-gray-500">{t("pricingPerMonth")}</span>
               ) : null}
             </div>
             <ul className="mt-6 space-y-3">
               {p.features.map((f) => (
                 <li key={f} className="flex gap-2 text-sm text-gray-300">
-                  <Check />
+                  <Check size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-brand-400" />
                   {f}
                 </li>
               ))}

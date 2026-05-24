@@ -24,6 +24,11 @@ import {
 // (e.g. "whatsapp" | "telegram" | "web"), and `metadata` is a free-form dict.
 type HandoffTicket = HandoffOut;
 
+type DeliveryMetadata = {
+  ok?: boolean;
+  detail?: string;
+};
+
 // Channel filter chips use display-cased names; map a raw backend channel to
 // one of those buckets so filtering and the channel icon keep working.
 function channelKey(channel: string): "Telegram" | "WhatsApp" | "Widget" {
@@ -106,6 +111,12 @@ export default function HandoffsPage() {
         { content }
       );
       setTickets(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+      const delivery = updated.metadata.delivery as DeliveryMetadata | undefined;
+      if (delivery?.ok === false) {
+        setError(`Reply saved, but delivery failed: ${delivery.detail || "check channel settings"}`);
+      } else {
+        setError(null);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send reply");
       // Restore the unsent text so the agent can retry.

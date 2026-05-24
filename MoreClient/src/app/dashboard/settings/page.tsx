@@ -22,6 +22,7 @@ import {
 } from "lucide-react";
 
 const fallbackOrigin = "http://localhost:5000";
+const defaultTenantKey = process.env.NEXT_PUBLIC_DEFAULT_TENANT_KEY ?? "telnet";
 const subscribeOrigin = () => () => {};
 const getClientOrigin = () =>
   typeof window === "undefined" ? fallbackOrigin : window.location.origin;
@@ -90,6 +91,8 @@ export default function SettingsPage() {
   );
   const [copiedScript, setCopiedScript] = useState(false);
   const [copiedIframe, setCopiedIframe] = useState(false);
+  const widgetScriptSnippet = `<script src="${currentOrigin}/embed.js" data-tenant-key="${defaultTenantKey}"></script>`;
+  const widgetIframeSnippet = `<iframe src="${currentOrigin}/widget?tenantKey=${encodeURIComponent(defaultTenantKey)}" width="380" height="600" style="border:none; border-radius:12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></iframe>`;
 
   const copyToClipboard = (text: string, type: "script" | "iframe") => {
     navigator.clipboard.writeText(text);
@@ -658,7 +661,7 @@ export default function SettingsPage() {
               </span>
               <button
                 type="button"
-                onClick={() => copyToClipboard(`<script src="${currentOrigin}/embed.js"></script>`, "script")}
+                onClick={() => copyToClipboard(widgetScriptSnippet, "script")}
                 className="flex items-center gap-1.5 rounded-lg border border-[#1f1f2e] bg-[#07070b] px-3 py-1.5 text-xs text-purple-400 hover:text-white transition-colors"
               >
                 {copiedScript ? (
@@ -676,7 +679,7 @@ export default function SettingsPage() {
             </div>
             <div className="relative">
               <pre className="overflow-x-auto rounded-xl border border-[#1f1f2e] bg-[#07070b] p-4 text-xs font-mono text-purple-300">
-                <code>{`<script src="${currentOrigin}/embed.js"></script>`}</code>
+                <code>{widgetScriptSnippet}</code>
               </pre>
             </div>
             <p className="text-[11px] text-gray-500 leading-relaxed">
@@ -692,7 +695,7 @@ export default function SettingsPage() {
               </span>
               <button
                 type="button"
-                onClick={() => copyToClipboard(`<iframe src="${currentOrigin}/widget" width="380" height="600" style="border:none; border-radius:12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></iframe>`, "iframe")}
+                onClick={() => copyToClipboard(widgetIframeSnippet, "iframe")}
                 className="flex items-center gap-1.5 rounded-lg border border-[#1f1f2e] bg-[#07070b] px-3 py-1.5 text-xs text-purple-400 hover:text-white transition-colors"
               >
                 {copiedIframe ? (
@@ -710,7 +713,7 @@ export default function SettingsPage() {
             </div>
             <div className="relative">
               <pre className="overflow-x-auto rounded-xl border border-[#1f1f2e] bg-[#07070b] p-4 text-xs font-mono text-purple-300">
-                <code>{`<iframe src="${currentOrigin}/widget" width="380" height="600" style="border: none;"></iframe>`}</code>
+                <code>{widgetIframeSnippet}</code>
               </pre>
             </div>
           </div>

@@ -69,6 +69,13 @@ export type ChatResponse = {
   language: "en" | "ar";
 };
 
+export type ChatMessageOut = {
+  id: number;
+  role: "user" | "assistant" | "agent";
+  content: string;
+  time: string;
+};
+
 export type UploadResponse = { file: string; chunks: number; status: string };
 
 export type FileOut = {
@@ -198,6 +205,7 @@ export type PurchaseOrderOut = {
 
 export type TenantOut = {
   id: number;
+  tenantKey: string;
   name: string;
   email: string;
   plan: "pro" | "ultra" | "custom";
@@ -212,6 +220,7 @@ export type TenantCreate = {
   email: string;
   plan: string;
   limitMessages: number;
+  tenantKey?: string;
 };
 
 export type TenantUpdate = {

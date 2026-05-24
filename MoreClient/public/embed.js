@@ -88,11 +88,32 @@
       console.warn("Naseh Widget: Failed to parse script origin", e);
     }
   }
+  let tenantKey = "telnet";
+  if (scriptTag) {
+    const explicitTenant =
+      scriptTag.getAttribute("data-tenant-key") ||
+      scriptTag.getAttribute("data-tenant") ||
+      scriptTag.getAttribute("data-company");
+    if (explicitTenant) {
+      tenantKey = explicitTenant;
+    } else if (scriptTag.src) {
+      try {
+        const scriptUrl = new URL(scriptTag.src);
+        tenantKey =
+          scriptUrl.searchParams.get("tenantKey") ||
+          scriptUrl.searchParams.get("tenant_key") ||
+          scriptUrl.searchParams.get("company") ||
+          tenantKey;
+      } catch (e) {
+        console.warn("Naseh Widget: Failed to parse tenant key", e);
+      }
+    }
+  }
 
   // 4. Create the Iframe Chat Window
   const iframe = document.createElement("iframe");
   iframe.id = "clientmore-chat-widget-iframe";
-  iframe.src = origin + "/widget?company=default";
+  iframe.src = origin + "/widget?tenantKey=" + encodeURIComponent(tenantKey);
   
   // Style iframe with hidden state by default (scaled down, zero opacity)
   iframe.style.cssText = `

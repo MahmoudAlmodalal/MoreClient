@@ -179,6 +179,7 @@ class Tenant(Base):
     __tablename__ = "tenants"
 
     id = Column(Integer, primary_key=True, index=True)
+    tenant_key = Column(String(255), nullable=False, unique=True, index=True)
     name = Column(String(255), nullable=False)
     email = Column(String(255), nullable=False, unique=True)
     plan = Column(String(20), default="pro", nullable=False)         # pro | ultra | custom
@@ -264,3 +265,22 @@ def upgrade_existing_schema(engine) -> None:
                     f"DEFAULT {sql_default(default)} NOT NULL"
                 )
                 conn.execute(text(ddl))
+
+        if "tenants" in tables:
+            tenant_columns = {col["name"] for col in inspector.get_columns("tenants")}
+            if "tenant_key" not in tenant_columns:
+                conn.execute(text("ALTER TABLE tenants ADD COLUMN tenant_key VARCHAR(255)"))
+                tenant_rows = conn.execute(text("SELECT id FROM tenants ORDER BY id ASC")).mappings().all()
+                for row in tenant_rows:
+                    conn.execute(
+                        text("UPDATE tenants SET tenant_key = :tenant_key WHERE id = :id"),
+                        {"tenant_key": f"tenant-{row['id']}", "id": row["id"]},
+                    )
+            try:
+                conn.execute(
+                    text("CREATE UNIQUE INDEX IF NOT EXISTS ix_tenants_tenant_key ON tenants (tenant_key)")
+                )
+            except Exception:
+                # Some development databases may already have duplicate manual keys.
+                # Keep the app bootable; create/update paths still enforce uniqueness.
+                pass

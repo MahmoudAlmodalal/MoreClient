@@ -14,6 +14,7 @@ from backend.core.language import detect_language
 from backend.models.database import get_db
 from backend.models.tables import Conversation, Handoff, Message, PurchaseOrder
 from backend.schemas.handoffs import HandoffMessageOut, HandoffOut, ReplyRequest
+from backend.services.handoff_delivery import DeliveryResult, deliver_agent_reply
 from backend.services.realtime import broadcast_dashboard_snapshot
 
 router = APIRouter()
@@ -39,7 +40,11 @@ def _time_ago(dt: datetime | None) -> str:
     return f"{days}d ago"
 
 
-def _build_handoff_out(handoff: Handoff, db: Session) -> HandoffOut:
+def _build_handoff_out(
+    handoff: Handoff,
+    db: Session,
+    delivery_result: DeliveryResult | None = None,
+) -> HandoffOut:
     """Assemble the frontend-facing HandoffOut for a single handoff."""
     conv = handoff.conversation or db.get(Conversation, handoff.conversation_id)
 
@@ -71,6 +76,8 @@ def _build_handoff_out(handoff: Handoff, db: Session) -> HandoffOut:
     metadata = {"tenantKey": conv.tenant_key} if conv else {}
     if customer_ref:
         metadata["customerRef"] = customer_ref
+    if delivery_result is not None:
+        metadata["delivery"] = delivery_result.to_metadata()
 
     order = (
         db.query(PurchaseOrder)
@@ -118,22 +125,28 @@ def list_handoffs(channel: str | None = None, db: Session = Depends(get_db)):
 
 @router.post("/api/handoffs/{handoff_id}/reply", response_model=HandoffOut)
 def reply_handoff(handoff_id: int, body: ReplyRequest, db: Session = Depends(get_db)):
-    """Append an agent reply to the handoff's conversation."""
+    """Append an agent reply and deliver it to the original channel."""
     handoff = db.get(Handoff, handoff_id)
     if handoff is None:
         raise HTTPException(status_code=404, detail="Handoff not found")
 
+    content = body.content.strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="Reply cannot be blank")
+
+    conv = handoff.conversation or db.get(Conversation, handoff.conversation_id)
     message = Message(
         conversation_id=handoff.conversation_id,
         role="agent",
-        content=body.content,
+        content=content,
     )
     db.add(message)
     db.commit()
 
     db.refresh(handoff)
+    delivery_result = deliver_agent_reply(conv, content, db)
     broadcast_dashboard_snapshot("handoff.reply")
-    return _build_handoff_out(handoff, db)
+    return _build_handoff_out(handoff, db, delivery_result)
 
 
 @router.post("/api/handoffs/{handoff_id}/resolve")

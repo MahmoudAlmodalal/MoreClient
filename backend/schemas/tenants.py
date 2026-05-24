@@ -20,6 +20,7 @@ class _CamelModel(BaseModel):
 
 class TenantOut(_CamelModel):
     id: int
+    tenant_key: str
     name: str
     email: str
     plan: str
@@ -34,6 +35,7 @@ class TenantCreate(_CamelModel):
     email: str
     plan: str = "pro"
     limit_messages: int = 500
+    tenant_key: str | None = None
 
 
 class TenantUpdate(_CamelModel):

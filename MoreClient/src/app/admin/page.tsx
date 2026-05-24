@@ -27,11 +27,25 @@ import {
   Cpu,
   Edit2,
   Trash2,
+  Globe,
+  Copy,
+  Check,
 } from "lucide-react";
 
+const fallbackOrigin = "http://localhost:5000";
 const subscribeToClientReady = () => () => {};
 const getClientReady = () => true;
 const getServerReady = () => false;
+const subscribeOrigin = () => () => {};
+const getClientOrigin = () =>
+  typeof window === "undefined" ? fallbackOrigin : window.location.origin;
+const getServerOrigin = () => fallbackOrigin;
+
+const buildTenantScriptSnippet = (origin: string, tenantKey: string) =>
+  `<script src="${origin}/embed.js" data-tenant-key="${tenantKey}"></script>`;
+
+const buildTenantIframeSnippet = (origin: string, tenantKey: string) =>
+  `<iframe src="${origin}/widget?tenantKey=${encodeURIComponent(tenantKey)}" width="380" height="600" style="border:none; border-radius:12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></iframe>`;
 
 export default function SuperAdminPage() {
   const { t, isRtl } = useLanguage();
@@ -40,6 +54,11 @@ export default function SuperAdminPage() {
     subscribeToClientReady,
     getClientReady,
     getServerReady
+  );
+  const currentOrigin = useSyncExternalStore(
+    subscribeOrigin,
+    getClientOrigin,
+    getServerOrigin
   );
 
   // States
@@ -58,6 +77,7 @@ export default function SuperAdminPage() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [currentTenant, setCurrentTenant] = useState<TenantOut | null>(null);
+  const [copiedTenantSnippet, setCopiedTenantSnippet] = useState<string | null>(null);
 
   // Form States for Creation
   const [newTenantName, setNewTenantName] = useState("");
@@ -160,6 +180,12 @@ export default function SuperAdminPage() {
     }, 3000);
   };
 
+  const copyTenantSnippet = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedTenantSnippet(id);
+    setTimeout(() => setCopiedTenantSnippet(null), 2000);
+  };
+
   // ── CRUD Handlers ──────────────────────────────────────────────────────
 
   const handleCreateSubscription = async (e: React.FormEvent) => {
@@ -248,6 +274,12 @@ export default function SuperAdminPage() {
   const chromaOk = health?.chromaStatus === "healthy";
   const llmConfigured = health?.llmProviderStatus === "configured";
   const highLoad = cpuUsage > 80;
+  const currentTenantScriptSnippet = currentTenant
+    ? buildTenantScriptSnippet(currentOrigin, currentTenant.tenantKey)
+    : "";
+  const currentTenantIframeSnippet = currentTenant
+    ? buildTenantIframeSnippet(currentOrigin, currentTenant.tenantKey)
+    : "";
 
   // KPI UI Metadata
   const kpiCards = [
@@ -632,7 +664,10 @@ export default function SuperAdminPage() {
                     {filteredTenants.map(tenant => (
                       <tr key={tenant.id} className="hover:bg-[#1a1a26]/10 transition-colors">
                         <td className="px-6 py-4 font-bold text-white text-right rtl:text-right">
-                          {tenant.name}
+                          <div>{tenant.name}</div>
+                          <div className="mt-1 font-mono text-[10px] font-semibold text-gray-500">
+                            {tenant.tenantKey}
+                          </div>
                         </td>
                         <td className="px-6 py-4 font-medium text-gray-400">
                           {tenant.email}
@@ -822,7 +857,7 @@ export default function SuperAdminPage() {
       {/* EDIT SUBSCRIPTION MODAL */}
       {isEditModalOpen && currentTenant && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl border border-[#1f1f2e] bg-[#0d0d15] p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
+          <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[#1f1f2e] bg-[#0d0d15] p-6 shadow-2xl animate-in fade-in zoom-in duration-200">
             <div className="flex items-center justify-between border-b border-[#1f1f2e] pb-4 mb-4">
               <h4 className="text-lg font-bold text-white flex items-center gap-2">
                 <Edit2 className="h-5 w-5 text-purple-400" />
@@ -896,6 +931,74 @@ export default function SuperAdminPage() {
                     onChange={e => setEditTenantLimit(parseInt(e.target.value) || 0)}
                     className="w-full rounded-xl border border-[#1f1f2e] bg-[#050508] p-2.5 text-sm text-white focus:border-purple-500 focus:outline-none"
                   />
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-[#1f1f2e] bg-[#050508] p-4 space-y-4">
+                <div>
+                  <h5 className="flex items-center gap-2 text-sm font-bold text-white">
+                    <Globe className="h-4 w-4 text-purple-400" />
+                    {t("widgetIntegrationTitle")}
+                  </h5>
+                  <p className="mt-1 text-[11px] font-mono text-gray-500">
+                    tenantKey={currentTenant.tenantKey}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[11px] font-semibold uppercase text-gray-400">
+                      {t("widgetScriptLabel")}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => copyTenantSnippet(currentTenantScriptSnippet, `${currentTenant.tenantKey}-script`)}
+                      className="flex items-center gap-1.5 rounded-lg border border-[#1f1f2e] bg-[#0d0d15] px-3 py-1.5 text-xs text-purple-400 hover:text-white transition-colors"
+                    >
+                      {copiedTenantSnippet === `${currentTenant.tenantKey}-script` ? (
+                        <>
+                          <Check className="h-3.5 w-3.5 text-emerald-400" />
+                          <span className="text-emerald-400">{t("copied")}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3.5 w-3.5" />
+                          <span>{t("copySnippet")}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <pre className="overflow-x-auto rounded-xl border border-[#1f1f2e] bg-[#07070b] p-3 text-xs font-mono text-purple-300">
+                    <code>{currentTenantScriptSnippet}</code>
+                  </pre>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-[11px] font-semibold uppercase text-gray-400">
+                      {t("widgetIframeLabel")}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => copyTenantSnippet(currentTenantIframeSnippet, `${currentTenant.tenantKey}-iframe`)}
+                      className="flex items-center gap-1.5 rounded-lg border border-[#1f1f2e] bg-[#0d0d15] px-3 py-1.5 text-xs text-purple-400 hover:text-white transition-colors"
+                    >
+                      {copiedTenantSnippet === `${currentTenant.tenantKey}-iframe` ? (
+                        <>
+                          <Check className="h-3.5 w-3.5 text-emerald-400" />
+                          <span className="text-emerald-400">{t("copied")}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3.5 w-3.5" />
+                          <span>{t("copySnippet")}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  <pre className="overflow-x-auto rounded-xl border border-[#1f1f2e] bg-[#07070b] p-3 text-xs font-mono text-purple-300">
+                    <code>{currentTenantIframeSnippet}</code>
+                  </pre>
                 </div>
               </div>
 

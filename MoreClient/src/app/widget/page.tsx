@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useLanguage } from "@/components/language-provider";
-import { apiSend, type ChatResponse } from "@/lib/api";
+import { apiGet, apiSend, type ChatMessageOut, type ChatResponse } from "@/lib/api";
 import {
   Send,
   Bot,
@@ -28,6 +28,8 @@ export default function WidgetPage() {
   } = useLanguage();
 
   const messageIdRef = useRef(1);
+  const lastAgentMessageIdRef = useRef(0);
+  const tenantKeyRef = useRef("telnet");
   // One stable session id per widget mount — drives backend conversation memory.
   const sessionId = useRef<string>(crypto.randomUUID());
   const greetingText = language === "ar" ? t("widgetGreetingAr") : t("widgetGreeting");
@@ -52,6 +54,49 @@ export default function WidgetPage() {
   useEffect(() => {
     scrollToBottom();
   }, [messages, loading]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const companyKey = params.get("company");
+    tenantKeyRef.current =
+      params.get("tenantKey") ||
+      params.get("tenant_key") ||
+      (companyKey && companyKey !== "default" ? companyKey : "") ||
+      "telnet";
+  }, []);
+
+  useEffect(() => {
+    if (!isEscalated) return;
+
+    const pollAgentMessages = async () => {
+      try {
+        const rows = await apiGet<ChatMessageOut[]>(
+          `/api/chat/${encodeURIComponent(sessionId.current)}/agent-messages?after_id=${lastAgentMessageIdRef.current}&tenant_key=${encodeURIComponent(tenantKeyRef.current)}`
+        );
+        if (rows.length === 0) return;
+
+        lastAgentMessageIdRef.current = Math.max(
+          lastAgentMessageIdRef.current,
+          ...rows.map(row => row.id)
+        );
+        setMessages(prev => [
+          ...prev,
+          ...rows.map(row => ({
+            id: `agent-${row.id}`,
+            sender: "human" as const,
+            text: row.content,
+            time: row.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          }))
+        ]);
+      } catch {
+        /* keep polling quietly; the chat form already handles connection errors */
+      }
+    };
+
+    void pollAgentMessages();
+    const interval = window.setInterval(pollAgentMessages, 3000);
+    return () => window.clearInterval(interval);
+  }, [isEscalated]);
 
   const nextMessageId = () => {
     messageIdRef.current += 1;
@@ -106,7 +151,8 @@ export default function WidgetPage() {
       const resp = await apiSend<ChatResponse>("/api/chat", "POST", {
         session_id: sessionId.current,
         message: text,
-        channel: "web"
+        channel: "web",
+        tenantKey: tenantKeyRef.current
       });
 
       setMessages(prev => [

@@ -6,6 +6,7 @@ is enforced client-side via sessionStorage role check (P1 roadmap item).
 """
 
 import os
+import re
 import time
 
 import psutil
@@ -36,6 +37,7 @@ def _tenant_to_out(t: Tenant) -> TenantOut:
     """Convert an ORM Tenant row to the API response schema."""
     return TenantOut(
         id=t.id,
+        tenant_key=t.tenant_key,
         name=t.name,
         email=t.email,
         plan=t.plan,
@@ -44,6 +46,21 @@ def _tenant_to_out(t: Tenant) -> TenantOut:
         limit_messages=t.limit_messages,
         created_date=t.created_at.strftime("%Y-%m-%d") if t.created_at else "",
     )
+
+
+def _slugify_tenant_key(value: str) -> str:
+    key = re.sub(r"[^a-z0-9]+", "-", value.lower()).strip("-")
+    return key or "tenant"
+
+
+def _unique_tenant_key(db: Session, seed: str) -> str:
+    base = _slugify_tenant_key(seed)
+    candidate = base
+    suffix = 2
+    while db.scalar(select(Tenant.id).where(Tenant.tenant_key == candidate)) is not None:
+        candidate = f"{base}-{suffix}"
+        suffix += 1
+    return candidate
 
 
 # ── Tenant CRUD ──────────────────────────────────────────────────────────────
@@ -84,6 +101,7 @@ def create_tenant(
         raise HTTPException(status_code=409, detail="A tenant with this email already exists.")
 
     tenant = Tenant(
+        tenant_key=_unique_tenant_key(db, payload.tenant_key or payload.name),
         name=payload.name,
         email=payload.email,
         plan=payload.plan,

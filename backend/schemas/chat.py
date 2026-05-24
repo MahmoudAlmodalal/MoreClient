@@ -21,3 +21,10 @@ class ChatResponse(BaseModel):
     escalate: bool = False
     confidence: float = 0.0
     language: Literal["en", "ar"] = "en"
+
+
+class ChatMessageOut(BaseModel):
+    id: int
+    role: Literal["user", "assistant", "agent"]
+    content: str
+    time: str

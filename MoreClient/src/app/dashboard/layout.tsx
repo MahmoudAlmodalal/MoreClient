@@ -10,7 +10,6 @@ import {
   FileText,
   MessageSquareShare,
   Settings as SettingsIcon,
-  Eye,
   LogOut,
   Menu,
   X,
@@ -43,7 +42,6 @@ export default function DashboardLayout({
     { name: t("files"), href: "/dashboard/files", icon: FileText },
     { name: t("handoffs"), href: "/dashboard/handoffs", icon: MessageSquareShare },
     { name: t("settings"), href: "/dashboard/settings", icon: SettingsIcon },
-    { name: t("widgetPreview"), href: "/widget", icon: Eye, target: "_blank" },
     ...(isAdmin ? [{ name: t("superAdminTitle"), href: "/admin", icon: ShieldAlert }] : []),
   ];
 
@@ -123,7 +121,6 @@ export default function DashboardLayout({
                 <Link
                   key={item.name}
                   href={item.href}
-                  target={item.target}
                   className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
                     isActive
                       ? "bg-purple-600 text-white shadow-lg shadow-purple-600/15"
@@ -177,7 +174,6 @@ export default function DashboardLayout({
                     <Link
                       key={item.name}
                       href={item.href}
-                      target={item.target}
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-3 rounded-xl px-4 py-3 text-base font-medium transition-all ${
                         isActive

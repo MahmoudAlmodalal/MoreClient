@@ -1,6 +1,6 @@
 """/api/handoffs — drives the /dashboard/handoffs queue."""
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class HandoffMessageOut(BaseModel):
@@ -25,4 +25,4 @@ class HandoffOut(BaseModel):
 
 
 class ReplyRequest(BaseModel):
-    content: str
+    content: str = Field(..., min_length=1)

@@ -7,7 +7,6 @@ import { useLanguage } from "@/components/language-provider";
 import { NotificationBell } from "@/components/notification-bell";
 import {
   LayoutDashboard,
-  Eye,
   LogOut,
   Menu,
   X,
@@ -53,7 +52,6 @@ export default function SuperAdminLayout({
   const navigation = [
     { name: t("superAdminTitle"), href: "/admin", icon: ShieldAlert },
     { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
-    { name: t("widgetPreview"), href: "/widget", icon: Eye, target: "_blank" },
   ];
 
   const handleLanguageToggle = () => {
@@ -141,7 +139,6 @@ export default function SuperAdminLayout({
                 <Link
                   key={item.name}
                   href={item.href}
-                  target={item.target}
                   className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
                     isActive
                       ? "bg-purple-600 text-white shadow-lg shadow-purple-600/15"
@@ -195,7 +192,6 @@ export default function SuperAdminLayout({
                     <Link
                       key={item.name}
                       href={item.href}
-                      target={item.target}
                       onClick={() => setMobileMenuOpen(false)}
                       className={`flex items-center gap-3 rounded-xl px-4 py-3 text-base font-medium transition-all ${
                         isActive

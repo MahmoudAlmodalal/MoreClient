@@ -6,7 +6,7 @@ so each turn runs in a threadpool to avoid blocking the event loop, with a fresh
 DB session per message rather than holding a connection for the socket's life.
 """
 
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from starlette.concurrency import run_in_threadpool
 
 from backend.core.language import detect_language
@@ -73,7 +73,23 @@ async def chat_ws(websocket: WebSocket, session_id: str) -> None:
 
 
 @router.websocket("/ws/dashboard")
-async def dashboard_ws(websocket: WebSocket) -> None:
+async def dashboard_ws(websocket: WebSocket, token: str | None = Query(default=None)) -> None:
+    from backend.core.security import decode_access_token
+    from backend.core.config import settings
+
+    if settings.APP_SECRET:
+        if not token:
+            await websocket.close(code=4001)
+            return
+        try:
+            user = decode_access_token(token)
+            if user.role not in {"company", "admin"}:
+                await websocket.close(code=4001)
+                return
+        except Exception:
+            await websocket.close(code=4001)
+            return
+
     await websocket.accept()
     client = dashboard_connections.add(websocket)
     try:

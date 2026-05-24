@@ -17,6 +17,7 @@ from backend.models.tables import Conversation, Handoff, LearnedAnswer
 from backend.schemas.learn import LearnRequest, LearnResponse
 from backend.services.ai import embeddings, vectorstore
 from backend.services.realtime import broadcast_dashboard_snapshot
+from backend.core.security import get_tenant_key
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +25,12 @@ router = APIRouter()
 
 
 @router.post("/api/learn", response_model=LearnResponse)
-def learn(body: LearnRequest, db: Session = Depends(get_db)) -> LearnResponse:
-    tenant_key = (body.tenant_key or cfg.DEFAULT_TENANT_KEY).strip().lower() or cfg.DEFAULT_TENANT_KEY
+def learn(
+    body: LearnRequest,
+    tenant_key_dep: str | None = Depends(get_tenant_key),
+    db: Session = Depends(get_db)
+) -> LearnResponse:
+    tenant_key = tenant_key_dep or (body.tenant_key or cfg.DEFAULT_TENANT_KEY).strip().lower() or cfg.DEFAULT_TENANT_KEY
     source_handoff: Handoff | None = None
     source_conversation: Conversation | None = None
 

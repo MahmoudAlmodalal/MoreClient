@@ -39,5 +39,19 @@ class AuthSessionOut(_CamelModel):
     user_id: int
     email: str
     name: str | None = None
-    role: Literal["admin", "user"]
+    role: Literal["admin", "company"]
     redirect_to: str
+    tenant_key: str | None = None
+
+
+class RegisterIn(SignUpIn):
+    company_name: str = Field(..., min_length=2)
+
+
+class TokenPayload(BaseModel):
+    sub: str
+    email: str
+    role: Literal["admin", "company"]
+    tenant_key: str | None = None
+    iat: int
+    exp: int

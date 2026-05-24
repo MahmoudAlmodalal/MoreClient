@@ -41,16 +41,16 @@ def _time_ago(dt: datetime | None) -> str:
     return f"{days}d ago"
 
 
-def get_analytics_snapshot(db: Session) -> AnalyticsResponse:
-    total_questions = (
-        db.execute(
-            select(func.count()).select_from(Message).where(Message.role == "user")
-        ).scalar_one()
-        or 0
-    )
-    handoff_count = (
-        db.execute(select(func.count()).select_from(Handoff)).scalar_one() or 0
-    )
+def get_analytics_snapshot(db: Session, tenant_key: str | None = None) -> AnalyticsResponse:
+    msg_query = select(func.count()).select_from(Message).join(Conversation).where(Message.role == "user")
+    if tenant_key:
+        msg_query = msg_query.where(Conversation.tenant_key == tenant_key)
+    total_questions = db.execute(msg_query).scalar_one() or 0
+
+    handoff_query = select(func.count()).select_from(Handoff).join(Conversation)
+    if tenant_key:
+        handoff_query = handoff_query.where(Conversation.tenant_key == tenant_key)
+    handoff_count = db.execute(handoff_query).scalar_one() or 0
 
     if total_questions > 0:
         deflection_rate = 1.0 - (handoff_count / total_questions)
@@ -66,33 +66,46 @@ def get_analytics_snapshot(db: Session) -> AnalyticsResponse:
         feedback_score=_FEEDBACK_PLACEHOLDER,
     )
 
-    top_rows = db.execute(
+    top_query = (
         select(Message.content, func.count().label("c"))
+        .join(Conversation)
         .where(Message.role == "user")
         .group_by(Message.content)
         .order_by(func.count().desc())
         .limit(6)
-    ).all()
+    )
+    if tenant_key:
+        top_query = top_query.where(Conversation.tenant_key == tenant_key)
+    top_rows = db.execute(top_query).all()
+    
     top_questions = [
         TopQuestion(name=(content or "")[:40], count=count) for content, count in top_rows
     ]
 
-    channel_rows = db.execute(
+    channel_query = (
         select(Conversation.channel, func.count().label("c"))
         .group_by(Conversation.channel)
         .order_by(func.count().desc())
-    ).all()
+    )
+    if tenant_key:
+        channel_query = channel_query.where(Conversation.tenant_key == tenant_key)
+    channel_rows = db.execute(channel_query).all()
+    
     channel_distribution = [
         ChannelSlice(name=(channel or "unknown").capitalize(), value=count)
         for channel, count in channel_rows
     ]
 
-    pending = db.execute(
+    pending_query = (
         select(Handoff)
+        .join(Conversation)
         .where(Handoff.status == "pending")
         .order_by(Handoff.created_at.desc())
         .limit(8)
-    ).scalars().all()
+    )
+    if tenant_key:
+        pending_query = pending_query.where(Conversation.tenant_key == tenant_key)
+    pending = db.execute(pending_query).scalars().all()
 
     unanswered: list[UnansweredItem] = []
     for handoff in pending:

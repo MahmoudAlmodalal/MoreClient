@@ -16,6 +16,7 @@ from backend.models.tables import Conversation, Handoff, Message, PurchaseOrder
 from backend.schemas.handoffs import HandoffMessageOut, HandoffOut, ReplyRequest
 from backend.services.handoff_delivery import DeliveryResult, deliver_agent_reply
 from backend.services.realtime import broadcast_dashboard_snapshot
+from backend.core.security import get_tenant_key
 
 router = APIRouter()
 
@@ -103,6 +104,7 @@ def _build_handoff_out(
         reason=handoff.reason or "low_confidence",
         language=language,
         timeAgo=_time_ago(handoff.created_at),
+        createdAt=handoff.created_at.isoformat() if handoff.created_at else None,
         unreplied=unreplied,
         messages=messages,
         metadata=metadata,
@@ -111,6 +113,7 @@ def _build_handoff_out(
 
 @router.get("/api/handoffs", response_model=list[HandoffOut])
 def list_handoffs(
+    tenant_key: str | None = Depends(get_tenant_key),
     channel: str | None = None,
     limit: int = Query(500, ge=1, le=1000),
     offset: int = Query(0, ge=0),
@@ -119,10 +122,12 @@ def list_handoffs(
     """List pending handoffs, newest first, optionally filtered by channel."""
     query = db.query(Handoff).filter(Handoff.status == "pending")
 
-    if channel:
-        query = query.join(
-            Conversation, Conversation.id == Handoff.conversation_id
-        ).filter(Conversation.channel == channel)
+    if channel or tenant_key:
+        query = query.join(Conversation, Conversation.id == Handoff.conversation_id)
+        if channel:
+            query = query.filter(Conversation.channel == channel)
+        if tenant_key:
+            query = query.filter(Conversation.tenant_key == tenant_key)
 
     handoffs = (
         query.order_by(Handoff.created_at.desc(), Handoff.id.desc())

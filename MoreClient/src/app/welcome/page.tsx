@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { Apple } from "lucide-react";
+import { login } from "@/lib/api";
 
 const SLIDES = 3;
 
@@ -27,16 +28,13 @@ export default function WelcomePage() {
       return;
     }
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const session = await login(email, password);
+      router.push(session.redirectTo);
+    } catch (err: any) {
+      setError(err.message || "Login failed");
       setLoading(false);
-      if (email.toLowerCase().includes("admin")) {
-        sessionStorage.setItem("userRole", "admin");
-        router.push("/admin");
-      } else {
-        sessionStorage.setItem("userRole", "user");
-        router.push("/dashboard");
-      }
-    }, 1200);
+    }
   };
 
   const handleSocialLogin = () => {

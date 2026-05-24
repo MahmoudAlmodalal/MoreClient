@@ -126,7 +126,8 @@ class AuthUser(Base):
     password_hash = Column(Text, nullable=True)
     provider = Column(String(20), default="password", nullable=False)
     provider_subject = Column(String(255), nullable=True, index=True)
-    role = Column(String(20), default="user", nullable=False)  # user | admin
+    tenant_key = Column(String(255), nullable=True, index=True)
+    role = Column(String(20), default="company", nullable=False)  # company | admin
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
     last_login_at = Column(DateTime, nullable=True)
 
@@ -293,3 +294,9 @@ def upgrade_existing_schema(engine) -> None:
                 # Some development databases may already have duplicate manual keys.
                 # Keep the app bootable; create/update paths still enforce uniqueness.
                 pass
+
+        if "auth_users" in tables:
+            auth_cols = {col["name"] for col in inspector.get_columns("auth_users")}
+            if "tenant_key" not in auth_cols:
+                conn.execute(text("ALTER TABLE auth_users ADD COLUMN tenant_key VARCHAR(255)"))
+            conn.execute(text("UPDATE auth_users SET role = 'company' WHERE role = 'user'"))

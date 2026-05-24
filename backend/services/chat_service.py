@@ -20,6 +20,7 @@ from backend.schemas.chat import ChatResponse
 from backend.services.ai import knowledge_sync, rag, vectorstore
 from backend.services.intent_classifier import CustomerIntent, classify_intent
 from backend.services.purchase_flow import advance_purchase_flow, get_active_purchase_order
+from backend.services.realtime import broadcast_handoff_created
 
 
 class ChatService:
@@ -92,7 +93,7 @@ class ChatService:
 
         if self._is_unsafe_or_instruction_attack(message):
             conv.status = "handoff"
-            self._ensure_handoff(conv, reason="unsafe_or_unanswered")
+            self._ensure_handoff(conv, reason="unsafe_or_unanswered", question=message)
             answer = self._unanswered_handoff_reply(lang)
             self._add_message(conv, role="assistant", content=answer)
             self._remember_turn(mem_key, session_id, message, answer)
@@ -169,13 +170,19 @@ class ChatService:
                 language=lang,
             )
 
-        if intent.intent == CustomerIntent.SUPPORT_REQUEST or (
-            intent.intent == CustomerIntent.COMPLAINT
-            and getattr(setting, "auto_handoff_on_complaint", True)
+        if (
+            intent.source != "llm"
+            and (
+                intent.intent == CustomerIntent.SUPPORT_REQUEST
+                or (
+                    intent.intent == CustomerIntent.COMPLAINT
+                    and getattr(setting, "auto_handoff_on_complaint", True)
+                )
+            )
         ):
             reason = "complaint" if intent.intent == CustomerIntent.COMPLAINT else "support_request"
             conv.status = "handoff"
-            self._ensure_handoff(conv, reason=reason)
+            self._ensure_handoff(conv, reason=reason, question=message)
             answer = self._handoff_started_reply(lang, reason)
             self._add_message(conv, role="assistant", content=answer)
             self._remember_turn(mem_key, session_id, message, answer)
@@ -208,7 +215,7 @@ class ChatService:
 
         if result.escalate:
             conv.status = "handoff"
-            self._ensure_handoff(conv, reason=result.reason or "low_confidence")
+            self._ensure_handoff(conv, reason=result.reason or "low_confidence", question=message)
 
         self._add_message(conv, role="assistant", content=result.answer)
 
@@ -278,7 +285,7 @@ class ChatService:
         rows.reverse()
         return [{"role": m.role, "content": m.content} for m in rows]
 
-    def _ensure_handoff(self, conv: Conversation, *, reason: str) -> None:
+    def _ensure_handoff(self, conv: Conversation, *, reason: str, question: str = "") -> None:
         existing = self.db.scalars(
             select(Handoff).where(
                 Handoff.conversation_id == conv.id,
@@ -286,10 +293,20 @@ class ChatService:
             )
         ).first()
         if existing is None:
-            self.db.add(Handoff(conversation_id=conv.id, reason=reason, status="pending"))
+            handoff = Handoff(conversation_id=conv.id, reason=reason, status="pending")
+            self.db.add(handoff)
             # Commit immediately so a decided escalation is durable even if a
             # later side-effect raises before handle()'s final commit.
             self.db.commit()
+            self.db.refresh(handoff)
+            broadcast_handoff_created({
+                "id": handoff.id,
+                "conversationId": conv.id,
+                "channel": conv.channel,
+                "reason": reason,
+                "question": question[:200],
+                "createdAt": handoff.created_at.isoformat() if handoff.created_at else None,
+            })
         else:
             existing.reason = reason
 

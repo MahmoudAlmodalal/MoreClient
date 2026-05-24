@@ -40,9 +40,52 @@ export function adminKeyHeader(): Record<string, string> {
   return key ? { "X-Admin-Key": key } : {};
 }
 
+export const JWT_TOKEN_STORAGE = "authToken";
+
+export type AuthSessionOut = {
+  token: string;
+  userId: number;
+  email: string;
+  name: string | null;
+  role: "admin" | "company";
+  redirectTo: string;
+  tenantKey: string | null;
+};
+
+export function authHeader(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  const token = window.localStorage.getItem(JWT_TOKEN_STORAGE);
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export async function login(email: string, password: string): Promise<AuthSessionOut> {
+  const res = await apiSend<AuthSessionOut>("/api/auth/login", "POST", { email, password });
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(JWT_TOKEN_STORAGE, res.token);
+    window.sessionStorage.setItem("userRole", res.role);
+  }
+  return res;
+}
+
+export async function register(name: string, email: string, password: string, companyName: string): Promise<AuthSessionOut> {
+  const res = await apiSend<AuthSessionOut>("/api/auth/register", "POST", { name, email, password, companyName });
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(JWT_TOKEN_STORAGE, res.token);
+    window.sessionStorage.setItem("userRole", res.role);
+  }
+  return res;
+}
+
+export function logout(): void {
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem(JWT_TOKEN_STORAGE);
+    window.sessionStorage.removeItem("userRole");
+  }
+}
+
 export async function apiGet<T>(path: string, headers?: Record<string, string>): Promise<T> {
   const res = await fetch(joinBasePath(BASE, path), {
-    headers: { Accept: "application/json", ...headers },
+    headers: { Accept: "application/json", ...authHeader(), ...headers },
   });
   if (!res.ok) return parseError(res);
   return res.json() as Promise<T>;
@@ -56,7 +99,7 @@ export async function apiSend<T>(
 ): Promise<T> {
   const res = await fetch(joinBasePath(BASE, path), {
     method,
-    headers: { "Content-Type": "application/json", Accept: "application/json", ...headers },
+    headers: { "Content-Type": "application/json", Accept: "application/json", ...authHeader(), ...headers },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) return parseError(res);
@@ -64,10 +107,11 @@ export async function apiSend<T>(
 }
 
 /** Multipart upload. Do NOT set Content-Type — the browser sets the boundary. */
-export async function apiUpload<T>(path: string, file: File): Promise<T> {
+export async function apiUpload<T>(path: string, file: File, headers?: Record<string, string>): Promise<T> {
   const fd = new FormData();
   fd.append("file", file);
-  const res = await fetch(joinBasePath(BASE, path), { method: "POST", body: fd });
+  const reqHeaders = { ...authHeader(), ...headers };
+  const res = await fetch(joinBasePath(BASE, path), { method: "POST", body: fd, headers: reqHeaders });
   if (!res.ok) return parseError(res);
   return res.json() as Promise<T>;
 }
@@ -127,6 +171,20 @@ export type AnalyticsSocketMessage = {
   data: AnalyticsResponse;
 };
 
+export type HandoffCreatedSocketMessage = {
+  type: "handoff.created";
+  data: {
+    id: number;
+    conversationId: number;
+    channel: string;
+    reason: string;
+    question: string;
+    createdAt: string | null;
+  };
+};
+
+export type DashboardSocketMessage = AnalyticsSocketMessage | HandoffCreatedSocketMessage;
+
 export function createWebSocketUrl(path: string): string {
   const configured = process.env.NEXT_PUBLIC_WS_URL;
   if (configured) return joinBasePath(configured, path);
@@ -142,6 +200,20 @@ export function createWebSocketUrl(path: string): string {
       return url.toString();
     }
     return path;
+  }
+}
+
+export function createAuthenticatedWebSocketUrl(path: string): string {
+  const baseWsUrl = createWebSocketUrl(path);
+  if (typeof window === "undefined") return baseWsUrl;
+  const token = window.localStorage.getItem(JWT_TOKEN_STORAGE);
+  if (!token) return baseWsUrl;
+  try {
+    const url = new URL(baseWsUrl);
+    url.searchParams.set("token", token);
+    return url.toString();
+  } catch {
+    return `${baseWsUrl}?token=${token}`;
   }
 }
 
@@ -164,6 +236,7 @@ export type HandoffOut = {
   reason: string;
   language: string;
   timeAgo: string;
+  createdAt: string | null;
   unreplied: boolean;
   messages: HandoffMessage[];
   metadata: {

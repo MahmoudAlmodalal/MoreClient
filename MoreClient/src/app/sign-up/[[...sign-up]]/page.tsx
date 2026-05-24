@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Apple } from "lucide-react";
+import { register } from "@/lib/api";
 
 export default function SignUpPage() {
   const { t } = useLanguage();
@@ -33,16 +34,13 @@ export default function SignUpPage() {
     }
 
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const session = await register(name, email, password, name);
+      router.push(session.redirectTo);
+    } catch (err: any) {
+      setError(err.message || "Registration failed");
       setLoading(false);
-      if (email.toLowerCase().includes("admin")) {
-        sessionStorage.setItem("userRole", "admin");
-        router.push("/admin");
-      } else {
-        sessionStorage.setItem("userRole", "user");
-        router.push("/dashboard");
-      }
-    }, 1500);
+    }
   };
 
   const handleSocialSignUp = () => {

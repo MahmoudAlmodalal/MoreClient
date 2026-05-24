@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { useSessionRole } from "@/lib/use-session-role";
+import { logout } from "@/lib/api";
 import { NotificationBell } from "@/components/notification-bell";
 import {
   LayoutDashboard,
@@ -55,7 +56,7 @@ export default function SuperAdminLayout({
   };
 
   const handleLogout = () => {
-    sessionStorage.removeItem("userRole");
+    logout();
     router.push("/welcome");
   };
 

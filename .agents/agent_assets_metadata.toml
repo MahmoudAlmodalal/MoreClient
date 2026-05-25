@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "lj5ZiTgiRyqwCmuYZm9Gi"
+uri = "file://REPLIT_DEPLOY_AND_ENHANCE.md"
+type = "text"
+title = "دليل النشر الشامل — clientMORE"

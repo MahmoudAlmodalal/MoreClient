@@ -128,10 +128,12 @@ _oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=Fal
 
 
 def get_current_user(token: str | None = Depends(_oauth2_scheme)) -> TokenPayload:
+    if settings.is_dev and not settings.APP_SECRET:
+        return TokenPayload(sub="1", email="dev@example.com", role="admin", tenant_key=None, iat=0, exp=0)
+    
     if not token:
-        if settings.is_dev and not settings.APP_SECRET:
-            return TokenPayload(sub="1", email="dev@example.com", role="admin", tenant_key=None, iat=0, exp=0)
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
+        
     try:
         return decode_access_token(token)
     except jwt.InvalidTokenError:

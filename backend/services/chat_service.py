@@ -108,18 +108,23 @@ class ChatService:
             )
 
         if conv.status == "handoff":
-            answer = self._handoff_waiting_reply(lang)
-            self._add_message(conv, role="assistant", content=answer)
-            self._remember_turn(mem_key, session_id, message, answer)
-            setting.used_messages = (setting.used_messages or 0) + 1
-            self.db.commit()
-            return ChatResponse(
-                reply=answer,
-                sender="bot",
-                escalate=True,
-                confidence=1.0,
-                language=lang,
-            )
+            # In demo mode the conversation must stay interactive after a sales handoff.
+            if getattr(setting, "purchase_direct_handoff", False):
+                conv.status = "open"
+                self.db.commit()
+            else:
+                answer = self._handoff_waiting_reply(lang)
+                self._add_message(conv, role="assistant", content=answer)
+                self._remember_turn(mem_key, session_id, message, answer)
+                setting.used_messages = (setting.used_messages or 0) + 1
+                self.db.commit()
+                return ChatResponse(
+                    reply=answer,
+                    sender="bot",
+                    escalate=True,
+                    confidence=1.0,
+                    language=lang,
+                )
 
         active_purchase = get_active_purchase_order(self.db, conv)
         if active_purchase is not None:
@@ -157,6 +162,19 @@ class ChatService:
             intent.intent == CustomerIntent.PURCHASE_INTENT
             and getattr(setting, "purchase_flow_enabled", True)
         ):
+            if getattr(setting, "purchase_direct_handoff", False):
+                answer = self._purchase_handoff_reply(lang)
+                self._add_message(conv, role="assistant", content=answer)
+                self._remember_turn(mem_key, session_id, message, answer)
+                setting.used_messages = (setting.used_messages or 0) + 1
+                self.db.commit()
+                return ChatResponse(
+                    reply=answer,
+                    sender="bot",
+                    escalate=True,
+                    confidence=intent.confidence,
+                    language=lang,
+                )
             flow = advance_purchase_flow(self.db, conv, message, setting, intent)
             self._add_message(conv, role="assistant", content=flow.reply)
             self._remember_turn(mem_key, session_id, message, flow.reply)
@@ -171,7 +189,8 @@ class ChatService:
             )
 
         if (
-            intent.source != "llm"
+            not getattr(setting, "purchase_direct_handoff", False)
+            and intent.source != "llm"
             and (
                 intent.intent == CustomerIntent.SUPPORT_REQUEST
                 or (
@@ -196,6 +215,21 @@ class ChatService:
                 language=lang,
             )
 
+        # Demo mode: price questions never reach RAG/escalation — answer immediately.
+        if self._is_price_question(message) and getattr(setting, "purchase_direct_handoff", False):
+            answer = self._demo_price_reply(message, lang)
+            self._add_message(conv, role="assistant", content=answer)
+            self._remember_turn(mem_key, session_id, message, answer)
+            setting.used_messages = (setting.used_messages or 0) + 1
+            self.db.commit()
+            return ChatResponse(
+                reply=answer,
+                sender="bot",
+                escalate=False,
+                confidence=0.95,
+                language=lang,
+            )
+
         # Long-term memory: recall what we know about this user across sessions.
         user_memory = long_term_memory.recall(session_id, message)
 
@@ -214,7 +248,7 @@ class ChatService:
         )
         result = strategy.run(message, lang, setting, history, user_memory)
 
-        if result.escalate:
+        if result.escalate and not getattr(setting, "purchase_direct_handoff", False):
             conv.status = "handoff"
             self._ensure_handoff(conv, reason=result.reason or "low_confidence", question=message)
 
@@ -338,6 +372,24 @@ class ChatService:
         if lang == "ar":
             return "تم تحويل سؤالك إلى فريق الدعم، وسيتم الرد عليك قريباً."
         return "I’ve forwarded your question to our support team. They’ll reply shortly."
+
+    def _is_price_question(self, message: str) -> bool:
+        stripped = message.strip()
+        return bool(re.match(r"^(كم|بكم|وبكم|شو سعر|ما سعر|ما هو سعر|what.?s the price|how much)", stripped, re.IGNORECASE))
+
+    def _demo_price_reply(self, message: str, lang: str) -> str:
+        import hashlib, random
+        _PRICES = [75, 85, 95, 110, 120, 135, 145, 155, 165, 175, 190, 210, 220, 245, 260, 290, 320, 380, 420, 450]
+        seed = int(hashlib.md5(message.lower().encode()).hexdigest(), 16) % len(_PRICES)
+        price = _PRICES[seed]
+        if lang == "ar":
+            return f"سعره {price} ريال فقط! هل تريد طلبه؟"
+        return f"It's only {price} SAR! Would you like to order it?"
+
+    def _purchase_handoff_reply(self, lang: str) -> str:
+        if lang == "ar":
+            return "سيرد عليك قسم المبيعات قريباً!"
+        return "Our sales team will get back to you shortly!"
 
     def _greeting_reply(self, lang: str) -> str:
         if lang == "ar":

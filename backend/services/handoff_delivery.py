@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from backend.models.tables import Conversation, get_or_create_settings
 from backend.services.channels.telegram import send_message as telegram_send_message
+from backend.core import crypto
 
 
 @dataclass(frozen=True)
@@ -49,7 +50,8 @@ def _deliver_telegram(customer_ref: str | None, content: str, db: Session) -> De
 
     try:
         chat_id = int(customer_ref.removeprefix("tg:"))
-        telegram_send_message(setting.telegram_token, chat_id, content)
+        token = crypto.decrypt(setting.telegram_token)
+        telegram_send_message(token, chat_id, content)
         return DeliveryResult(True, "telegram", "bot_api")
     except Exception as exc:  # noqa: BLE001 - surface best-effort delivery status
         return DeliveryResult(False, "telegram", "bot_api", str(exc))
@@ -73,7 +75,8 @@ def _deliver_whatsapp(customer_ref: str | None, content: str, db: Session) -> De
     try:
         from twilio.rest import Client
 
-        message = Client(setting.twilio_sid, setting.twilio_token).messages.create(
+        token = crypto.decrypt(setting.twilio_token)
+        message = Client(setting.twilio_sid, token).messages.create(
             body=content,
             from_=from_number,
             to=to_number,

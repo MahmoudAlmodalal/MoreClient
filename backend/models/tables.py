@@ -161,6 +161,7 @@ class Setting(Base):
     confidence_threshold = Column(Float, default=0.45, nullable=False)
 
     purchase_flow_enabled = Column(Boolean, default=True, nullable=False)
+    purchase_direct_handoff = Column(Boolean, default=False, nullable=False)
     purchase_collect_address = Column(Boolean, default=True, nullable=False)
     purchase_collect_quantity = Column(Boolean, default=True, nullable=False)
     purchase_auto_forward_to_support = Column(Boolean, default=True, nullable=False)
@@ -231,6 +232,7 @@ def upgrade_existing_schema(engine) -> None:
         settings_columns = {col["name"] for col in inspector.get_columns("settings")}
         settings_additions = {
             "purchase_flow_enabled": ("BOOLEAN", True),
+            "purchase_direct_handoff": ("BOOLEAN", False),
             "purchase_collect_address": ("BOOLEAN", True),
             "purchase_collect_quantity": ("BOOLEAN", True),
             "purchase_auto_forward_to_support": ("BOOLEAN", True),

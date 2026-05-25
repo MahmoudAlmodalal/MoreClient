@@ -38,7 +38,12 @@ export default function WelcomePage() {
   };
 
   const handleSocialLogin = () => {
-    sessionStorage.setItem("userRole", "user");
+    sessionStorage.setItem("userRole", "company");
+    router.push("/dashboard");
+  };
+
+  const handleDemoAccess = () => {
+    sessionStorage.setItem("userRole", "company");
     router.push("/dashboard");
   };
 
@@ -158,7 +163,23 @@ export default function WelcomePage() {
                 )}
               </button>
 
-              <div className="grid gap-3">
+              {/* Demo Access — no login required */}
+              <div className="relative my-2 flex items-center gap-3">
+                <div className="flex-1 border-t border-[var(--border-light)]" />
+                <span className="text-xs text-gray-400 font-medium">أو</span>
+                <div className="flex-1 border-t border-[var(--border-light)]" />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleDemoAccess}
+                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 px-6 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 shadow-lg shadow-emerald-600/20 hover:scale-[1.01] cursor-pointer"
+              >
+                <span>🚀</span>
+                <span>{language === "ar" ? "دخول تجريبي — بدون تسجيل" : "Demo Access — No Login"}</span>
+              </button>
+
+              <div className="grid gap-3 mt-2">
                 <button
                   type="button"
                   onClick={handleSocialLogin}

@@ -5,6 +5,8 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
+import { setAuthTokenGetter, setBaseUrl } from "@workspace/api-client-react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
@@ -15,6 +17,18 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { JWT_TOKEN_KEY } from "@/lib/api";
+
+// Wire the generated API client to the correct base URL and JWT getter.
+// EXPO_PUBLIC_API_URL takes priority; falls back to the Replit dev domain.
+const apiBase =
+  process.env.EXPO_PUBLIC_API_URL ??
+  (process.env.EXPO_PUBLIC_DOMAIN
+    ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
+    : "http://localhost:8080");
+
+setBaseUrl(apiBase);
+setAuthTokenGetter(() => AsyncStorage.getItem(JWT_TOKEN_KEY));
 
 SplashScreen.preventAutoHideAsync();
 

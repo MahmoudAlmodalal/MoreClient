@@ -14,7 +14,8 @@
       "backgroundColor": "#050508"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.clientmore.mobile"
     },
     "android": {},
     "web": {

@@ -24,6 +24,8 @@ import {
   XCircle,
   FlaskConical,
   X,
+  Trash2,
+  CheckSquare,
 } from "lucide-react";
 
 // Format milliseconds as a compact "1h 4m" / "23m" / "12s" SLA string.
@@ -69,6 +71,12 @@ export default function HandoffsPage() {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [retryingId, setRetryingId] = useState<number | null>(null);
+
+  // Bulk-select state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   // Simulate dialog state
   const [showSimDialog, setShowSimDialog] = useState(false);
@@ -232,6 +240,43 @@ export default function HandoffsPage() {
     }
   };
 
+  const toggleSelectMode = () => {
+    setSelectMode(prev => !prev);
+    setSelectedIds(new Set());
+  };
+
+  const toggleTicketSelection = (id: number, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkDelete = async () => {
+    setDeleting(true);
+    try {
+      const ids = Array.from(selectedIds);
+      await apiSend<{ deleted: number }>("/api/handoffs", "DELETE", { ids });
+      setTickets(prev => prev.filter(t => !selectedIds.has(t.id)));
+      setSelectedIds(new Set());
+      setSelectMode(false);
+      setShowDeleteConfirm(false);
+      setToast(`Deleted ${ids.length} ticket${ids.length !== 1 ? "s" : ""}`);
+      setTimeout(() => setToast(null), 3000);
+      if (selectedTicketId !== null && selectedIds.has(selectedTicketId)) {
+        setSelectedTicketId(null);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to delete tickets");
+      setShowDeleteConfirm(false);
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   const handleResolve = async (id: number) => {
     try {
       await apiSend("/api/handoffs/" + id + "/resolve", "POST");
@@ -302,8 +347,39 @@ export default function HandoffsPage() {
             <FlaskConical className="h-3.5 w-3.5" />
             Send test message
           </button>
+
+          {/* Select mode toggle */}
+          <button
+            type="button"
+            onClick={toggleSelectMode}
+            className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-colors ${
+              selectMode
+                ? "border-purple-500/50 bg-purple-500/20 text-purple-300"
+                : "border-[#1f1f2e] bg-[#0d0d15] text-gray-400 hover:bg-[#1a1a26]"
+            }`}
+          >
+            <CheckSquare className="h-3.5 w-3.5" />
+            {selectMode ? "Cancel" : "Select"}
+          </button>
         </div>
       </div>
+
+      {/* Bulk-delete action bar */}
+      {selectMode && selectedIds.size > 0 && (
+        <div className="flex items-center justify-between rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-2.5">
+          <span className="text-xs font-semibold text-red-300">
+            {selectedIds.size} ticket{selectedIds.size !== 1 ? "s" : ""} selected
+          </span>
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-red-600 hover:bg-red-500 px-3 py-1.5 text-xs font-bold text-white transition-colors"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Delete selected
+          </button>
+        </div>
+      )}
 
       {/* Simulate Dialog */}
       {showSimDialog && (
@@ -386,6 +462,51 @@ export default function HandoffsPage() {
         </div>
       )}
 
+      {/* Bulk-delete confirmation modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-[#1f1f2e] bg-[#0d0d15] p-6 shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-500/15">
+                <Trash2 className="h-5 w-5 text-red-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">
+                  Delete {selectedIds.size} ticket{selectedIds.size !== 1 ? "s" : ""}?
+                </h3>
+                <p className="text-xs text-gray-400 mt-0.5">This cannot be undone.</p>
+              </div>
+            </div>
+            <p className="text-xs text-gray-400 mb-6">
+              All messages and conversation data for the selected tickets will be permanently removed.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => setShowDeleteConfirm(false)}
+                className="rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-2 text-xs font-semibold text-gray-300 hover:bg-[#1a1a26] transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleting}
+                onClick={() => void handleBulkDelete()}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-red-600 hover:bg-red-500 disabled:opacity-50 px-4 py-2 text-xs font-bold text-white transition-colors"
+              >
+                {deleting ? (
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Trash2 className="h-3.5 w-3.5" />
+                )}
+                {deleting ? "Deleting…" : `Delete ${selectedIds.size}`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Inline error banner (non-blocking) */}
       {error && (
         <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs font-semibold text-red-400">
@@ -425,15 +546,32 @@ export default function HandoffsPage() {
               return (
                 <div
                   key={ticket.id}
-                  onClick={() => setSelectedTicketId(ticket.id)}
+                  onClick={() => {
+                    if (selectMode) {
+                      toggleTicketSelection(ticket.id, { stopPropagation: () => {} } as React.MouseEvent);
+                    } else {
+                      setSelectedTicketId(ticket.id);
+                    }
+                  }}
                   className={`cursor-pointer rounded-xl border p-4 transition-all ${
-                    selectedTicketId === ticket.id
+                    selectMode && selectedIds.has(ticket.id)
+                      ? "border-red-500/50 bg-red-500/5"
+                      : selectedTicketId === ticket.id && !selectMode
                       ? "border-purple-500 bg-purple-500/5 glow-purple"
                       : "border-[#1f1f2e] bg-[#0d0d15] hover:bg-[#151520]"
                   }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-white flex items-center gap-2">
+                      {selectMode && (
+                        <input
+                          type="checkbox"
+                          readOnly
+                          checked={selectedIds.has(ticket.id)}
+                          className="h-4 w-4 rounded border-[#1f1f2e] bg-[#07070b] text-red-500 accent-red-500"
+                          onClick={(e) => toggleTicketSelection(ticket.id, e)}
+                        />
+                      )}
                       {channelKey(ticket.channel) === "WhatsApp" && <Smartphone className="h-4 w-4 text-emerald-400" />}
                       {channelKey(ticket.channel) === "Telegram" && <SendHorizontal className="h-4 w-4 text-blue-400" />}
                       {channelKey(ticket.channel) === "Widget" && <Globe className="h-4 w-4 text-purple-400" />}

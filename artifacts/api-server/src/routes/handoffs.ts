@@ -152,6 +152,61 @@ router.post("/handoffs/:id/resolve", requireJwt, async (req, res) => {
   return res.json({ ok: true });
 });
 
+router.delete("/handoffs", requireJwt, async (req, res) => {
+  const tenantId = req.auth!.tid;
+  const ids = req.body?.ids;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ detail: "ids must be a non-empty array" });
+  }
+  const parsedIds = ids.map(Number).filter((n) => Number.isInteger(n) && n > 0);
+  if (parsedIds.length === 0) {
+    return res.status(400).json({ detail: "ids must contain valid positive integers" });
+  }
+
+  // Fetch matching handoffs that belong to this tenant.
+  const owned = await db
+    .select({ id: handoffs.id, conversationId: handoffs.conversationId })
+    .from(handoffs)
+    .where(and(eq(handoffs.tenantId, tenantId), inArray(handoffs.id, parsedIds)));
+
+  if (owned.length === 0) {
+    return res.json({ deleted: 0 });
+  }
+
+  const ownedIds = owned.map((h) => h.id);
+  const affectedConvIds = Array.from(new Set(owned.map((h) => h.conversationId)));
+
+  // Wrap in a transaction to avoid partial state on failure.
+  await db.transaction(async (tx) => {
+    // 1. Delete only the selected handoff rows (not blindly all handoffs for
+    //    the conversation — a conversation can accumulate multiple handoffs
+    //    over its lifetime; we must not delete unselected ones).
+    await tx.delete(handoffs).where(inArray(handoffs.id, ownedIds));
+
+    // 2. For each affected conversation, delete it — and cascade its messages
+    //    via the FK onDelete:cascade — only when no other handoffs remain.
+    //    This prevents us from orphaning messages that belong to a still-live
+    //    handoff on the same conversation.
+    for (const convId of affectedConvIds) {
+      const remaining = await tx
+        .select({ id: handoffs.id })
+        .from(handoffs)
+        .where(eq(handoffs.conversationId, convId))
+        .limit(1);
+      if (remaining.length === 0) {
+        // No handoffs left — safe to remove the conversation (messages cascade).
+        await tx.delete(conversations).where(eq(conversations.id, convId));
+      }
+    }
+  });
+
+  for (const id of ownedIds) {
+    broadcastDashboard(tenantId, { type: "handoff.deleted", data: { id } });
+  }
+
+  return res.json({ deleted: ownedIds.length });
+});
+
 router.post("/handoffs/:id/feedback", requireJwt, async (req, res) => {
   const tenantId = req.auth!.tid;
   const id = Number(req.params.id);

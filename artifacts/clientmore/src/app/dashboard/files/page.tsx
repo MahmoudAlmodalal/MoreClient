@@ -182,21 +182,6 @@ export default function FilesPage() {
         </div>
       )}
 
-      {/* RAG Pipeline visual info banner */}
-      <div className="rounded-xl border border-purple-500/10 bg-[#0d0d15] p-5 flex flex-col md:flex-row items-center gap-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
-          <Database className="h-5 w-5" />
-        </div>
-        <div className="flex-1 text-sm text-gray-300">
-          <span className="font-bold text-white">Demo Vector Pipeline: </span>
-          Uploaded docs are parsed into markdown text, split into chunks, and converted into local demo vectors for the frontend preview.
-        </div>
-        <div className="flex items-center gap-1.5 text-xs text-purple-400 font-semibold bg-purple-500/5 px-3 py-1.5 rounded-lg border border-purple-500/10">
-          <Sparkles className="h-3.5 w-3.5" />
-          Zero External Hallucination
-        </div>
-      </div>
-
       {/* Main Drag & Drop Zone */}
       <div
         onDragEnter={handleDrag}

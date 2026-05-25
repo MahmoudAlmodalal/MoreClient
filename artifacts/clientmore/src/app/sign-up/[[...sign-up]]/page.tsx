@@ -5,8 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { AuthShell } from "@/components/auth/auth-shell";
-import { Apple } from "lucide-react";
-import { register, demoLogin } from "@/lib/api";
+import { register } from "@/lib/api";
 
 export default function SignUpPage() {
   const { t } = useLanguage();
@@ -43,47 +42,11 @@ export default function SignUpPage() {
     }
   };
 
-  // Social SSO is not wired yet — fall back to the real demo-tenant login so
-  // the dashboard always loads against a real backend session.
-  const handleSocialSignUp = async () => {
-    setError("");
-    setLoading(true);
-    try {
-      const session = await demoLogin();
-      router.push(session.redirectTo || "/dashboard");
-    } catch (err: any) {
-      setError(err?.message || "Demo access unavailable");
-      setLoading(false);
-    }
-  };
-
   return (
     <AuthShell>
       <div className="rounded-2xl border border-[#1f1f2e] bg-[#0d0d15] p-8">
         <h1 className="text-xl font-semibold text-white text-center mb-6">{t("createAccountBtn")}</h1>
 
-        <div className="mb-6 grid gap-3">
-          <button
-            type="button"
-            onClick={handleSocialSignUp}
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#1f1f2e] bg-white px-4 text-sm font-semibold text-gray-800 transition-colors hover:bg-gray-100"
-          >
-            <span className="flex h-5 w-5 items-center justify-center rounded-full text-sm font-bold text-[#4285F4]">
-              G
-            </span>
-            <span>{t("signUpWithGoogle")}</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleSocialSignUp}
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#1f1f2e] bg-white px-4 text-sm font-semibold text-gray-800 transition-colors hover:bg-gray-100"
-          >
-            <Apple className="h-5 w-5 text-gray-900" />
-            <span>{t("signUpWithApple")}</span>
-          </button>
-        </div>
-        
         <form onSubmit={handleSignUpSubmit} className="space-y-4">
           <div>
             <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">

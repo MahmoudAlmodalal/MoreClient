@@ -2,7 +2,6 @@ import { createServer } from "node:http";
 import app from "./app";
 import { logger } from "./lib/logger";
 import { attachWebSockets } from "./lib/ws";
-import { ensureDemoTenant } from "./lib/tenant";
 import { db } from "./lib/db";
 import { sql } from "drizzle-orm";
 
@@ -25,9 +24,6 @@ attachWebSockets(server);
 db.execute(sql`CREATE EXTENSION IF NOT EXISTS vector`)
   .then(() => logger.info("pgvector extension ready"))
   .catch((err: unknown) => logger.warn({ err }, "pgvector extension check skipped"));
-
-// Bootstrap the demo tenant up-front so /api/auth/demo-login never races.
-ensureDemoTenant().catch((err) => logger.warn({ err }, "Demo tenant bootstrap deferred"));
 
 server.on("error", (err) => {
   logger.error({ err }, "Server error");

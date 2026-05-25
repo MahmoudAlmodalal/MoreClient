@@ -930,31 +930,32 @@ const LanguageContext = createContext<LanguageContextType | undefined>(undefined
 export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [language, setLanguage] = useState<Language>("en");
 
-  // Global settings mock state shared between dashboard pages and widget
-  const [companyName, setCompanyName] = useState("clientMORE");
-  const [botName, setBotName] = useState("clientMORE");
-  const [companyLogo, setCompanyLogo] = useState("/clientmore-logo.jpeg");
+  // Settings state — hydrated from /api/settings on mount. Empty/zero defaults
+  // are used until the backend responds; on fetch failure we surface an error
+  // instead of pretending data loaded.
+  const [companyName, setCompanyName] = useState("");
+  const [botName, setBotName] = useState("");
+  const [companyLogo, setCompanyLogo] = useState("");
   const [subscriptionPlan, setSubscriptionPlan] = useState<"pro" | "ultra">("pro");
-  const [usedMessages, setUsedMessages] = useState(328);
+  const [usedMessages, setUsedMessages] = useState(0);
 
-  // Integration credentials mock state
-  const [telegramToken, setTelegramToken] = useState("1823908230:AAHfjkeF8392-Jdhfj388273hGDH");
-  const [isTelegramActive, setIsTelegramActive] = useState(true);
-  const [twilioSid, setTwilioSid] = useState("AC73827d89abfdce2738d829392e92c28");
-  const [twilioToken, setTwilioToken] = useState("8f39281e82b7c738e82d8d8c8b2938a");
-  const [twilioNumber, setTwilioNumber] = useState("+14155238886");
+  const [telegramToken, setTelegramToken] = useState("");
+  const [isTelegramActive, setIsTelegramActive] = useState(false);
+  const [twilioSid, setTwilioSid] = useState("");
+  const [twilioToken, setTwilioToken] = useState("");
+  const [twilioNumber, setTwilioNumber] = useState("");
   const [isWhatsappActive, setIsWhatsappActive] = useState(false);
 
-  const [botTone, setBotTone] = useState("professional");
-  const [systemPromptExtra, setSystemPromptExtra] = useState("Answer briefly and use bullet points where helpful.");
-  const [purchaseFlowEnabled, setPurchaseFlowEnabled] = useState(true);
-  const [purchaseCollectAddress, setPurchaseCollectAddress] = useState(true);
-  const [purchaseCollectQuantity, setPurchaseCollectQuantity] = useState(true);
-  const [purchaseAutoForwardToSupport, setPurchaseAutoForwardToSupport] = useState(true);
-  const [purchaseConfirmationRequired, setPurchaseConfirmationRequired] = useState(true);
+  const [botTone, setBotTone] = useState("");
+  const [systemPromptExtra, setSystemPromptExtra] = useState("");
+  const [purchaseFlowEnabled, setPurchaseFlowEnabled] = useState(false);
+  const [purchaseCollectAddress, setPurchaseCollectAddress] = useState(false);
+  const [purchaseCollectQuantity, setPurchaseCollectQuantity] = useState(false);
+  const [purchaseAutoForwardToSupport, setPurchaseAutoForwardToSupport] = useState(false);
+  const [purchaseConfirmationRequired, setPurchaseConfirmationRequired] = useState(false);
   const [purchaseSessionMinutes, setPurchaseSessionMinutes] = useState(30);
-  const [purchaseCurrencyLabel, setPurchaseCurrencyLabel] = useState("ريال");
-  const [intentLlmEnabled, setIntentLlmEnabled] = useState(true);
+  const [purchaseCurrencyLabel, setPurchaseCurrencyLabel] = useState("");
+  const [intentLlmEnabled, setIntentLlmEnabled] = useState(false);
   const [intentConfidenceThreshold, setIntentConfidenceThreshold] = useState(0.7);
   const [autoHandoffOnComplaint, setAutoHandoffOnComplaint] = useState(true);
 
@@ -1007,8 +1008,9 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           setSubscriptionPlan(s.subscriptionPlan);
         }
         setUsedMessages(s.usedMessages);
-      } catch {
-        /* keep mock defaults when the backend is unreachable */
+      } catch (err) {
+        // Surface the error instead of papering over it with fake data.
+        console.error("Failed to load settings from backend", err);
       }
     })();
     return () => {

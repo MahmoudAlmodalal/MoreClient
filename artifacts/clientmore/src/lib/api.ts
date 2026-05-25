@@ -91,18 +91,6 @@ export async function register(name: string, email: string, password: string, co
   return res;
 }
 
-/**
- * Demo-tenant access: hits the real /api/auth/demo-login endpoint, which
- * returns a real JWT scoped to the seeded "demo" tenant. Replaces the old
- * sessionStorage `userRole` bypass that let unauthenticated callers reach the
- * dashboard.
- */
-export async function demoLogin(): Promise<AuthSessionOut> {
-  const res = await apiSend<AuthSessionOut>("/api/auth/demo-login", "POST", {});
-  persistSession(res);
-  return res;
-}
-
 export function logout(): void {
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(JWT_TOKEN_STORAGE);

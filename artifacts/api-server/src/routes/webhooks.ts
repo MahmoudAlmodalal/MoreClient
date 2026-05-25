@@ -183,11 +183,17 @@ Answer concisely using only the provided context. Respond in ${language === "ar"
 // ── Route handlers ───────────────────────────────────────────────────────────
 
 router.post("/telegram/webhook", async (req, res) => {
-  const tenantKey = (req.query["tenantKey"] as string | undefined) || "demo";
+  const tenantKey = (req.query["tenantKey"] as string | undefined)?.trim() || "";
+  if (!tenantKey) {
+    return res.status(400).json({ ok: false, detail: "tenantKey query param is required" });
+  }
 
   // Load tenant settings to check for a configured webhook secret.
   const [tenant] = await db.select().from(tenants).where(eq(tenants.tenantKey, tenantKey)).limit(1);
-  if (tenant) {
+  if (!tenant) {
+    return res.status(400).json({ ok: false, detail: `Unknown tenantKey: ${tenantKey}` });
+  }
+  {
     const [settingsRow] = await db
       .select()
       .from(settings)
@@ -213,11 +219,17 @@ router.post("/telegram/webhook", async (req, res) => {
 });
 
 router.post("/whatsapp/webhook", async (req, res) => {
-  const tenantKey = (req.query["tenantKey"] as string | undefined) || "demo";
+  const tenantKey = (req.query["tenantKey"] as string | undefined)?.trim() || "";
+  if (!tenantKey) {
+    return res.status(400).type("text/xml").send("<Response></Response>");
+  }
 
   // Load Twilio auth token to validate signature when configured.
   const [tenant] = await db.select().from(tenants).where(eq(tenants.tenantKey, tenantKey)).limit(1);
-  if (tenant) {
+  if (!tenant) {
+    return res.status(400).type("text/xml").send("<Response></Response>");
+  }
+  {
     const [settingsRow] = await db
       .select()
       .from(settings)

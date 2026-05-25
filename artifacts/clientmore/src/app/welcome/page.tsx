@@ -4,8 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
-import { Apple } from "lucide-react";
-import { login, demoLogin } from "@/lib/api";
+import { login } from "@/lib/api";
 
 const SLIDES = 3;
 
@@ -36,23 +35,6 @@ export default function WelcomePage() {
       setLoading(false);
     }
   };
-
-  const handleDemoAccess = async () => {
-    setError("");
-    setLoading(true);
-    try {
-      const session = await demoLogin();
-      router.push(session.redirectTo || "/dashboard");
-    } catch (err: any) {
-      setError(err?.message || "Demo access unavailable");
-      setLoading(false);
-    }
-  };
-
-  // Social SSO is not implemented yet — route the click through the same
-  // real demo-tenant login instead of dropping a fake role in sessionStorage,
-  // so the dashboard always loads against a real backend session.
-  const handleSocialLogin = handleDemoAccess;
 
   useEffect(() => {
     const id = setInterval(() => setSlide((s) => (s + 1) % SLIDES), 4500);
@@ -169,44 +151,6 @@ export default function WelcomePage() {
                   <span>{t("signInBtn")}</span>
                 )}
               </button>
-
-              {/* Demo Access — no login required */}
-              <div className="relative my-2 flex items-center gap-3">
-                <div className="flex-1 border-t border-[var(--border-light)]" />
-                <span className="text-xs text-gray-400 font-medium">أو</span>
-                <div className="flex-1 border-t border-[var(--border-light)]" />
-              </div>
-
-              <button
-                type="button"
-                onClick={handleDemoAccess}
-                className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-3.5 px-6 rounded-2xl flex items-center justify-center gap-3 transition-all duration-300 shadow-lg shadow-emerald-600/20 hover:scale-[1.01] cursor-pointer"
-              >
-                <span>🚀</span>
-                <span>{language === "ar" ? "دخول تجريبي — بدون تسجيل" : "Demo Access — No Login"}</span>
-              </button>
-
-              <div className="grid gap-3 mt-2">
-                <button
-                  type="button"
-                  onClick={handleSocialLogin}
-                  className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[var(--border-light)] bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-[var(--surface-muted)]"
-                >
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full text-sm font-bold text-[#4285F4]">
-                    G
-                  </span>
-                  <span>{t("continueWithGoogle")}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleSocialLogin}
-                  className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[var(--border-light)] bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-[var(--surface-muted)]"
-                >
-                  <Apple className="h-5 w-5 text-gray-900" />
-                  <span>{t("continueWithApple")}</span>
-                </button>
-              </div>
 
               <div className="text-center mt-4">
                 <Link

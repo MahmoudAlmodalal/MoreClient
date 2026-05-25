@@ -9,8 +9,6 @@ import SignUpPage from "@/app/sign-up/[[...sign-up]]/page";
 import WidgetPage from "@/app/widget/page";
 import PrivacyPage from "@/app/legal/privacy/page";
 import TermsPage from "@/app/legal/terms/page";
-import PublicTalentPage from "@/app/(public)/t/[handle]/page";
-import PublicLayout from "@/app/(public)/layout";
 
 import DashboardLayout from "@/app/dashboard/layout";
 import DashboardHome from "@/app/dashboard/page";
@@ -32,10 +30,6 @@ function Admin({ children }: { children: React.ReactNode }) {
   return <AdminLayout>{children}</AdminLayout>;
 }
 
-function Public({ children }: { children: React.ReactNode }) {
-  return <PublicLayout>{children}</PublicLayout>;
-}
-
 function App() {
   return (
     <LanguageProvider>
@@ -49,13 +43,6 @@ function App() {
           <Route path="/widget" component={WidgetPage} />
           <Route path="/legal/privacy" component={PrivacyPage} />
           <Route path="/legal/terms" component={TermsPage} />
-          <Route path="/t/:handle">
-            {(params) => (
-              <Public>
-                <PublicTalentPage params={{ handle: params.handle }} />
-              </Public>
-            )}
-          </Route>
           <Route path="/dashboard">
             <Dashboard>
               <DashboardHome />

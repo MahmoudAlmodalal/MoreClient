@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
 import { db, tenants, authUsers, settings } from "../lib/db";
 import { hashPassword, signJwt, verifyPassword } from "../lib/auth";
-import { ensureDemoTenant, slugifyTenantKey } from "../lib/tenant";
+import { slugifyTenantKey } from "../lib/tenant";
 import { requireJwt } from "../middlewares/auth";
 
 const router: IRouter = Router();
@@ -81,26 +81,6 @@ router.post("/auth/login", async (req, res) => {
       role: user.role as "admin" | "company",
       tenantId: user.tenantId,
       tenantKey: tenant?.tenantKey || "",
-    }),
-  );
-});
-
-router.post("/auth/demo-login", async (_req, res) => {
-  const demo = await ensureDemoTenant();
-  const [user] = await db
-    .select()
-    .from(authUsers)
-    .where(eq(authUsers.email, "demo@clientmore.app"))
-    .limit(1);
-  if (!user) return res.status(500).json({ detail: "Demo bootstrap failed" });
-  return res.json(
-    sessionFor({
-      userId: user.id,
-      email: user.email,
-      name: user.name,
-      role: "company",
-      tenantId: demo.id,
-      tenantKey: demo.tenantKey,
     }),
   );
 });

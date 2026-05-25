@@ -16,13 +16,16 @@ router.post("/chat", async (req, res) => {
   const sessionId = (req.body?.session_id || req.body?.sessionId || "").toString();
   const message = (req.body?.message || "").toString().trim();
   const channel = (req.body?.channel || "web").toString();
-  const tenantKey = (req.body?.tenantKey || req.body?.tenant_key || "demo").toString();
+  const tenantKey = (req.body?.tenantKey || req.body?.tenant_key || "").toString().trim();
   if (!sessionId || !message) {
     return res.status(400).json({ detail: "session_id and message required" });
   }
+  if (!tenantKey) {
+    return res.status(400).json({ detail: "tenantKey is required" });
+  }
 
   const tenant = await findTenantByKey(tenantKey);
-  if (!tenant) return res.status(404).json({ detail: "Unknown tenant" });
+  if (!tenant) return res.status(400).json({ detail: `Unknown tenantKey: ${tenantKey}` });
 
   // get-or-create conversation
   let [conv] = await db
@@ -184,10 +187,11 @@ function buildFallbackAnswer(chunk: string, lang: string | null): string {
 // over /ws/chat/:sessionId for clients without a live socket.
 router.get("/chat/:sessionId/agent-messages", async (req, res) => {
   const sessionId = req.params.sessionId;
-  const tenantKey = (req.query["tenant_key"] as string | undefined) || "demo";
+  const tenantKey = (req.query["tenant_key"] as string | undefined)?.trim() || "";
   const afterId = Number(req.query["after_id"] || 0);
+  if (!tenantKey) return res.status(400).json({ detail: "tenant_key is required" });
   const tenant = await findTenantByKey(tenantKey);
-  if (!tenant) return res.json([]);
+  if (!tenant) return res.status(400).json({ detail: `Unknown tenantKey: ${tenantKey}` });
   const [conv] = await db
     .select()
     .from(conversations)

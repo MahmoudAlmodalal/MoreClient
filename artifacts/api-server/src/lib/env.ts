@@ -7,15 +7,15 @@ import { randomBytes } from "node:crypto";
 function requireSecret(name: string, devFallback: string): string {
   const val = process.env[name];
   if (val) return val;
-  if (process.env["NODE_ENV"] !== "production") return devFallback;
-  // Production: emit a loud warning but continue with a random ephemeral secret
-  // rather than crashing. Operators should always set these via env.
-  const fallback = randomBytes(32).toString("hex");
+  if (process.env["NODE_ENV"] === "production") {
+    throw new Error(
+      `${name} is required in production. Set ${name} in your environment before starting the server.`,
+    );
+  }
   console.warn(
-    `[WARN] ${name} is not set in production. Using a random ephemeral value — ` +
-      `all existing tokens will be invalidated on restart. Set ${name} in your environment.`,
+    `[WARN] ${name} is not set. Using an ephemeral dev value — all tokens will be invalidated on restart.`,
   );
-  return fallback;
+  return devFallback;
 }
 
 // Per-process random values used only when env vars are absent (dev only).

@@ -1,37 +1,5 @@
 import { and, eq } from "drizzle-orm";
 import { db, tenants, settings, type Tenant } from "./db";
-import { hashPassword } from "./auth";
-import { authUsers } from "./db";
-
-let demoBootstrap: Promise<Tenant> | null = null;
-
-// Guarantee a "demo" tenant exists for the public demo-login flow.
-export async function ensureDemoTenant(): Promise<Tenant> {
-  if (!demoBootstrap) {
-    demoBootstrap = (async () => {
-      const existing = await db.select().from(tenants).where(eq(tenants.tenantKey, "demo")).limit(1);
-      if (existing[0]) return existing[0];
-      const [created] = await db
-        .insert(tenants)
-        .values({ tenantKey: "demo", name: "Demo Company", email: "demo@clientmore.app" })
-        .returning();
-      await db.insert(settings).values({ tenantId: created.id, companyName: "Demo Company" });
-      // Seed a demo operator account so /api/auth/me has a user backing the demo JWT.
-      await db
-        .insert(authUsers)
-        .values({
-          tenantId: created.id,
-          email: "demo@clientmore.app",
-          passwordHash: await hashPassword("demo-only"),
-          name: "Demo Operator",
-          role: "company",
-        })
-        .onConflictDoNothing();
-      return created;
-    })();
-  }
-  return demoBootstrap;
-}
 
 export async function findTenantByKey(tenantKey: string): Promise<Tenant | undefined> {
   const [t] = await db.select().from(tenants).where(eq(tenants.tenantKey, tenantKey)).limit(1);

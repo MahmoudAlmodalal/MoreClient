@@ -1,0 +1,163 @@
+Plan: Comprehensive Replit Deployment & Enhancement Prompt for clientMORE                          
+                                                                                                      
+ Context
+
+ The user has built clientMORE — a bilingual (Arabic/English) AI customer support SaaS. The running
+ system is:
+ - Backend: Python FastAPI on :8000 (RAG, multi-channel, purchase flow, handoffs)
+ - Frontend: Next.js 16 on :5000 (dashboard, analytics, widget)
+
+ They want a single, polished deployment prompt document they can use as a Replit setup guide that
+ covers:
+ 1. What they built (project idea explanation)
+ 2. Complete file tree
+ 3. Replit deployment steps
+ 4. UI enhancements (human-facing, not "AI-looking")
+ 5. Lite / optimized build
+ 6. All known bug fixes
+ 7. RAG + reply quality improvements
+ 8. Handoff feedback enhancements
+
+ Deliverable
+
+ One comprehensive Markdown file at REPLIT_DEPLOY_AND_ENHANCE.md in the project root.
+
+ Content Outline
+
+ Section 1: Project Idea — What You Built
+
+ - B2B AI customer support bot
+ - RAG from uploaded docs (PDF, DOCX, XLSX, TXT)
+ - Multi-channel: Web widget, Telegram, WhatsApp
+ - Bilingual AR/EN, RTL aware
+ - Smart escalation to human agents when confidence is low
+ - Purchase flow state machine
+ - Analytics dashboard
+ - Answer injection ("teach the bot") from unanswered questions
+ - SaaS model: Pro/Ultra plans, per-tenant settings
+
+ Section 2: File Tree
+
+ Complete annotated tree of:
+ - backend/ (all subdirs: core, models, routers, services, schemas, seed, scripts, tests)
+ - MoreClient/src/ (all subdirs: app, components, lib)
+ - Root files (start.sh, requirements.txt, docker-compose.yml, etc.)
+
+ Section 3: Replit Deployment Guide
+
+ Step-by-step:
+ 1. Replit project setup (Python + Node.js template)
+ 2. Secrets configuration (OPENAI_API_KEY, APP_SECRET, ADMIN_API_KEY, etc.)
+ 3. .replit file configuration for dual-process startup
+ 4. replit.nix for system packages (Python 3.11, Node.js 20)
+ 5. Port configuration (backend 8000, frontend 5000)
+ 6. Run commands for npm install, pip install, seed_demo
+ 7. ChromaDB persistence (bind mount in Replit)
+ 8. Environment variable list (all required + optional)
+ 9. Health check endpoints to verify deployment
+
+ Section 4: UI Enhancements — Human-Facing, Not "AI-Looking"
+
+ Problems to fix:
+ - Remove "AI" terminology from UI; use "Support Team", "Our Team", etc.
+ - Bot name defaults to "clientMORE" — make it use Setting.bot_name everywhere
+ - Response messages should use first-person ("I found...", "Here's what I know...")
+ - Dashboard: replace generic icons with branded visuals
+ - Handoff tickets: use human avatar/name placeholder instead of robot icon
+ - Widget: show company logo, not AI logo; use company colors
+ - Escalation messages: "Connecting you with our support team..." not "Escalating to human"
+
+ Specific file changes:
+ - MoreClient/src/components/language-provider.tsx: Update translation keys to remove "AI" wording
+ - backend/services/ai/rag.py: Tune system prompt to be more human-like ("I", first-person)
+ - backend/services/chat_service.py: Humanize escalation messages in AR/EN
+ - MoreClient/src/app/dashboard/handoffs/page.tsx: Replace "Bot" badge with Setting.bot_name
+
+ Section 5: Lite / Optimized Build
+
+ Backend optimizations:
+ - Use gemini-2.0-flash-lite instead of gemini-2.5-flash for lower latency + cost
+ - Reduce RETRIEVAL_K to 3 (from 4) for faster vector search
+ - Remove unused imports in backend/main.py (anthropic not wired yet)
+ - Skip long_term_memory.py in lite mode (ENABLE_LONG_TERM_MEMORY=false)
+ - Cache language detection per conversation (avoid calling langdetect every message)
+
+ Frontend optimizations:
+ - Remove dead scaffold pages: src/app/api/v1/*, src/server/*
+ - Remove unused landing components if deploying dashboard-only
+ - Set output: 'standalone' in next.config.ts for smaller Docker image
+
+ Section 6: Bug Fixes
+
+ Critical:
+ 1. Auth not enforcing on /admin — add require_admin_key dependency to all /api/admin/* routes
+ 2. Silent handoff delivery failures — add retry logic with 3 attempts + log to
+ handoffs.delivery_failed column
+ 3. Demo access bypass — require backend session validation, not just sessionStorage role
+
+ High priority:
+ 4. Learned answer orphans in Chroma — on DELETE /api/learn/{id}, also delete from Chroma by
+ learned-{id}
+ 5. Purchase order stuck in "pending" — add timeout cleanup job (cron or background task)
+ 6. Language detected per message — cache conv.language on first detection, reuse thereafter
+ 7. Files page polling exits at 20 attempts — show "still processing" message after timeout instead
+ of silence
+
+ Medium priority:
+ 8. WebSocket no user feedback on persistent disconnect — show "Disconnected" banner after 5 failed
+ reconnects
+ 9. Optimistic delete flicker — only remove from UI on confirmed 200 response
+ 10. Settings logo sync bug — derive logoDraft from useEffect when companyLogo context changes
+
+ Section 7: RAG + Reply Enhancement
+
+ 1. Hybrid search: Already implemented (retrieval.py). Ensure ENABLE_HYBRID=true in env.
+ 2. Better system prompt: Rewrite to be more conversational, first-person, bilingual-aware
+ 3. Confidence calibration: Lower threshold to 0.35 for Arabic (Arabic embeddings score lower)
+ 4. Answer length control: Add max_tokens=300 for short factual answers, 700 for detailed
+ 5. Citation mode: Append source document name to answers: "Based on [document name]..."
+ 6. Rejection phrase detection: Add more Arabic rejection phrases to _is_no_answer() check
+ 7. Context window: Increase MEMORY_WINDOW to 10 for better multi-turn coherence
+ 8. Chunk dedup: Before generation, deduplicate overlapping chunks from same document
+
+ Section 8: Handoff Feedback Enhancement
+
+ 1. Delivery confirmation: Track delivery status in Handoff.delivery_status column
+ (pending/sent/failed)
+ 2. Retry queue: Add background task to retry failed deliveries every 60s (max 3 attempts)
+ 3. Agent reply threading: Show agent replies inline in handoff chat as "Agent: {name}"
+ 4. Handoff resolution feedback: After resolving, prompt admin "Was this resolved satisfactorily?"
+ (Y/N) — store in Handoff.resolved_satisfactorily
+ 5. Customer satisfaction: After resolution, send customer a 1-5 star rating prompt on their channel
+ 6. Handoff SLA: Show time-in-queue in handoffs list; highlight red if > 1 hour unresponded
+ 7. KB teaching shortcut: In handoff view, one-click "Use bot reply as answer" without re-typing
+
+ Critical Files to Modify
+
+ - backend/core/config.py — add new env flags (ENABLE_LONG_TERM_MEMORY, ENABLE_HYBRID, etc.)
+ - backend/services/ai/rag.py — system prompt improvements, confidence calibration, dedup
+ - backend/services/chat_service.py — humanize escalation messages
+ - backend/services/handoff_delivery.py — retry logic, delivery_status tracking
+ - backend/models/tables.py — add delivery_status, resolved_satisfactorily columns to Handoff
+ - backend/routers/admin.py — add require_admin_key dependency
+ - MoreClient/src/components/language-provider.tsx — remove "AI" wording from translations
+ - MoreClient/src/app/dashboard/handoffs/page.tsx — SLA timer, feedback prompt
+ - MoreClient/src/lib/api.ts — handoff resolution feedback endpoint
+ - next.config.ts — standalone output mode
+
+ Verification Plan
+
+ 1. Start backend: uvicorn backend.main:app --port 8000
+ 2. Seed KB: python -m backend.scripts.seed_demo
+ 3. Start frontend: cd MoreClient && npm run dev
+ 4. Test chat at http://localhost:5000/widget
+ 5. Verify handoff flow: send "talk to a human" → see ticket in /dashboard/handoffs
+ 6. Verify admin: GET /api/admin/tenants with X-Admin-Key header
+ 7. Verify no "AI" wording visible in widget/dashboard
+ 8. Run tests: python -m pytest backend/tests
+
+ Output Format
+
+ The deliverable is a single file: REPLIT_DEPLOY_AND_ENHANCE.md at the project root.
+ It will be a complete, copy-pasteable Replit deployment guide + enhancement specification.
+ Length: ~800-1200 lines to cover all sections thoroughly.

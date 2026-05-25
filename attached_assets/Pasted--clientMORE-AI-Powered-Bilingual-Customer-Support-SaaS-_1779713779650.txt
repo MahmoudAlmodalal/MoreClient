@@ -1,0 +1,929 @@
+# clientMORE — AI-Powered Bilingual Customer Support SaaS
+## Clean MVP Build Specification for Replit Agent
+
+**Version:** 2.0 (Replit Build Edition)
+**Date:** 2026-05-25
+**Purpose:** Complete spec to build a production-ready MVP from scratch — no legacy code, no partial implementations, no known bugs.
+
+---
+
+## OVERVIEW
+
+**clientMORE** is a B2B SaaS platform that lets any Arabic or English business deploy an AI support bot in under 10 minutes. The bot reads the company's uploaded documents, answers customer questions across Web widget, Telegram, and WhatsApp, and escalates to human agents when it can't answer. Unanswered questions feed a learning loop — agents teach the bot with one click.
+
+**The one-line pitch:** Replace expensive, slow human support with a bot that speaks Arabic, knows your business, and never sleeps.
+
+---
+
+## TECH STACK (NON-NEGOTIABLE)
+
+### Backend
+- **Runtime:** Python 3.11+
+- **Framework:** FastAPI (async)
+- **Database:** SQLite with SQLAlchemy ORM (WAL mode enabled)
+- **Vector Store:** ChromaDB (persistent, local)
+- **Task Queue:** None for MVP (inline async is fine)
+- **Auth:** JWT (HS256, python-jose), bcrypt password hashing
+- **Encryption:** Fernet (cryptography library) for secrets stored in DB
+- **LLM Chain:** Google Gemini → DeepSeek → OpenAI (try in order, skip if key missing)
+- **Embeddings:** Google `text-embedding-004` → OpenAI `text-embedding-3-small` → MD5-hash fallback
+- **File parsing:** PyMuPDF (PDF), python-docx (DOCX), openpyxl (XLSX), plain text (TXT/MD)
+- **Telegram:** python-telegram-bot (long-polling, not webhook)
+- **WhatsApp:** Twilio Python SDK (webhook)
+- **Rate limiting:** slowapi
+
+### Frontend (Admin Dashboard)
+- **Framework:** Next.js 14 (App Router)
+- **Language:** TypeScript
+- **Styling:** Tailwind CSS
+- **UI Components:** shadcn/ui
+- **Charts:** Recharts
+- **State:** React hooks (no Redux)
+- **HTTP:** fetch API (no axios)
+- **Real-time:** native WebSocket
+
+### Deployment (Replit)
+- Backend runs on port **8000**
+- Frontend runs on port **5000** (next dev -p 5000)
+- Both in the same Replit project as separate processes
+- All secrets via **Replit Secrets** (environment variables)
+
+---
+
+## ENVIRONMENT VARIABLES
+
+```
+# LLM Providers (all optional — app degrades gracefully if missing)
+GEMINI_API_KEY=
+DEEPSEEK_API_KEY=
+OPENAI_API_KEY=
+
+# Auth
+JWT_SECRET=your-random-256-bit-secret-here
+FERNET_KEY=             # generated once: Fernet.generate_key()
+
+# Admin
+ADMIN_API_KEY=          # for super-admin routes
+
+# WhatsApp / Twilio (optional)
+TWILIO_ACCOUNT_SID=
+TWILIO_AUTH_TOKEN=
+TWILIO_WHATSAPP_FROM=
+
+# Frontend
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_WS_URL=ws://localhost:8000
+```
+
+---
+
+## PROJECT STRUCTURE
+
+```
+clientmore/
+├── backend/
+│   ├── main.py                    # FastAPI app + startup
+│   ├── database.py                # SQLAlchemy engine + session + Base
+│   ├── models.py                  # All ORM models
+│   ├── auth.py                    # JWT creation/verification, password hashing
+│   ├── dependencies.py            # FastAPI Depends: get_db, require_jwt, require_admin
+│   ├── config.py                  # Settings loaded from env
+│   ├── routers/
+│   │   ├── auth.py                # POST /api/auth/login, /register, /me, /demo-login
+│   │   ├── chat.py                # POST /api/chat  (public)
+│   │   ├── files.py               # CRUD /api/files
+│   │   ├── settings.py            # GET/PUT /api/settings
+│   │   ├── analytics.py           # GET /api/analytics
+│   │   ├── handoffs.py            # /api/handoffs + reply/resolve/feedback
+│   │   ├── learn.py               # POST/DELETE /api/learn
+│   │   ├── admin.py               # /api/admin/* (requires admin key)
+│   │   └── webhooks.py            # /telegram/webhook, /whatsapp/webhook
+│   ├── services/
+│   │   ├── chat_service.py        # Main RAG pipeline
+│   │   ├── rag_service.py         # Embed + search ChromaDB
+│   │   ├── llm_service.py         # Gemini → DeepSeek → OpenAI fallback chain
+│   │   ├── ingest_service.py      # Parse files → chunk → embed → store
+│   │   ├── handoff_service.py     # Create/resolve handoffs + delivery retry
+│   │   ├── telegram_service.py    # Send messages via Telegram Bot API
+│   │   ├── whatsapp_service.py    # Send messages via Twilio
+│   │   └── language_service.py   # Detect AR vs EN; cache on conversation
+│   └── ws/
+│       └── manager.py             # WebSocket connection manager
+│
+├── frontend/                      # Next.js 14 app
+│   ├── app/
+│   │   ├── layout.tsx
+│   │   ├── page.tsx               # Redirect to /dashboard or /login
+│   │   ├── login/page.tsx
+│   │   ├── register/page.tsx
+│   │   ├── widget/page.tsx        # Public chat widget (no auth)
+│   │   └── dashboard/
+│   │       ├── layout.tsx         # Sidebar + auth guard
+│   │       ├── page.tsx           # Analytics overview
+│   │       ├── files/page.tsx     # Knowledge base management
+│   │       ├── handoffs/page.tsx  # Escalation ticket queue
+│   │       ├── analytics/page.tsx # Charts + unanswered queue
+│   │       ├── settings/page.tsx  # Bot config + embed code
+│   │       └── admin/page.tsx     # Super admin (hidden unless admin)
+│   ├── components/
+│   │   ├── ui/                    # shadcn/ui components
+│   │   ├── sidebar.tsx
+│   │   ├── chat-widget.tsx        # Embeddable widget component
+│   │   ├── handoff-card.tsx
+│   │   ├── file-upload.tsx
+│   │   └── notification-bell.tsx  # WebSocket-powered live alerts
+│   ├── lib/
+│   │   ├── api.ts                 # fetch wrappers with auth headers
+│   │   ├── auth.ts                # JWT storage + useAuth hook
+│   │   └── ws.ts                  # WebSocket client with reconnect
+│   └── public/
+│       └── widget-embed.js        # Standalone script for external sites
+│
+├── chroma_store/                  # ChromaDB persistent data (gitignored)
+├── uploads/                       # Uploaded files temp storage (gitignored)
+├── backend.db                     # SQLite database (gitignored)
+├── requirements.txt
+├── package.json                   # Frontend deps
+└── .replit                        # Replit run config
+```
+
+---
+
+## DATABASE SCHEMA (SQLAlchemy Models)
+
+```python
+# All models in backend/models.py
+
+class Tenant(Base):
+    __tablename__ = "tenants"
+    id: int (PK, autoincrement)
+    tenant_key: str (unique, indexed)  # e.g. "shop_123"
+    name: str
+    email: str (unique)
+    plan: str = "pro"                  # "pro" | "ultra" | "custom"
+    status: str = "active"             # "active" | "inactive" | "suspended"
+    used_messages: int = 0
+    limit_messages: int = 500
+    created_at: datetime
+
+class AuthUser(Base):
+    __tablename__ = "auth_users"
+    id: int (PK)
+    email: str (unique, indexed)
+    password_hash: str (nullable — null for OAuth users)
+    provider: str = "password"         # "password" | "google"
+    role: str = "company"              # "company" | "admin"
+    tenant_key: str (FK → tenants.tenant_key)
+    is_active: bool = True
+    created_at: datetime
+
+class Setting(Base):
+    __tablename__ = "settings"
+    id: int (PK)
+    tenant_key: str (unique, indexed)
+
+    # Bot identity
+    company_name: str = "My Company"
+    bot_name: str = "Support Bot"
+    bot_tone: str = "professional"     # "friendly" | "professional" | "formal"
+    custom_system_prompt: str = ""
+
+    # RAG config
+    confidence_threshold: float = 0.40
+    memory_window: int = 10            # messages to keep in context
+
+    # Telegram (token stored Fernet-encrypted)
+    telegram_token_enc: bytes = None
+    is_telegram_active: bool = False
+
+    # WhatsApp / Twilio (stored Fernet-encrypted)
+    twilio_account_sid_enc: bytes = None
+    twilio_auth_token_enc: bytes = None
+    twilio_whatsapp_from: str = ""
+    is_whatsapp_active: bool = False
+
+    # Company logo
+    logo_url: str = ""
+
+    # Purchase flow
+    purchase_flow_enabled: bool = False
+    purchase_collect_address: bool = True
+    purchase_collect_quantity: bool = True
+    currency_label: str = "ريال"
+
+    # Intent config
+    auto_handoff_on_complaint: bool = True
+
+class Document(Base):
+    __tablename__ = "documents"
+    id: int (PK)
+    tenant_key: str (indexed)
+    title: str
+    file_type: str                     # "pdf" | "docx" | "xlsx" | "txt" | "md"
+    status: str = "processing"         # "processing" | "completed" | "failed"
+    chunk_count: int = 0
+    error_message: str = ""
+    created_at: datetime
+
+class Conversation(Base):
+    __tablename__ = "conversations"
+    id: int (PK)
+    tenant_key: str (indexed)
+    channel: str                       # "web" | "telegram" | "whatsapp"
+    customer_ref: str (indexed)        # session ID / tg chat_id / wa number
+    status: str = "open"               # "open" | "handoff" | "closed"
+    language: str = ""                 # "en" | "ar" — cached after first detection
+    created_at: datetime
+
+class Message(Base):
+    __tablename__ = "messages"
+    id: int (PK)
+    conversation_id: int (FK → conversations.id)
+    role: str                          # "user" | "assistant" | "agent"
+    content: str
+    confidence_score: float = None     # Only for assistant messages
+    created_at: datetime
+
+class Handoff(Base):
+    __tablename__ = "handoffs"
+    id: int (PK)
+    tenant_key: str (indexed)
+    conversation_id: int (FK → conversations.id)
+    reason: str                        # "low_confidence" | "complaint" | "support_request" | "empty_kb"
+    status: str = "pending"            # "pending" | "resolved"
+    delivery_status: str = "not_attempted"  # "not_attempted" | "sent" | "failed"
+    delivery_attempts: int = 0
+    csat_score: int = None             # 1–5
+    resolved_satisfactorily: bool = None
+    created_at: datetime
+    resolved_at: datetime = None
+
+class LearnedAnswer(Base):
+    __tablename__ = "learned_answers"
+    id: int (PK)
+    tenant_key: str (indexed)
+    question: str
+    answer: str
+    source_handoff_id: int (FK → handoffs.id, nullable)
+    chroma_chunk_id: str               # "learned-{id}" — for deletion sync
+    usage_count: int = 0
+    created_at: datetime
+
+class PurchaseOrder(Base):
+    __tablename__ = "purchase_orders"
+    id: int (PK)
+    tenant_key: str
+    conversation_id: int (FK → conversations.id)
+    product_name: str = ""
+    quantity: int = None
+    delivery_address: str = ""
+    state: str = "collecting_product"
+    # "collecting_product" | "collecting_quantity" | "collecting_address" | "pending_confirmation" | "confirmed"
+    created_at: datetime
+
+class AnalyticsEvent(Base):
+    __tablename__ = "analytics_events"
+    id: int (PK)
+    tenant_key: str (indexed)
+    event_type: str                    # "answered" | "escalated" | "purchase_started" | "purchase_confirmed"
+    channel: str
+    question_text: str = ""
+    confidence_score: float = None
+    created_at: datetime
+```
+
+---
+
+## CORE SERVICES
+
+### 1. chat_service.py — Main Pipeline
+
+```
+handle(tenant_key, session_id, channel, user_message) → str:
+
+1. get_or_create_conversation(tenant_key, session_id, channel)
+2. detect_and_cache_language(conversation, user_message)
+3. if conversation.status == "handoff":
+     return localized "Our team will reply shortly" message
+4. if active PurchaseOrder for this conversation:
+     return advance_purchase_state_machine(order, user_message)
+5. classify_intent(user_message, settings):
+     - contains keywords ["اشتري","أطلب","order","buy"] → PURCHASE_INTENT
+     - contains ["تشكوى","شكوى","complaint","problem","مشكلة"] → COMPLAINT
+     - contains ["بشري","موظف","human","agent","انسان"] → SUPPORT_REQUEST
+6. if intent == PURCHASE_INTENT and settings.purchase_flow_enabled:
+     create PurchaseOrder, return first collection prompt
+7. if intent == COMPLAINT and settings.auto_handoff_on_complaint:
+     create_handoff(conversation, "complaint"), return escalation message
+8. if intent == SUPPORT_REQUEST:
+     create_handoff(conversation, "support_request"), return escalation message
+9. RAG pipeline:
+     a. if no documents exist for tenant:
+          create_handoff("empty_kb"), return escalation message
+     b. chunks = hybrid_search(tenant_key, user_message, k=5)
+     c. confidence = max(chunk.score for chunk in chunks)
+     d. if confidence < settings.confidence_threshold:
+          create_handoff("low_confidence"), return escalation message
+     e. answer = generate_answer(user_message, chunks, conversation_history, settings)
+     f. if answer contains NO_ANSWER_SENTINEL:
+          create_handoff("low_confidence"), return escalation message
+10. persist Message(role="user"), Message(role="assistant", content=answer)
+11. log AnalyticsEvent
+12. broadcast WebSocket update to dashboard
+13. return answer
+```
+
+### 2. rag_service.py — Embeddings + Search
+
+```python
+# ChromaDB Collections (one set per tenant):
+# "{tenant_key}_kb"     — document chunks
+# "{tenant_key}_memory" — per-user long-term memory (future feature, create but don't query for RAG)
+
+def embed_text(text: str) -> list[float]:
+    # Try Gemini text-embedding-004
+    # Fallback OpenAI text-embedding-3-small
+    # Fallback MD5-hash → deterministic 128-dim vector (keyless mode)
+
+def ingest_chunks(tenant_key, doc_id, chunks: list[str]):
+    collection = get_or_create_collection(f"{tenant_key}_kb")
+    for i, chunk in enumerate(chunks):
+        collection.add(
+            ids=[f"doc-{doc_id}-chunk-{i}"],
+            embeddings=[embed_text(chunk)],
+            documents=[chunk],
+            metadatas=[{"doc_id": doc_id, "chunk_index": i}]
+        )
+
+def hybrid_search(tenant_key, query, k=5) -> list[dict]:
+    # Vector search (semantic)
+    results = collection.query(query_embeddings=[embed_text(query)], n_results=k)
+    # Lexical boost: if query words appear in chunk, add +0.05 to score
+    # Return list of {text, score, doc_id}
+    # Score = 1 - cosine_distance / 2 (so 1.0 = perfect match, 0.0 = unrelated)
+```
+
+### 3. llm_service.py — Provider Chain
+
+```python
+SYSTEM_PROMPT_TEMPLATE = """
+You are {bot_name}, the customer support assistant for {company_name}.
+Tone: {tone_instructions}
+Language: Always reply in the same language the customer used.
+Rules:
+- Answer ONLY using the provided context. Never invent facts.
+- If the context doesn't contain enough information, reply with exactly: __NO_ANSWER__
+- Keep answers concise: 2–4 sentences maximum.
+- Never mention AI, ChatGPT, Gemini, or any LLM.
+- For Arabic: use formal Gulf/Egyptian Modern Standard Arabic.
+{custom_system_prompt}
+
+Context from knowledge base:
+{context}
+
+Conversation history (last {memory_window} messages):
+{history}
+"""
+
+def generate(prompt: str, settings: Setting) -> str:
+    providers = []
+    if GEMINI_API_KEY: providers.append(call_gemini)
+    if DEEPSEEK_API_KEY: providers.append(call_deepseek)
+    if OPENAI_API_KEY: providers.append(call_openai)
+    if not providers: return top_chunk_verbatim  # keyless fallback
+
+    for provider in providers:
+        try:
+            return provider(prompt)
+        except Exception:
+            continue
+    raise AllProvidersFailedError
+```
+
+### 4. ingest_service.py — File Processing
+
+```python
+CHUNK_SIZE = 800       # characters
+CHUNK_OVERLAP = 100    # characters
+
+def process_file(tenant_key, doc_id, file_path, file_type):
+    raw_text = extract_text(file_path, file_type)
+    chunks = sliding_window_chunk(raw_text, CHUNK_SIZE, CHUNK_OVERLAP)
+    # Filter empty chunks
+    chunks = [c.strip() for c in chunks if len(c.strip()) > 50]
+    ingest_chunks(tenant_key, doc_id, chunks)
+    return len(chunks)
+
+def extract_text(path, file_type) -> str:
+    if file_type == "pdf":   return pymupdf_extract(path)
+    if file_type == "docx":  return python_docx_extract(path)
+    if file_type == "xlsx":  return openpyxl_extract(path)
+    if file_type in ("txt", "md"): return open(path).read()
+```
+
+### 5. handoff_service.py — Escalation + Delivery
+
+```python
+def create_handoff(conversation, reason, db):
+    # Set conversation.status = "handoff"
+    # Create Handoff(pending)
+    # Return system message to customer
+
+def deliver_agent_reply(handoff_id, reply_text, db):
+    handoff = db.get(Handoff, handoff_id)
+    conv = db.get(Conversation, handoff.conversation_id)
+    # Try up to 3 times with exponential backoff (1s, 2s, 4s)
+    for attempt in range(3):
+        try:
+            if conv.channel == "telegram": telegram_send(conv.customer_ref, reply_text)
+            if conv.channel == "whatsapp": whatsapp_send(conv.customer_ref, reply_text)
+            if conv.channel == "web": ws_manager.send_to_session(conv.customer_ref, reply_text)
+            handoff.delivery_status = "sent"
+            return True
+        except Exception:
+            await asyncio.sleep(2 ** attempt)
+    handoff.delivery_status = "failed"
+    handoff.delivery_attempts = 3
+    return False
+```
+
+---
+
+## API CONTRACTS
+
+### Public Endpoints (no auth required)
+
+**POST /api/chat**
+```json
+Request:
+{
+  "tenant_key": "shop_123",
+  "session_id": "web:abc123",
+  "channel": "web",
+  "message": "ما هو سعر المنتج؟"
+}
+
+Response 200:
+{
+  "reply": "سعر المنتج 150 ريال سعودي.",
+  "confidence": 0.87,
+  "escalated": false,
+  "handoff_id": null
+}
+
+Response 200 (escalated):
+{
+  "reply": "جاري تحويلك إلى فريق الدعم...",
+  "confidence": 0.21,
+  "escalated": true,
+  "handoff_id": 42
+}
+```
+
+**POST /api/auth/login**
+```json
+Request: { "email": "admin@shop.com", "password": "..." }
+Response 200: { "access_token": "eyJ...", "token_type": "bearer", "role": "company" }
+Response 401: { "detail": "Invalid credentials" }
+```
+
+**POST /api/auth/register**
+```json
+Request: { "email": "...", "password": "...", "company_name": "...", "tenant_key": "..." }
+Response 201: { "access_token": "...", "token_type": "bearer" }
+Response 400: { "detail": "Email already registered" }
+```
+
+**POST /api/auth/demo-login**
+```json
+Request: { "tenant_key": "demo" }
+Response 200: { "access_token": "...", "token_type": "bearer", "role": "company" }
+# Creates a demo tenant if it doesn't exist. Issues real JWT — not sessionStorage bypass.
+```
+
+### Protected Endpoints (JWT required — `Authorization: Bearer <token>`)
+
+**GET /api/settings**
+```json
+Response: { "company_name": "...", "bot_name": "...", "bot_tone": "...", 
+            "confidence_threshold": 0.4, "is_telegram_active": false, 
+            "is_whatsapp_active": false, "logo_url": "...", ... }
+# NOTE: Never return decrypted tokens — return only masked values like "****5678"
+```
+
+**PUT /api/settings**
+```json
+Request: { any subset of settings fields }
+Response: { updated settings object }
+```
+
+**POST /api/upload**
+```
+Multipart form: file (binary), title (str)
+Response 202: { "doc_id": 7, "status": "processing" }
+# Processing happens async — poll GET /api/files for status
+```
+
+**GET /api/files**
+```json
+Response: [{ "id": 7, "title": "FAQ.pdf", "status": "completed", 
+             "chunk_count": 42, "file_type": "pdf", "created_at": "..." }]
+```
+
+**DELETE /api/files/{id}**
+```json
+Response 200: { "deleted": true }
+# Must delete from BOTH SQLite and ChromaDB
+```
+
+**GET /api/analytics**
+```json
+Response:
+{
+  "total_questions": 1240,
+  "deflection_rate": 0.74,
+  "escalated_count": 322,
+  "avg_confidence": 0.71,
+  "channel_distribution": { "web": 800, "telegram": 300, "whatsapp": 140 },
+  "top_questions": [
+    { "question": "ما سعر الشحن؟", "count": 87, "last_confidence": 0.91 }
+  ],
+  "unanswered_queue": [
+    { "question": "هل تقبلون الدفع بالتقسيط؟", "confidence": 0.18, "asked_at": "..." }
+  ]
+}
+```
+
+**GET /api/handoffs** (query params: `status`, `channel`)
+```json
+Response: [{
+  "id": 42,
+  "reason": "low_confidence",
+  "status": "pending",
+  "delivery_status": "sent",
+  "channel": "telegram",
+  "customer_question": "هل يوجد توصيل لخارج المملكة؟",
+  "conversation_history": [{"role": "user", "content": "..."}, ...],
+  "created_at": "...",
+  "open_minutes": 34,
+  "is_overdue": true
+}]
+```
+
+**POST /api/handoffs/{id}/reply**
+```json
+Request: { "reply": "نعم، نوصل لجميع دول الخليج." }
+Response: { "delivered": true, "delivery_status": "sent" }
+```
+
+**POST /api/handoffs/{id}/resolve**
+```json
+Response: { "resolved": true }
+```
+
+**POST /api/learn**
+```json
+Request: { "question": "هل يوجد توصيل للخارج؟", "answer": "نعم...", "source_handoff_id": 42 }
+Response: { "id": 15, "chroma_chunk_id": "learned-15" }
+```
+
+**DELETE /api/learn/{id}**
+```json
+Response: { "deleted": true }
+# Deletes from BOTH SQLite and ChromaDB collection by chroma_chunk_id
+```
+
+### WebSocket
+
+**WS /ws/dashboard?token={jwt}**
+- Server pushes events:
+  - `{ "type": "new_handoff", "handoff": {...} }`
+  - `{ "type": "message_answered", "stats": { "total": ..., "deflection_rate": ... } }`
+  - `{ "type": "document_processed", "doc_id": 7, "status": "completed", "chunk_count": 42 }`
+
+**WS /ws/chat/{session_id}**  
+- Server pushes: `{ "type": "agent_reply", "content": "..." }`
+- No auth required (used by public widget)
+
+### Admin Endpoints (X-Admin-Key header required)
+
+**GET /api/admin/tenants** → list of all tenants with stats  
+**POST /api/admin/tenants** → create tenant  
+**PUT /api/admin/tenants/{id}** → update tenant  
+**DELETE /api/admin/tenants/{id}** → delete tenant  
+**GET /api/admin/kpis** → `{ total_tenants, active_tenants, total_messages_today, top_tenants_by_usage }`  
+**GET /api/admin/health** → `{ db_latency_ms, chroma_status, llm_availability, uptime_seconds }`
+
+---
+
+## FRONTEND PAGES
+
+### /login and /register
+- Clean centered form, company logo placeholder
+- Email + password fields
+- Register: additionally collect Company Name and desired tenant_key (slug)
+- On success → store JWT in `localStorage` as `cm_token` → redirect to `/dashboard`
+- Show inline validation errors from API
+
+### /dashboard (protected layout)
+- Left sidebar with: Logo, nav links (Overview, Knowledge Base, Handoffs, Analytics, Settings), user email + logout
+- Auth guard: if no valid JWT → redirect to /login
+- RTL-aware: detect from settings.language and apply `dir="rtl"` to layout
+
+### /dashboard (overview page)
+- KPI cards: Total Questions, Deflection Rate %, Escalated Count, Avg Confidence
+- Bar chart: questions per day (last 7 days)
+- Pie chart: channel distribution
+- Recent handoffs list (top 5, with "View all" link)
+- All data from GET /api/analytics + live updates via WebSocket
+
+### /dashboard/files
+- Drag-and-drop upload area (accepts PDF, DOCX, XLSX, TXT, MD, max 10MB)
+- File list table: Name, Type, Status (with spinner if processing), Chunks, Uploaded, Delete button
+- Optimistic delete with rollback on error
+- If status == "processing": poll every 5s for up to 60 polls, then switch to 30s polling (never give up silently)
+- Empty state: "Upload your first document to enable the bot"
+
+### /dashboard/handoffs
+- Filter tabs: All | Web | Telegram | WhatsApp | Pending | Resolved
+- Each ticket card shows:
+  - Customer question (truncated)
+  - Channel badge
+  - Open time + red "OVERDUE" badge if > 60 min
+  - Expandable: full conversation history
+  - Reply textarea + Send button
+  - "Mark Resolved" button
+  - "Add to Knowledge Base" button (if resolved — pre-fills /api/learn form)
+- Delivery status indicator (sent ✓ / failed ✗ / pending ⏳)
+
+### /dashboard/analytics
+- Top 10 most-asked questions table with frequency counts
+- Unanswered questions queue: question text, confidence score, timestamp, "Inject Answer" button
+  - "Inject Answer" opens modal with question pre-filled → admin types answer → POST /api/learn
+- CSAT score (future: placeholder card)
+
+### /dashboard/settings
+- Bot Identity section: Company Name, Bot Name, Bot Tone (dropdown), Logo URL, Custom Prompt
+- RAG Config: Confidence Threshold slider (0.20 – 0.80 with live preview of current value)
+- Telegram: enable toggle, API token input (masked), save button
+- WhatsApp: enable toggle, Account SID, Auth Token (masked), From Number
+- Widget Embed: readonly code block with copy button
+  ```html
+  <script src="https://YOUR_DOMAIN/widget-embed.js" data-tenant="shop_123"></script>
+  ```
+- Purchase Flow: enable toggle, collect quantity toggle, collect address toggle, currency label
+
+### /widget (public — no auth)
+- Floating chat bubble in bottom-right
+- Reads tenant_key from URL param `?tenant=shop_123`
+- Loads company name + bot name from GET /api/settings?tenant=shop_123 (public endpoint, returns only display config)
+- Chat interface: message bubbles, typing indicator, input + send
+- RTL if Arabic detected
+- Connects to WS /ws/chat/{session_id} for live agent replies
+- Escalation message styled differently (grey, italic)
+
+---
+
+## WIDGET EMBED (public/widget-embed.js)
+
+Standalone script that:
+1. Reads `data-tenant` from the script tag
+2. Creates an iframe pointing to `{API_URL}/widget?tenant={tenant_key}`
+3. Injects floating button (32px circle, brand color) in bottom-right corner
+4. Toggles iframe visibility on click
+5. Zero dependencies — pure vanilla JS
+
+```html
+<!-- Example usage on any external site -->
+<script src="https://clientmore.example.com/widget-embed.js" 
+        data-tenant="shop_123"
+        data-primary-color="#4F46E5">
+</script>
+```
+
+---
+
+## MULTI-CHANNEL: TELEGRAM
+
+```python
+# backend/services/telegram_service.py
+
+# On startup: if is_telegram_active for any tenant, start polling
+# Use python-telegram-bot Application with token per tenant
+
+async def handle_telegram_message(update, context, tenant_key):
+    chat_id = update.effective_chat.id
+    text = update.message.text
+    session_id = f"tg:{chat_id}"
+    reply = await chat_service.handle(tenant_key, session_id, "telegram", text)
+    await context.bot.send_message(chat_id=chat_id, text=reply)
+
+def send_telegram_message(token: str, chat_id: str, text: str):
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    requests.post(url, json={"chat_id": chat_id, "text": text})
+```
+
+---
+
+## MULTI-CHANNEL: WHATSAPP
+
+```python
+# POST /whatsapp/webhook (Twilio sends form-encoded data)
+# Validate Twilio signature before processing
+
+async def whatsapp_webhook(request: Request, tenant_key: str):
+    body = await request.form()
+    from_number = body.get("From")  # "whatsapp:+966501234567"
+    message_text = body.get("Body")
+    session_id = f"wa:{from_number}"
+    reply = await chat_service.handle(tenant_key, session_id, "whatsapp", message_text)
+    # Return TwiML response
+    return Response(f'<Response><Message>{reply}</Message></Response>', 
+                    media_type="text/xml")
+```
+
+---
+
+## PURCHASE FLOW STATE MACHINE
+
+```
+States: collecting_product → collecting_quantity → collecting_address → pending_confirmation → confirmed
+
+collecting_product:
+  Bot: "ما اسم المنتج الذي تريد طلبه؟"
+  User input → save product_name → move to next state
+
+collecting_quantity (if purchase_collect_quantity):
+  Bot: "كم وحدة تريد؟"
+  User input (must be integer) → save quantity
+
+collecting_address (if purchase_collect_address):
+  Bot: "ما هو عنوان التوصيل؟"
+  User input → save delivery_address
+
+pending_confirmation:
+  Bot: "ملخص طلبك: {product} × {qty} — التوصيل إلى: {address}. هل تأكد الطلب؟ (نعم/لا)"
+  "نعم" → state = "confirmed" → create Handoff with order metadata
+  "لا" → cancel order, return to normal RAG mode
+```
+
+---
+
+## SECURITY REQUIREMENTS (ALL MANDATORY)
+
+1. **Admin routes** — every route in `admin.py` must use `Depends(require_admin_key)`. The dependency compares the `X-Admin-Key` header using `hmac.compare_digest()` (constant-time). Return 401 if missing, 403 if wrong.
+
+2. **JWT auth** — every dashboard API route (except `/api/chat`, `/api/auth/*`, widget settings) must use `Depends(require_jwt)`. Decode token, verify expiry, attach `current_user` to request.
+
+3. **Demo login** — `/api/auth/demo-login` must issue a real JWT for a real demo tenant row. No sessionStorage bypasses. Token expiry: 2 hours for demo.
+
+4. **Secrets in DB** — Telegram tokens and Twilio credentials encrypted with Fernet before INSERT. Decrypted on use. Never returned in API responses (return masked version only).
+
+5. **File upload** — validate MIME type + extension match. Reject executables. Save to temp path with random UUID name, not original filename.
+
+6. **CORS** — allow only `http://localhost:5000` in development. In production, set to actual frontend domain.
+
+7. **Rate limiting** — 30 requests/minute per IP via slowapi on `/api/chat`. 10/minute on auth endpoints.
+
+8. **Tenant isolation** — every DB query filters by `tenant_key` from the JWT. Never trust `tenant_key` from request body for protected endpoints.
+
+---
+
+## GRACEFUL DEGRADATION
+
+| Condition | Behavior |
+|-----------|----------|
+| No LLM API keys | Use MD5 hash embeddings + return top matching chunk verbatim |
+| Gemini fails | Try DeepSeek, then OpenAI |
+| All LLMs fail | Create handoff: "Our system is temporarily unavailable, connecting you to a human" |
+| ChromaDB unavailable | Return handoff response, log error |
+| No documents uploaded | Return handoff with reason "empty_kb" |
+| Confidence below threshold | Return handoff with reason "low_confidence" |
+| Telegram delivery fails | 3 retries (1s, 2s, 4s), mark handoff delivery_status="failed" |
+| WebSocket disconnects | Client auto-reconnects up to 10 times with exponential backoff; after 10 failures, show "Live updates paused" banner |
+
+---
+
+## UI/UX REQUIREMENTS
+
+- **Color scheme:** Dark background (#0F0F14), purple accent (#7C3AED), white text
+- **RTL support:** When settings detect Arabic context, apply `dir="rtl"` to the page and use Cairo font (Google Fonts). Default to `dir="ltr"` with Inter font.
+- **All dashboard strings** must support both Arabic and English — use a simple i18n object, not hardcoded text.
+- **Empty states** on every list page (files, handoffs, analytics)
+- **Loading skeletons** on initial page load (not spinners — use shimmer placeholders)
+- **Toast notifications** for: successful upload, save, reply sent, error occurred
+- **Responsive:** dashboard usable on mobile (sidebar collapses to bottom nav on mobile)
+
+---
+
+## BUILD ORDER (follow this sequence)
+
+```
+Phase 1 — Backend skeleton (no LLM yet)
+  1. database.py + models.py (all tables, SQLAlchemy)
+  2. auth.py (JWT + bcrypt)
+  3. dependencies.py (require_jwt, require_admin_key, get_db)
+  4. routers/auth.py (login, register, demo-login, /me)
+  5. main.py (app init, CORS, include routers, startup event)
+  6. Test: POST /api/auth/register + login returns JWT
+
+Phase 2 — Knowledge base
+  7. rag_service.py (ChromaDB init, embed with fallback, ingest)
+  8. ingest_service.py (file parsing, chunking)
+  9. routers/files.py (upload, list, delete — delete syncs ChromaDB)
+  10. Test: upload a PDF → status=completed → chunk count visible
+
+Phase 3 — Core RAG chat
+  11. llm_service.py (Gemini → DeepSeek → OpenAI chain)
+  12. language_service.py (langdetect, cached per conversation)
+  13. handoff_service.py (create, deliver with retry)
+  14. chat_service.py (full pipeline)
+  15. routers/chat.py (POST /api/chat)
+  16. Test: send message → get answer grounded in uploaded doc
+
+Phase 4 — Handoffs + Learning
+  17. routers/handoffs.py (list, reply, resolve, feedback)
+  18. routers/learn.py (create, delete with ChromaDB sync)
+  19. Test: trigger escalation → reply from dashboard → learn from ticket
+
+Phase 5 — WebSocket + Analytics
+  20. ws/manager.py (broadcast, per-tenant rooms)
+  21. routers/analytics.py
+  22. Wire WebSocket broadcast into chat_service and ingest_service
+  23. Test: answer a question → dashboard KPI updates live
+
+Phase 6 — Channels
+  24. telegram_service.py + startup poller
+  25. whatsapp_service.py + webhook router
+  26. Test: send Telegram message → get reply → escalation shows in dashboard
+
+Phase 7 — Frontend
+  27. Next.js scaffold with shadcn/ui
+  28. /login + /register pages
+  29. Dashboard layout with sidebar
+  30. /dashboard/files page
+  31. /dashboard/handoffs page
+  32. /dashboard/analytics page
+  33. /dashboard/settings page
+  34. /widget page (public)
+  35. widget-embed.js
+
+Phase 8 — Admin + Polish
+  36. Admin console page + routers/admin.py
+  37. Purchase flow state machine
+  38. Notification bell (WebSocket)
+  39. E2E test all user stories
+```
+
+---
+
+## ACCEPTANCE CRITERIA (Definition of Done)
+
+- [ ] An admin can register, log in, and access the dashboard with a valid JWT
+- [ ] Admin can upload a PDF and see "completed" status with correct chunk count
+- [ ] A customer can ask a question in Arabic and receive an answer in Arabic grounded in the uploaded doc
+- [ ] A question below the confidence threshold triggers a handoff visible in the dashboard
+- [ ] An agent can reply to a handoff and the customer receives it on the correct channel
+- [ ] Agent can click "Add to KB" from a resolved ticket — bot uses the answer for future questions
+- [ ] Deleting a document or learned answer removes it from both SQLite and ChromaDB
+- [ ] All admin API routes return 401/403 without the correct X-Admin-Key header
+- [ ] Demo login returns a real JWT (no sessionStorage tricks)
+- [ ] App boots and serves chat responses with zero API keys configured (keyless mode)
+- [ ] WebSocket dashboard updates in real-time without page refresh
+- [ ] Widget embed script works on an HTML page with a single script tag
+- [ ] p95 chat response time < 3 seconds under normal load
+
+---
+
+## OUT OF SCOPE FOR THIS MVP
+
+- ❌ Voice/phone (IVR)
+- ❌ Instagram / Facebook Messenger
+- ❌ Payment processing / Stripe
+- ❌ Google OAuth (scaffold the DB column but don't wire it)
+- ❌ Weekly digest emails
+- ❌ Multi-language beyond Arabic + English
+- ❌ A/B testing
+- ❌ Team collaboration (multiple agents on one ticket)
+- ❌ Mobile native app
+
+---
+
+## GLOSSARY
+
+| Term | Definition |
+|------|-----------|
+| **RAG** | Retrieval-Augmented Generation — search the knowledge base, then pass results to the LLM to generate a grounded answer |
+| **Handoff** | A conversation escalated from the bot to a human agent |
+| **Deflection Rate** | % of questions answered by the bot without human involvement |
+| **Tenant** | A business using clientMORE (one subscription = one tenant) |
+| **Tenant Key** | Unique slug for a tenant, e.g. `"shop_123"` |
+| **Chunk** | ~800-character text segment from an uploaded document |
+| **Confidence Score** | `1 - cosine_distance / 2` — 0.0 = unrelated, 1.0 = perfect match |
+| **ChromaDB** | Open-source vector database storing document embeddings |
+| **Keyless Mode** | No API keys set — uses MD5 hash embeddings and returns top chunk verbatim |
+| **Fernet** | Symmetric encryption (AES-128-CBC + HMAC) used to encrypt secrets stored in DB |
+
+---
+
+*clientMORE MVP Build Spec v2.0 — ready for Replit Agent*

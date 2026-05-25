@@ -1,0 +1,17 @@
+modules = ["nodejs-20", "python-3.11"]
+run = "bash start.sh"
+
+[agent]
+expertMode = true
+stack = "BEST_EFFORT_FALLBACK"
+
+[nix]
+channel = "stable-25_05"
+
+[[ports]]
+localPort = 5000
+externalPort = 80
+
+[[ports]]
+localPort = 8000
+externalPort = 8000

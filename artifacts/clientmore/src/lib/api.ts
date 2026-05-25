@@ -325,6 +325,9 @@ export type SettingsOut = {
   intentConfidenceThreshold: number;
   autoHandoffOnComplaint: boolean;
   tenantKey: string;
+  telegramLastDeliveryStatus: string | null;
+  telegramLastDeliveryDetail: string | null;
+  telegramLastDeliveryAt: string | null;
 };
 
 export type PurchaseOrderOut = {

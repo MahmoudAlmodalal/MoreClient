@@ -227,6 +227,8 @@ router.post("/telegram/webhook", async (req, res) => {
 
   // Send the AI-generated reply back to the user in the same Telegram chat.
   if (result && settingsForReply?.telegramToken && settingsForReply?.isTelegramActive) {
+    let deliveryStatus: "delivered" | "failed" = "failed";
+    let deliveryDetail: string | null = null;
     try {
       const tgRes = await fetch(
         `https://api.telegram.org/bot${settingsForReply.telegramToken}/sendMessage`,
@@ -236,15 +238,27 @@ router.post("/telegram/webhook", async (req, res) => {
           body: JSON.stringify({ chat_id: msg.chat.id, text: result.answer }),
         },
       );
-      if (!tgRes.ok) {
-        const detail = await tgRes.text().catch(() => String(tgRes.status));
-        console.warn(`[telegram] sendMessage failed: ${detail}`);
+      if (tgRes.ok) {
+        deliveryStatus = "delivered";
+      } else {
+        deliveryDetail = await tgRes.text().catch(() => String(tgRes.status));
+        console.warn(`[telegram] sendMessage failed: ${deliveryDetail}`);
       }
     } catch (err) {
       // Log but do not rethrow — Telegram must receive { ok: true } or it will
       // keep retrying the webhook indefinitely.
-      console.warn("[telegram] sendMessage error:", (err as Error).message);
+      deliveryDetail = (err as Error).message;
+      console.warn("[telegram] sendMessage error:", deliveryDetail);
     }
+    // Persist delivery status so operators can see it in Settings.
+    await db
+      .update(settings)
+      .set({
+        telegramLastDeliveryStatus: deliveryStatus,
+        telegramLastDeliveryDetail: deliveryDetail,
+        telegramLastDeliveryAt: new Date(),
+      })
+      .where(eq(settings.tenantId, tenant.id));
   }
 
   return res.json({ ok: true });

@@ -84,11 +84,19 @@ export default function SettingsPage() {
   const [errorToast, setErrorToast] = useState(false);
   const [savedTenantKey, setSavedTenantKey] = useState<string>("");
   const [copiedWebhook, setCopiedWebhook] = useState(false);
+  const [tgDeliveryStatus, setTgDeliveryStatus] = useState<string | null>(null);
+  const [tgDeliveryDetail, setTgDeliveryDetail] = useState<string | null>(null);
+  const [tgDeliveryAt, setTgDeliveryAt] = useState<string | null>(null);
 
-  // Load tenantKey on mount so the webhook URL is shown even before the first save.
+  // Load tenantKey and last Telegram delivery status on mount.
   useEffect(() => {
     apiGet<SettingsOut>("/api/settings")
-      .then((s) => { if (s.tenantKey) setSavedTenantKey(s.tenantKey); })
+      .then((s) => {
+        if (s.tenantKey) setSavedTenantKey(s.tenantKey);
+        setTgDeliveryStatus(s.telegramLastDeliveryStatus ?? null);
+        setTgDeliveryDetail(s.telegramLastDeliveryDetail ?? null);
+        setTgDeliveryAt(s.telegramLastDeliveryAt ?? null);
+      })
       .catch(() => {});
   }, []);
 
@@ -559,6 +567,38 @@ export default function SettingsPage() {
                     </div>
                   );
                 })()}
+
+                {/* Last auto-reply delivery status */}
+                {tgDeliveryStatus && (
+                  <div className="rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-3 space-y-1.5">
+                    <p className="text-[11px] font-bold text-gray-500 uppercase">
+                      {language === "ar" ? "آخر حالة إرسال تلقائي" : "Last Auto-Reply Status"}
+                    </p>
+                    <div className="flex items-center gap-2">
+                      {tgDeliveryStatus === "delivered" ? (
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
+                          <Check className="h-3.5 w-3.5" />
+                          {language === "ar" ? "تم التسليم بنجاح" : "Delivered"}
+                        </span>
+                      ) : (
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-red-400">
+                          <span className="text-sm leading-none">✗</span>
+                          {language === "ar" ? "فشل الإرسال" : "Failed"}
+                        </span>
+                      )}
+                      {tgDeliveryAt && (
+                        <span className="text-[11px] text-gray-600">
+                          · {new Date(tgDeliveryAt).toLocaleString()}
+                        </span>
+                      )}
+                    </div>
+                    {tgDeliveryStatus === "failed" && tgDeliveryDetail && (
+                      <p className="text-[11px] text-red-400/80 break-all font-mono">
+                        {tgDeliveryDetail}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>

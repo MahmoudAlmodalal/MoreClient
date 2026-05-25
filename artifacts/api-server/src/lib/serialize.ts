@@ -39,6 +39,9 @@ const DEFAULT_SETTINGS = {
   intentLlmEnabled: true,
   intentConfidenceThreshold: 0.6,
   autoHandoffOnComplaint: true,
+  telegramLastDeliveryStatus: null as string | null,
+  telegramLastDeliveryDetail: null as string | null,
+  telegramLastDeliveryAt: null as string | null,
 };
 
 export function settingsOut(s: Settings | undefined, usedMessages = 0) {
@@ -68,6 +71,9 @@ export function settingsOut(s: Settings | undefined, usedMessages = 0) {
     intentLlmEnabled: s.intentLlmEnabled,
     intentConfidenceThreshold: s.intentConfidenceThreshold,
     autoHandoffOnComplaint: s.autoHandoffOnComplaint,
+    telegramLastDeliveryStatus: s.telegramLastDeliveryStatus ?? null,
+    telegramLastDeliveryDetail: s.telegramLastDeliveryDetail ?? null,
+    telegramLastDeliveryAt: s.telegramLastDeliveryAt ? s.telegramLastDeliveryAt.toISOString() : null,
   };
 }
 

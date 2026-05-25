@@ -1,6 +1,6 @@
-# [Project name]
+# clientMORE
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+B2B AI customer support SaaS — operators manage their AI support bot, knowledge base, handoffs queue, and integrations from web and mobile.
 
 ## Run & Operate
 
@@ -22,23 +22,36 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/clientmore/` — Vite + React web app (operators dashboard)
+- `artifacts/clientmore-mobile/` — Expo mobile app (iOS / Android / web)
+- `artifacts/api-server/` — Express 5 backend (port 5000)
+- `artifacts/clientmore/src/lib/api.ts` — web API client (calls Python FastAPI on :8000)
+- `artifacts/clientmore-mobile/lib/api.ts` — mobile API client (mirrors web, uses AsyncStorage)
+- `artifacts/clientmore-mobile/constants/colors.ts` — design tokens (dark theme)
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Mobile mirrors the web app's manual fetch layer (`lib/api.ts`) rather than the OpenAPI codegen path, since the web's actual data calls bypass the stub openapi.yaml.
+- JWT token stored in AsyncStorage on mobile (same key `"authToken"` as web's localStorage).
+- Dark theme forced (`userInterfaceStyle: "dark"`) — brand colors: bg `#050508`, primary `#8b5cf6`.
+- Mobile auth uses an `AuthProvider` context; unauthenticated users are redirected to the `(auth)` stack.
+- Expo Router file-based routing with `(auth)/login` and `(tabs)` groups gated by token presence.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+- **Web**: Marketing landing page, operator dashboard with analytics KPIs/charts, knowledge base file manager, handoffs queue with reply + resolve, settings (company, integrations, advanced). Bilingual EN/AR.
+- **Mobile**: Login, Dashboard (KPIs + channel distribution + unanswered queue), Knowledge Base (list + upload + delete), Handoffs (queue with filter, inline reply, resolve), Settings (all fields + sign out).
 
 ## User preferences
 
-_Populate as you build — explicit user instructions worth remembering across sessions._
+- Dark theme only: bg `#050508`, card `#0d0d15`, border `#1f1f2e`, primary `#8b5cf6`.
+- Bilingual support EN/AR in web app.
+- Mobile targets operators (internal users), not end customers.
 
 ## Gotchas
 
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Python FastAPI backend runs separately on port 8000 — set `EXPO_PUBLIC_API_URL=http://localhost:8000` and `VITE_API_URL=http://localhost:8000` to point both apps at it.
+- `expo-document-picker` version must match expo SDK (currently `~14.0.8` for expo ~54).
 
 ## Pointers
 

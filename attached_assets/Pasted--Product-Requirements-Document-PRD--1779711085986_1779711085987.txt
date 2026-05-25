@@ -1,0 +1,868 @@
+ # Product Requirements Document (PRD)                                                         
+    2 ## clientMORE — AI-Powered Bilingual Customer Support SaaS                                    
+    3
+    4 **Version:** 1.0
+    5 **Date:** 2026-05-25
+    6 **Author:** Product Team
+    7 **Status:** Active Development
+    8
+    9 ---
+   10
+   11 ## 1. EXECUTIVE SUMMARY
+   12
+   13 **clientMORE** is a B2B SaaS platform that enables businesses to deploy an
+      intelligent, bilingual (Arabic/English) customer support bot in minutes. Th
+      e bot learns from the company's own documents, answers customer questions a
+      cross Web, Telegram, and WhatsApp, and seamlessly escalates to human agents
+       when it doesn't know the answer. Every unanswered question becomes a learn
+      ing opportunity — admins can teach the bot with one click, making it smarte
+      r over time.
+   14
+   15 **The core promise:** Replace or augment expensive human support teams with
+       a bot that speaks your language, knows your business, and never sleeps.
+   16
+   17 ---
+   18
+   19 ## 2. PROBLEM STATEMENT
+   20
+   21 ### 2.1 Customer Pain Points
+   22
+   23 Small and medium businesses in the Arab world face a specific set of custom
+      er support challenges:
+   24
+   25 | Problem | Impact |
+   26 |---------|--------|
+   27 | Support agents are expensive to hire and train | High operational cost; q
+      uality inconsistency |
+   28 | Most chatbot platforms are English-only or poor in Arabic | Market gap fo
+      r Arabic SMBs |
+   29 | Generic chatbots give irrelevant answers | Customer frustration; churn |
+   30 | Businesses can't afford to be available 24/7 | Lost sales and support out
+      side business hours |
+   31 | Agents waste time answering the same questions repeatedly | Inefficiency;
+       burnout |
+   32 | No visibility into what customers are asking | Missed product/content imp
+      rovements |
+   33
+   34 ### 2.2 The Gap in the Market
+   35
+   36 Existing solutions (Intercom, Zendesk AI, Freshdesk Bot) are:
+   37 - Primarily English-first (Arabic support is an afterthought)
+   38 - Expensive for SMBs (starting at $50–$500/month)
+   39 - Require significant setup and CRM integration
+   40 - Don't support Telegram/WhatsApp natively without expensive add-ons
+   41
+   42 **clientMORE** targets Arabic-market SMBs who need a fast, affordable, docu
+      ment-grounded support bot with first-class Arabic and RTL support.
+   43
+   44 ---
+   45
+   46 ## 3. GOALS & OBJECTIVES
+   47
+   48 ### 3.1 Business Goals
+   49 - Build a recurring-revenue SaaS (subscription model)
+   50 - Target 1,000 paying tenants in 18 months
+   51 - Achieve $50K MRR within 24 months
+   52 - Become the go-to Arabic AI support platform for SMBs
+   53
+   54 ### 3.2 Product Goals
+   55 - **Time to value < 10 minutes**: A business owner uploads one document and
+       has a working bot
+   56 - **Deflection rate > 70%**: The bot answers correctly more than 7 out of 1
+      0 questions without human help
+   57 - **Bilingual quality**: Arabic answers are as accurate and natural as Engl
+      ish
+   58 - **Zero-knowledge baseline**: The bot works even without an API key (keyle
+      ss demo mode)
+   59
+   60 ### 3.3 Success Metrics (KPIs)
+   61 | Metric | Target | Measurement |
+   62 |--------|--------|-------------|
+   63 | Bot deflection rate | ≥ 70% | (answered / total) per tenant |
+   64 | Response latency (p95) | < 3 seconds | Backend benchmark |
+   65 | Handoff resolution time | < 30 minutes median | Handoff created → resolve
+      d |
+   66 | Customer satisfaction (CSAT) | ≥ 4.2/5 | Post-resolution star rating |
+   67 | Monthly active tenants | +20% MoM | Dashboard unique logins |
+   68 | Documents per tenant | ≥ 3 | Median at 30 days |
+   69 | Upgrade rate (free → paid) | ≥ 15% | Conversion funnel |
+   70
+   71 ---
+   72
+   73 ## 4. TARGET USERS
+   74
+   75 ### 4.1 Primary Persona — The Business Owner (Admin)
+   76
+   77 **Name:** Ahmed Al-Rashidi
+   78 **Role:** Owner of a medium e-commerce or services business
+   79 **Location:** Saudi Arabia, UAE, Egypt, or Jordan
+   80 **Tech level:** Moderate — uses WhatsApp Business, Google Docs, basic web a
+      pps
+   81 **Goal:** Reduce the cost and effort of customer support; never miss a cust
+      omer question
+   82 **Pain:** Spends 2–3 hours/day answering the same WhatsApp messages
+   83 **Behavior:** Checks the dashboard once a day; wants to trust the bot; hate
+      s complexity
+   84
+   85 **What they need from clientMORE:**
+   86 - Upload their product catalog or FAQ → bot is ready
+   87 - See how many questions were answered vs. escalated
+   88 - Reply to escalated questions in a simple chat interface
+   89 - Embed the bot on their website with a single copy-paste snippet
+   90
+   91 ---
+   92
+   93 ### 4.2 Secondary Persona — The Support Agent
+   94
+   95 **Name:** Fatima Hassan
+   96 **Role:** Customer support rep at a company using clientMORE
+   97 **Goal:** Handle escalated tickets efficiently; teach the bot to reduce fut
+      ure workload
+   98 **Pain:** Context-switching between Telegram, WhatsApp, and the dashboard
+   99 **Behavior:** Checks ticket queue throughout the day; uses mobile browser
+  100
+  101 **What they need from clientMORE:**
+  102 - Clear list of pending escalations with customer's question visible
+  103 - Quick reply interface that sends the message back to the customer's chann
+      el
+  104 - One-click "teach the bot this answer" to prevent repeat escalations
+  105
+  106 ---
+  107
+  108 ### 4.3 Tertiary Persona — The Super Admin (You)
+  109
+  110 **Role:** Platform operator managing all tenants
+  111 **Goal:** Monitor platform health, manage subscriptions, onboard new busine
+      sses
+  112 **What they need:** Admin console with tenant CRUD, global KPIs, system hea
+      lth
+  113
+  114 ---
+  115
+  116 ### 4.4 End Customer (NOT a user of the dashboard)
+  117
+  118 The end customer chats with the bot on a company's website, Telegram channe
+      l, or WhatsApp number.
+  119 They **do not know** they are talking to an AI — they see the company's bot
+       name and logo.
+  120 **Requirements:**
+  121 - Fast, natural responses in their language (AR or EN)
+  122 - Seamless handoff when the bot can't help ("connecting you to our team..."
+      )
+  123 - Consistent experience across all channels
+  124
+  125 ---
+  126
+  127 ## 5. FEATURES & REQUIREMENTS
+  128
+  129 ### 5.1 Core Features (MVP — currently built)
+  130
+  131 #### F1 — Knowledge Base Management
+  132 **What:** Upload documents (PDF, DOCX, XLSX, TXT/Markdown) that the bot lea
+      rns from.
+  133 **How it works:** Files are chunked (~800 chars), embedded (Gemini/OpenAI/M
+      D5), stored in ChromaDB.
+  134 **Requirements:**
+  135 - [ ] Support PDF, DOCX, XLSX, TXT, MD file types
+  136 - [ ] Max file size: 10 MB per file
+  137 - [ ] Show processing status: uploading → processing → completed / failed
+  138 - [ ] Display chunk count per document
+  139 - [ ] Allow delete (removes from both SQL + ChromaDB)
+  140 - [ ] Show total documents and total knowledge chunks in dashboard
+  141
+  142 **Status:** ✅ Implemented
+  143
+  144 ---
+  145
+  146 #### F2 — AI Chat (RAG)
+  147 **What:** The bot answers customer questions using the knowledge base.
+  148 **How it works:** Query → hybrid search (vector + lexical) → confidence gat
+      e → LLM generation → response.
+  149 **Requirements:**
+  150 - [ ] Answer grounded ONLY in uploaded documents
+  151 - [ ] Return confidence score with each answer
+  152 - [ ] Support Arabic and English in the same conversation
+  153 - [ ] Escalate if confidence < threshold (default 0.40)
+  154 - [ ] Escalate if customer says "human" / "agent" / "يرشب معد" / "فظوم"
+  155 - [ ] Show "I don't know" gracefully; never hallucinate
+  156 - [ ] Multi-provider LLM: try Gemini → DeepSeek → OpenAI in order
+  157 - [ ] Work in keyless mode (hash embeddings + direct chunk retrieval) for d
+      emo
+  158 - [ ] Response latency p95 < 3 seconds
+  159
+  160 **Status:** ✅ Implemented
+  161
+  162 ---
+  163
+  164 #### F3 — Human Handoff (Escalation)
+  165 **What:** When the bot can't help, create a support ticket for a human agen
+      t.
+  166 **Requirements:**
+  167 - [ ] Automatically create handoff ticket on: low confidence, complaint int
+      ent, explicit request
+  168 - [ ] Show all open tickets in dashboard `/dashboard/handoffs`
+  169 - [ ] Agent can reply; reply is delivered back to the customer on their cha
+      nnel (Telegram/WhatsApp/Web)
+  170 - [ ] Agent can resolve/close a ticket
+  171 - [ ] Agent can "teach" the bot from the ticket (add Q&A to knowledge base)
+  172 - [ ] Delivery confirmation: track whether reply was successfully sent to c
+      ustomer
+  173 - [ ] Retry failed deliveries up to 3 times
+  174 - [ ] SLA timer: show how long each ticket has been open; highlight overdue
+       (>1 hour) in red
+  175 - [ ] Filter tickets by: channel, unreplied, resolved
+  176
+  177 **Status:** ✅ Implemented (delivery retry = ⚠️  partial bug)
+  178
+  179 ---
+  180
+  181 #### F4 — Multi-Channel Support
+  182 **What:** The same bot works on Web widget, Telegram, and WhatsApp.
+  183 **Requirements:**
+  184 - [ ] **Web Widget**: Embeddable iframe + script tag; works on any website
+  185 - [ ] **Telegram**: Bot API via long-polling; activated by token in setting
+      s
+  186 - [ ] **WhatsApp**: Twilio webhook; activated by Twilio credentials in sett
+      ings
+  187 - [ ] All channels converge on the same RAG brain
+  188 - [ ] Session isolation: web:<id>, tg:<chat_id>, wa:<number>
+  189 - [ ] Agent replies delivered back to originating channel
+  190
+  191 **Status:** ✅ Implemented
+  192
+  193 ---
+  194
+  195 #### F5 — Analytics Dashboard
+  196 **What:** Business intelligence for the admin on bot performance.
+  197 **Requirements:**
+  198 - [ ] KPI cards: Total Questions, Deflection Rate, Cost Savings (estimated)
+      , Feedback Score
+  199 - [ ] Bar chart: Top 10 most-asked questions
+  200 - [ ] Pie chart: Channel distribution (Web / Telegram / WhatsApp)
+  201 - [ ] Unanswered questions queue with confidence scores
+  202 - [ ] Real-time updates via WebSocket (no page refresh needed)
+  203 - [ ] "Inject Answer" button on each unanswered question
+  204
+  205 **Status:** ✅ Implemented
+  206
+  207 ---
+  208
+  209 #### F6 — Bot Settings Configuration
+  210 **What:** Admin can customize the bot's persona, behavior, and channel cred
+      entials.
+  211 **Requirements:**
+  212 - [ ] Company name and bot name (used in all messages)
+  213 - [ ] Company logo (upload or URL; shown in widget)
+  214 - [ ] Bot tone: Friendly / Professional / Formal
+  215 - [ ] Custom system prompt injection
+  216 - [ ] Confidence threshold slider (0.20–0.80)
+  217 - [ ] Telegram token + enable toggle
+  218 - [ ] WhatsApp (Twilio) credentials + enable toggle
+  219 - [ ] Widget embed code (script + iframe) with copy button
+  220 - [ ] Purchase flow configuration (enable/disable, collect address, etc.)
+  221
+  222 **Status:** ✅ Implemented
+  223
+  224 ---
+  225
+  226 #### F7 — Purchase Flow
+  227 **What:** Guide customers through buying a product via chat.
+  228 **How it works:** State machine: product → quantity → delivery address → co
+      nfirmation.
+  229 **Requirements:**
+  230 - [ ] Enable/disable per tenant from settings
+  231 - [ ] Configurable: collect quantity (Y/N), collect address (Y/N)
+  232 - [ ] Store order as `PurchaseOrder` row in DB
+  233 - [ ] Support Arabic currency label (default: لاير)
+  234 - [ ] Auto-forward confirmed orders to support queue (optional)
+  235 - [ ] Order metadata visible in handoff ticket (product, qty, address, stat
+      us)
+  236
+  237 **Status:** ⚠️  Partial — confirmation step doesn't auto-transition; no payme
+      nt integration
+  238
+  239 ---
+  240
+  241 #### F8 — Answer Injection (Learning)
+  242 **What:** Admin can manually add Q&A pairs to the knowledge base.
+  243 **Requirements:**
+  244 - [ ] "Inject Answer" from unanswered queue (pre-fills question field)
+  245 - [ ] "Add to KB" from resolved handoff ticket (pre-fills both Q and A)
+  246 - [ ] Learned answers embedded into ChromaDB with chunk ID `learned-{id}`
+  247 - [ ] On deletion, remove from both SQL and ChromaDB
+  248
+  249 **Status:** ✅ Implemented (deletion orphan = ⚠️  bug, see Section 5.3)
+  250
+  251 ---
+  252
+  253 #### F9 — Multi-Tenant Admin Console
+  254 **What:** Super admin manages all tenants.
+  255 **Requirements:**
+  256 - [ ] List all tenants with search/filter by name, plan, status
+  257 - [ ] Create / update / delete tenants
+  258 - [ ] Toggle tenant active/inactive
+  259 - [ ] View global KPIs: total tenants, total MRR, total messages
+  260 - [ ] View system health: DB latency, Chroma status, LLM availability, CPU/
+      RAM
+  261 - [ ] **MUST require admin API key** (`X-Admin-Key` header)
+  262
+  263 **Status:** ⚠️  Partially broken — no auth guard on admin routes (critical bu
+      g)
+  264
+  265 ---
+  266
+  267 ### 5.2 Planned Features (Roadmap)
+  268
+  269 #### F10 — Full Authentication System
+  270 **Priority:** P0 — Must-fix before production
+  271 **Requirements:**
+  272 - [ ] Email + password login with JWT session tokens
+  273 - [ ] Google OAuth (config keys exist, not wired)
+  274 - [ ] Per-tenant user accounts with roles (owner, agent)
+  275 - [ ] Password reset via email
+  276 - [ ] Session expiry and refresh tokens
+  277 - [ ] Logout invalidates session
+  278
+  279 **Current state:** Scaffolded (`AuthUser` table exists, JWT utils exist) bu
+      t not wired end-to-end.
+  280
+  281 ---
+  282
+  283 #### F11 — Email Notifications
+  284 **Priority:** P1
+  285 **Requirements:**
+  286 - [ ] Email to admin when new handoff ticket is created
+  287 - [ ] Email to admin when their plan usage exceeds 80%
+  288 - [ ] Weekly usage summary email (questions answered, deflection rate)
+  289 - [ ] Onboarding welcome email with setup guide
+  290
+  291 ---
+  292
+  293 #### F12 — Customer Satisfaction (CSAT)
+  294 **Priority:** P1
+  295 **Requirements:**
+  296 - [ ] After handoff is resolved, send 1–5 star rating prompt to customer on
+       their channel
+  297 - [ ] Store rating in `Handoff.csat_score`
+  298 - [ ] Show average CSAT in analytics dashboard
+  299 - [ ] Alert admin if CSAT drops below 3.5
+  300
+  301 ---
+  302
+  303 #### F13 — Subscription Billing
+  304 **Priority:** P1
+  305 **Requirements:**
+  306 - [ ] Enforce message limits per plan (Pro: 500/month, Ultra: 1,500/month)
+  307 - [ ] Show usage bar in dashboard
+  308 - [ ] Upgrade/downgrade plan via settings
+  309 - [ ] Payment processing (Stripe or local payment gateway)
+  310 - [ ] Auto-suspend account on payment failure
+  311 - [ ] Invoice generation and email delivery
+  312
+  313 ---
+  314
+  315 #### F14 — Voice Channel
+  316 **Priority:** P2
+  317 **Requirements:**
+  318 - [ ] Accept inbound calls via Twilio Voice
+  319 - [ ] Convert speech to text → RAG → text to speech
+  320 - [ ] Arabic TTS/STT support
+  321
+  322 ---
+  323
+  324 #### F15 — Proactive Messaging
+  325 **Priority:** P2
+  326 **Requirements:**
+  327 - [ ] Admin can broadcast a message to all active Telegram/WhatsApp convers
+      ations
+  328 - [ ] Schedule broadcasts for a specific time
+  329 - [ ] Personalize with customer name
+  330
+  331 ---
+  332
+  333 ### 5.3 Known Bugs (Must Fix)
+  334
+  335 | ID | Severity | File | Description | Fix Summary |
+  336 |----|---------|------|-------------|-------------|
+  337 | B1 | **CRITICAL** | `backend/routers/admin.py` | Admin API has no authent
+      ication — publicly accessible | Add `Depends(require_admin_key)` to all adm
+      in routes |
+  338 | B2 | **HIGH** | `backend/services/handoff_delivery.py` | Delivery failure
+      s silently swallowed; no retry | Add 3-attempt retry loop; track `delivery_
+      status` in DB |
+  339 | B3 | **HIGH** | `MoreClient/src/app/welcome/page.tsx` | Demo access bypas
+      ses all auth via sessionStorage | Add `/api/auth/demo-login` backend endpoi
+      nt with real token |
+  340 | B4 | **MEDIUM** | `backend/routers/learn.py` | Learned answer chunks orph
+      an in ChromaDB on delete | Delete from Chroma by ID when SQL row deleted |
+  341 | B5 | **MEDIUM** | `MoreClient/src/app/dashboard/files/page.tsx` | Polling
+       silently gives up after 20 attempts | Show "still processing" + switch to
+      slow 30s polling |
+  342 | B6 | **MEDIUM** | `backend/services/chat_service.py` | Language detected
+      on every message (wasteful) | Cache `conv.language` on first detection |
+  343 | B7 | **LOW** | `MoreClient/notification-bell.tsx` | No user feedback afte
+      r 5+ failed WebSocket reconnects | Show "Live updates paused" banner |
+  344 | B8 | **LOW** | `MoreClient/src/app/dashboard/files/page.tsx` | Optimistic
+       delete flickers on server error | Restore file list on failure |
+  345
+  346 ---
+  347
+  348 ## 6. USER STORIES
+  349
+  350 ### As an Admin (Business Owner):
+  351
+  352 ```
+  353 US-01: Upload my FAQ document
+  354   As an admin, I want to upload my FAQ PDF
+  355   So that the bot can answer questions from it
+  356  
+  357   Acceptance Criteria:
+  358   - I can drag-drop or click to upload a file
+  359   - I see a progress indicator while the file is processed
+  360   - After processing, I see "Completed" status with chunk count
+  361   - If processing fails, I see "Failed" with an error message
+  362
+  363 US-02: Configure my bot's name and persona
+  364   As an admin, I want to set my bot's name to "Maha" and tone to "Friendly"
+  365   So that customers feel like they're talking to someone on my team
+  366  
+  367   Acceptance Criteria:
+  368   - I can change bot name and it reflects immediately in the widget
+  369   - I can choose Friendly / Professional / Formal tone
+  370   - I can add a custom instruction (e.g., "always mention our business hour
+      s")
+  371   - Changes are saved and persist across restarts
+  372
+  373 US-03: See what customers are asking
+  374   As an admin, I want to see the most common questions my customers ask
+  375   So that I can improve my documents and products
+  376  
+  377   Acceptance Criteria:
+  378   - Dashboard shows top 10 questions ranked by frequency
+  379   - I can see which questions were NOT answered (with confidence score)
+  380   - I can inject an answer directly from the unanswered list
+  381
+  382 US-04: Reply to escalated tickets
+  383   As an admin, I want to reply to a customer who was transferred to me
+  384   So that they don't get left without an answer
+  385  
+  386   Acceptance Criteria:
+  387   - I see the full conversation history in the ticket
+  388   - I can type a reply and it's delivered to the customer's channel
+  389   - I see confirmation that the message was delivered
+  390   - I can resolve/close the ticket after helping the customer
+  391
+  392 US-05: Embed the bot on my website
+  393   As an admin, I want a code snippet I can paste into my website
+  394   So that my customers can chat with the bot directly
+  395  
+  396   Acceptance Criteria:
+  397   - Settings page shows a ready-to-copy script tag
+  398   - The widget loads with my company name and logo
+  399   - The widget works on mobile and desktop
+  400 ```
+  401
+  402 ### As a Support Agent:
+  403
+  404 ```
+  405 US-06: Filter tickets by channel
+  406   As an agent, I want to filter tickets to see only WhatsApp escalations
+  407   So that I can focus on the channel I'm handling today
+  408  
+  409   Acceptance Criteria:
+  410   - Filter tabs: All / Telegram / WhatsApp / Widget
+  411   - Ticket count shown per tab
+  412   - Filter persists while I'm on the page
+  413
+  414 US-07: Teach the bot from a resolved ticket
+  415   As an agent, I want to save my reply as a bot answer
+  416   So that the bot handles the same question next time
+  417  
+  418   Acceptance Criteria:
+  419   - "Add to KB" button is enabled after I write a reply
+  420   - One click pre-fills the Q&A form with the conversation
+  421   - After saving, the bot uses this answer for future similar questions
+  422 ```
+  423
+  424 ### As an End Customer:
+  425
+  426 ```
+  427 US-08: Ask a question in Arabic and get an accurate answer
+  428   As a customer, I want to ask about product prices in Arabic
+  429   And receive a correct, natural Arabic response
+  430  
+  431   Acceptance Criteria:
+  432   - Response is in Arabic
+  433   - Response uses the correct price from the uploaded catalog
+  434   - Response is < 5 sentences
+  435   - No mention of "AI", "bot", or "language model"
+  436
+  437 US-09: Get connected to a human when needed
+  438   As a customer, I want to say "I want to speak to someone"
+  439   And be connected to a real person
+  440  
+  441   Acceptance Criteria:
+  442   - Bot responds warmly: "Connecting you to our support team..."
+  443   - A ticket appears in the admin dashboard immediately
+  444   - When agent replies, I receive the message on the same channel I used
+  445 ```
+  446
+  447 ---
+  448
+  449 ## 7. TECHNICAL ARCHITECTURE
+  450
+  451 ### 7.1 System Overview
+  452
+  453 ```
+  454 Customer Device
+  455      │
+  456      ├── Web Browser ──────── Next.js Widget (/widget) ──────────┐
+  457      ├── Telegram App ──────── Telegram Bot (long-poll) ──────────┤
+  458      └── WhatsApp App ──────── Twilio Webhook (/whatsapp/webhook) ┤
+  459                                                                    ↓
+  460                                                     FastAPI Backend (:8000)
+  461                                                            │
+  462                                ┌───────────────────────────┼───────────────
+      ────────────┐
+  463                                ↓                           ↓
+                  ↓
+  464                           SQLite DB                   ChromaDB
+              LLM Provider
+  465                          (backend.db)              (chroma_store/)
+         (Gemini/DeepSeek/OpenAI)
+  466                     Documents, Messages,           Embedded Knowledge
+              RAG Generation
+  467                     Handoffs, Settings,            Base + User Memory
+              + Embeddings
+  468                     PurchaseOrders, Tenants
+  469
+  470 Admin Dashboard ── Next.js Frontend (:5000) ── REST API + WebSocket ──→ Fas
+      tAPI Backend
+  471 ```
+  472
+  473 ### 7.2 Request Flow (Web Chat)
+  474
+  475 ```
+  476 1. Customer sends message → POST /api/chat
+  477 2. chat_service.handle():
+  478    a. Get or create Conversation
+  479    b. Detect language (cache per conversation)
+  480    c. Check if already in handoff → return "agent will reply" message
+  481    d. Check if active purchase order → advance purchase state machine
+  482    e. Classify intent (keyword + optional LLM):
+  483       - PURCHASE_INTENT → start purchase flow
+  484       - COMPLAINT + auto_handoff_on_complaint → create Handoff
+  485    f. RAG fallback:
+  486       - Check if KB is empty → create Handoff
+  487       - Hybrid search (vector + lexical) → top-K chunks
+  488       - Confidence gate → create Handoff if too low
+  489       - Generate answer via LLM (Gemini → DeepSeek → OpenAI)
+  490       - Validate answer → create Handoff if no-answer sentinel
+  491 3. Persist message + any state changes
+  492 4. Return response JSON
+  493 5. Broadcast dashboard update via WebSocket
+  494 ```
+  495
+  496 ### 7.3 Data Models
+  497
+  498 ```
+  499 Setting (id=1, single-row config)
+  500   ├── company_name, bot_name, bot_tone
+  501   ├── confidence_threshold, memory_window
+  502   ├── telegram_token (encrypted), is_telegram_active
+  503   ├── twilio credentials (encrypted), is_whatsapp_active
+  504   └── purchase flow config + intent config
+  505
+  506 Document
+  507   ├── title, file_type, status
+  508   ├── chunk_count, created_at
+  509   └── tenant_key
+  510
+  511 Conversation
+  512   ├── channel (web/telegram/whatsapp)
+  513   ├── customer_ref (session ID)
+  514   ├── status (open/closed/handoff)
+  515   ├── language (en/ar, cached)
+  516   └── tenant_key
+  517
+  518 Message
+  519   ├── conversation_id (FK)
+  520   ├── role (user/assistant/agent)
+  521   └── content
+  522
+  523 Handoff
+  524   ├── conversation_id (FK)
+  525   ├── reason (low_confidence/complaint/support_request)
+  526   ├── status (pending/resolved)
+  527   ├── delivery_status (not_attempted/sent/failed)
+  528   └── resolved_satisfactorily (bool, optional)
+  529
+  530 PurchaseOrder
+  531   ├── conversation_id (FK)
+  532   ├── product_name, quantity, delivery_address
+  533   └── state (collecting_product/.../pending_confirmation)
+  534
+  535 LearnedAnswer
+  536   ├── question, answer
+  537   ├── source_handoff_id (FK, optional)
+  538   └── usage_count
+  539
+  540 AuthUser
+  541   ├── email, password_hash
+  542   ├── provider (password/google/apple)
+  543   ├── role (company/admin)
+  544   └── tenant_key
+  545
+  546 Tenant
+  547   ├── tenant_key, name, email
+  548   ├── plan (pro/ultra/custom)
+  549   ├── status (active/inactive/suspended)
+  550   └── used_messages, limit_messages
+  551 ```
+  552
+  553 ### 7.4 API Endpoints
+  554
+  555 | Method | Path | Auth | Description |
+  556 |--------|------|------|-------------|
+  557 | POST | `/api/chat` | None | Send a chat message |
+  558 | GET | `/api/settings` | JWT | Get tenant settings |
+  559 | PUT | `/api/settings` | JWT | Update tenant settings |
+  560 | POST | `/api/upload` | JWT | Upload a document |
+  561 | GET | `/api/files` | JWT | List documents |
+  562 | DELETE | `/api/files/{id}` | JWT | Delete document |
+  563 | GET | `/api/analytics` | JWT | Get analytics snapshot |
+  564 | GET | `/api/handoffs` | JWT | List handoff tickets |
+  565 | POST | `/api/handoffs/{id}/reply` | JWT | Send agent reply |
+  566 | POST | `/api/handoffs/{id}/resolve` | JWT | Resolve ticket |
+  567 | POST | `/api/handoffs/{id}/feedback` | JWT | Rate resolution |
+  568 | POST | `/api/learn` | JWT | Add learned Q&A |
+  569 | DELETE | `/api/learn/{id}` | JWT | Delete learned answer |
+  570 | POST | `/api/auth/login` | None | Email/password login |
+  571 | POST | `/api/auth/demo-login` | None | Demo access token |
+  572 | WS | `/ws/dashboard` | JWT (query param) | Real-time updates |
+  573 | WS | `/ws/chat/{session_id}` | None | Live chat stream |
+  574 | POST | `/telegram/webhook` | Token | Telegram updates |
+  575 | POST | `/whatsapp/webhook` | Twilio signature | WhatsApp messages |
+  576 | GET | `/health` | None | System health check |
+  577 | GET | `/api/admin/tenants` | Admin Key | List tenants |
+  578 | POST | `/api/admin/tenants` | Admin Key | Create tenant |
+  579 | PUT | `/api/admin/tenants/{id}` | Admin Key | Update tenant |
+  580 | DELETE | `/api/admin/tenants/{id}` | Admin Key | Delete tenant |
+  581 | GET | `/api/admin/health` | Admin Key | System health (detailed) |
+  582 | GET | `/api/admin/kpis` | Admin Key | Global KPIs |
+  583
+  584 ---
+  585
+  586 ## 8. NON-FUNCTIONAL REQUIREMENTS
+  587
+  588 ### 8.1 Performance
+  589 - API response time (chat): p50 < 1.5s, p95 < 3s
+  590 - Vector search: < 200ms for k=3 over 10,000 chunks
+  591 - Frontend initial load: < 2s (Lighthouse score > 80)
+  592 - WebSocket reconnection: < 3 seconds after disconnect
+  593
+  594 ### 8.2 Scalability
+  595 - SQLite is sufficient for up to ~100 concurrent tenants
+  596 - ChromaDB single-writer limit: run seeding BEFORE server, not concurrently
+  597 - For > 100 tenants: migrate to PostgreSQL + Qdrant/pgvector
+  598 - Rate limiting: 30 requests/minute per IP (via slowapi)
+  599
+  600 ### 8.3 Security
+  601 - All API keys stored in env/Replit Secrets — never in code or DB (exceptio
+      n: Fernet-encrypted channel tokens in DB)
+  602 - JWT tokens: HS256, 24h expiry
+  603 - Admin routes: require `X-Admin-Key` header (constant-time comparison)
+  604 - Webhook signature checks: optional but available for Telegram and Twilio
+  605 - Password hashing: bcrypt with cost factor 12
+  606 - CORS: only allow frontend origin(s)
+  607 - Next.js security headers: X-Frame-Options, CSP, HSTS, no-sniff (already c
+      onfigured)
+  608
+  609 ### 8.4 Reliability
+  610 - Graceful degradation: if LLM API fails, fallback to next provider in chai
+      n
+  611 - Keyless mode: app boots and demos with zero API keys
+  612 - Database: SQLite with WAL mode for better concurrent reads
+  613 - Handoff delivery: 3 retries with exponential backoff (1s, 2s, 4s)
+  614
+  615 ### 8.5 Accessibility & Internationalization
+  616 - RTL layout support for Arabic (already implemented via `isRtl` context)
+  617 - Google Fonts: Inter (English) + Cairo (Arabic)
+  618 - All strings in i18n translations object — no hardcoded text
+  619 - Keyboard navigation for dashboard forms
+  620 - Color contrast: WCAG AA minimum (dark theme with purple accents)
+  621
+  622 ---
+  623
+  624 ## 9. RELEASE ROADMAP
+  625
+  626 ### Phase 1 — Security Hardening (NOW)
+  627 **Goal:** Make the app production-safe.
+  628
+  629 | Task | Priority | Effort |
+  630 |------|---------|--------|
+  631 | Wire admin route auth guard | P0 | 1 hour |
+  632 | Fix demo login to use backend token | P0 | 2 hours |
+  633 | Fix handoff delivery retry | P1 | 3 hours |
+  634 | Fix learned answer Chroma orphan on delete | P1 | 1 hour |
+  635 | Add `delivery_status` column to Handoff | P1 | 30 min |
+  636 | Cache language per conversation | P2 | 30 min |
+  637
+  638 ---
+  639
+  640 ### Phase 2 — Full Auth (Next Sprint)
+  641 **Goal:** Real login/logout/register flow.
+  642
+  643 | Task | Priority | Effort |
+  644 |------|---------|--------|
+  645 | Wire `/api/auth/login` to return real JWT | P0 | 4 hours |
+  646 | Protect all dashboard routes with JWT check | P0 | 2 hours |
+  647 | Implement `/api/auth/register` | P0 | 3 hours |
+  648 | Add `/api/auth/me` (get current user) | P0 | 1 hour |
+  649 | Wire Google OAuth | P1 | 6 hours |
+  650 | Password reset via email | P2 | 8 hours |
+  651
+  652 ---
+  653
+  654 ### Phase 3 — Quality & UX (Month 2)
+  655 **Goal:** Polish the product for paying customers.
+  656
+  657 | Task | Priority | Effort |
+  658 |------|---------|--------|
+  659 | RAG system prompt improvement (human-facing) | P0 | 2 hours |
+  660 | SLA timer in handoff queue | P1 | 2 hours |
+  661 | CSAT rating after ticket resolution | P1 | 4 hours |
+  662 | Email notifications for new handoffs | P1 | 6 hours |
+  663 | "Use bot reply as KB answer" one-click | P1 | 2 hours |
+  664 | Source citation in answers | P2 | 2 hours |
+  665 | Confidence calibration for Arabic | P1 | 1 hour |
+  666
+  667 ---
+  668
+  669 ### Phase 4 — Growth (Month 3–4)
+  670 **Goal:** Enable monetization and self-service onboarding.
+  671
+  672 | Task | Priority | Effort |
+  673 |------|---------|--------|
+  674 | Stripe billing integration | P0 | 16 hours |
+  675 | Enforce message limits per plan | P0 | 4 hours |
+  676 | Tenant onboarding wizard (upload + test chat) | P1 | 12 hours |
+  677 | Weekly digest email | P2 | 8 hours |
+  678 | Public API for widget customization | P2 | 6 hours |
+  679
+  680 ---
+  681
+  682 ### Phase 5 — Scale (Month 5–6)
+  683 **Goal:** Handle growth beyond SQLite/single-server.
+  684
+  685 | Task | Priority | Effort |
+  686 |------|---------|--------|
+  687 | Migrate to PostgreSQL | P0 | 1 day |
+  688 | Migrate ChromaDB to Qdrant | P1 | 1 day |
+  689 | Horizontal scaling (Gunicorn + shared DB) | P1 | 2 days |
+  690 | Rate limiting via Redis (replaces in-memory) | P1 | 4 hours |
+  691 | CDN for uploaded documents | P2 | 4 hours |
+  692
+  693 ---
+  694
+  695 ## 10. OUT OF SCOPE (v1.0)
+  696
+  697 The following are explicitly NOT included in the current version:
+  698
+  699 - ❌ Voice/phone channel (IVR)
+  700 - ❌ Instagram DMs
+  701 - ❌ Facebook Messenger
+  702 - ❌ Payment processing (Stripe)
+  703 - ❌ Multi-language beyond Arabic/English
+  704 - ❌ Custom domain for widget (e.g., `chat.yourdomain.com`)
+  705 - ❌ AI-generated analytics summaries
+  706 - ❌ A/B testing for bot responses
+  707 - ❌ Team collaboration (multiple agents on same ticket)
+  708 - ❌ Mobile native app (iOS/Android)
+  709 - ❌ Self-hosted on-premise deployment (planned for enterprise tier)
+  710
+  711 ---
+  712
+  713 ## 11. OPEN QUESTIONS & DECISIONS
+  714
+  715 | # | Question | Decision | Owner |
+  716 |---|---------|---------|-------|
+  717 | Q1 | Should Arabic confidence threshold be auto-detected or admin-configu
+      rable? | Auto-adjust internally with -0.08 offset; expose as env var | Engi
+      neering |
+  718 | Q2 | Which payment gateway to use? (Stripe global vs. local Arab gateway)
+       | Start with Stripe; add HyperPay later | Product |
+  719 | Q3 | Should the purchase flow be a separate paid add-on? | Include in Ult
+      ra plan | Product |
+  720 | Q4 | How to handle multi-language documents (mixed AR/EN)? | Treat as Eng
+      lish; bilingual detection handles queries | Engineering |
+  721 | Q5 | Should learned answers expire? | No expiry in v1; add TTL field in P
+      hase 3 | Engineering |
+  722 | Q6 | What to do when all LLM providers fail? | Return escalation message;
+       log to monitoring | Engineering |
+  723
+  724 ---
+  725
+  726 ## 12. GLOSSARY
+  727
+  728 | Term | Definition |
+  729 |------|-----------|
+  730 | **RAG** | Retrieval-Augmented Generation — the technique of searching a k
+      nowledge base before generating an LLM answer |
+  731 | **Handoff** | A conversation escalated from the bot to a human agent |
+  732 | **Deflection Rate** | Percentage of customer questions answered by the bo
+      t without human involvement |
+  733 | **Tenant** | A business using the clientMORE platform (one subscription =
+       one tenant) |
+  734 | **Tenant Key** | Unique string identifier for a tenant (e.g., `"telnet"`,
+       `"shop_123"`) |
+  735 | **Chunk** | A small piece of text (~800 characters) extracted from an upl
+      oaded document for indexing |
+  736 | **Embedding** | A numeric vector representation of text used for semantic
+       search |
+  737 | **Confidence Score** | A 0–1 value indicating how relevant the retrieved
+      knowledge is to the customer's question; derived as `1 - cosine_distance /
+      2` |
+  738 | **Confidence Threshold** | Minimum confidence required for the bot to ans
+      wer; below this, escalate to human |
+  739 | **Intent** | The purpose behind a customer's message (PURCHASE_INTENT, CO
+      MPLAINT, SUPPORT_REQUEST, GENERAL) |
+  740 | **ChromaDB** | The open-source vector database used to store and search d
+      ocument chunks |
+  741 | **Long-term Memory** | Per-user memory stored in a separate Chroma collec
+      tion; used to personalize responses but never used as a KB source |
+  742 | **Keyless Mode** | Operating mode where no API keys are set; uses MD5 has
+      h embeddings and returns top chunk verbatim |
+  743
+  744 ---
+  745
+  746 *PRD Version 1.0 — clientMORE*
+  747 *Last updated: 2026-05-25*
+╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌╌
+ Do you want to create PRD.md?
+ ❯ 1. Yes
+   2. Yes, allow all edits during this session (shift+tab)
+   3. No
+
+ Esc to cancel · Tab to amend
+  733 | **Tenant** | A business using the clientMORE platform (one subscription = one tenant) |
+  734 | **Tenant Key** | Unique string identifier for a tenant (e.g., `"telnet"`, `"shop_123"`) |
+  735 | **Chunk** | A small piece of text (~800 characters) extracted from an uploaded document for
+       indexing |
+  736 | **Embedding** | A numeric vector representation of text used for semantic search |
+  737 | **Confidence Score** | A 0–1 value indicating how relevant the retrieved knowledge is to th
+      e customer's question; derived as `1 - cosine_distance / 2` |
+  738 | **Confidence Threshold** | Minimum confidence required for the bot to answer; below this, e
+      scalate to human |
+  739 | **Intent** | The purpose behind a customer's message (PURCHASE_INTENT, COMPLAINT, SUPPORT_R
+      EQUEST, GENERAL) |
+  740 | **ChromaDB** | The open-source vector database used to store and search document chunks |
+  741 | **Long-term Memory** | Per-user memory stored in a separate Chroma collection; used to pers
+      onalize responses but never used as a KB source |
+  742 | **Keyless Mode** | Operating mode where no API keys are set; uses MD5 hash embeddings and r
+      eturns top chunk verbatim |
+  743
+  744 ---
+  745
+  746 *PRD Version 1.0 — clientMORE*
+  747 *Last updated: 2026-05-25*

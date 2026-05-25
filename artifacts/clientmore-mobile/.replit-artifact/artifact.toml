@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/clientmore-mobile"
+title = "clientMORE Mobile"
+version = "1.0.0"
+id = "artifacts/clientmore-mobile"
+router = "path"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/clientmore-mobile" ]
+localPort = 24442
+
+[services.development]
+run = "pnpm --filter @workspace/clientmore-mobile run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/clientmore-mobile", "run", "build" ]
+publicDir = "artifacts/clientmore-mobile/dist"
+serve = "static"
+
+[services.env]
+PORT = "24442"
+BASE_PATH = "/clientmore-mobile"

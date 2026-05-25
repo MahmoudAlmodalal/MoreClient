@@ -1,5 +1,10 @@
 uploads = []
-generated = []
+
+[[generated]]
+id = "lBf1dCVlPScj5sR8hTvuS"
+uri = "file://artifacts/clientmore-mobile/assets/images/icon.png"
+type = "image"
+title = "generated_image"
 
 [[outputs]]
 id = "lj5ZiTgiRyqwCmuYZm9Gi"

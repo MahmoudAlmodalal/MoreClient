@@ -115,8 +115,8 @@ function handle401(path: string): void {
   window.localStorage.removeItem(JWT_TOKEN_STORAGE);
   window.sessionStorage.removeItem("userRole");
   // Use replace() so the broken page doesn't pollute back-button history.
-  const base = window.location.pathname.replace(/\/dashboard.*$|\/admin.*$|\/widget.*$/, "");
-  const target = `${base || ""}/welcome`;
+  const base = window.location.pathname.replace(/\/dashboard.*$|\/admin.*$|\/widget.*$/, "").replace(/\/$/, "");
+  const target = `${base}/welcome`;
   window.location.replace(target);
 }
 

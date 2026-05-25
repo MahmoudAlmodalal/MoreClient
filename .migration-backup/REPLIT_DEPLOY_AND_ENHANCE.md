@@ -1,1456 +1,1252 @@
-# clientMORE — Complete Replit Deployment & Enhancement Guide
+# clientMORE — دليل النشر الشامل على Replit والتحسينات
 
-> **How to use this document:** Paste each section as a prompt to Claude/Cursor/Copilot in Replit,
-> or follow manually step-by-step. Every command, file path, code block, and env variable is spelled
-> out in full — no guessing required.
-
----
-
-## SECTION 0 — PROJECT IDEA (What You Built)
-
-**clientMORE** is a **B2B AI customer-support SaaS** that helps businesses replace expensive human
-support agents with a smart bot that learns from their own documents and speaks both Arabic and English.
-
-### Core Value Proposition
-A business uploads their FAQ, product catalog, or policy documents. The bot reads them, and
-from that moment forward, any customer who asks a question gets an instant, accurate answer —
-in Arabic or English — 24/7. If the bot is not confident in its answer, it seamlessly hands the
-conversation to a real human agent in the dashboard. Every unanswered question is saved and the
-business owner can "teach" the bot the correct answer with one click, making it smarter over time.
-
-### Who Uses It
-- **Business Owner / Admin**: Uploads documents, configures the bot, reads analytics, replies to
-  escalated tickets, teaches the bot new answers.
-- **End Customer**: Chats with the bot on the company's website (embedded widget), Telegram, or
-  WhatsApp — never knowing there is an AI behind it.
-- **Super Admin (you)**: Manages all tenants, plans, and billing from the `/admin` page.
-
-### What the Bot Can Do
-1. **Answer from documents** (RAG): Retrieves relevant chunks from uploaded PDFs/DOCX/TXT/XLSX
-   and generates a natural reply using Gemini, DeepSeek, or OpenAI.
-2. **Detect language**: Automatically switches between Arabic and English per message.
-3. **Escalate to human**: If confidence < threshold (default 0.45) or the customer says
-   "talk to a human" / "موظف" / "دعم بشري", creates a Handoff ticket in the dashboard.
-4. **Purchase flow**: Guides customers through buying a product — collects product name, quantity,
-   delivery address, and confirms the order.
-5. **Multi-channel**: Same brain, three transports — Web widget, Telegram Bot, WhatsApp (Twilio).
-6. **Learn from mistakes**: Admin can answer unanswered questions; those answers are embedded into
-   the knowledge base so the bot knows next time.
-
-### Tech Stack
-| Layer | Technology |
-|-------|-----------|
-| Backend API | Python 3.11 + FastAPI + Uvicorn |
-| Vector DB | ChromaDB (persistent, cosine distance) |
-| SQL DB | SQLite (single file `backend.db`) |
-| LLM | Gemini 2.5 Flash → DeepSeek → OpenAI (auto-chain) |
-| Embeddings | Gemini embedding-001 → OpenAI text-embedding-3-small → MD5 hash (keyless) |
-| Frontend | Next.js 16.2 + React 19 + Tailwind CSS v4 |
-| Real-time | WebSocket (FastAPI native, no external broker) |
-| Channels | python-telegram-bot (long-poll) + Twilio (WhatsApp webhook) |
-| Auth | JWT (PyJWT) + bcrypt passwords — **scaffolded, not fully wired yet** |
-
-### Revenue Model (planned)
-- **Pro** plan: 500 messages/month
-- **Ultra** plan: 1,500 messages/month
-- **Custom** plan: Negotiated for enterprise
+> **نسخة:** 1.0 · **التاريخ:** مايو 2026  
+> وثيقة مرجعية شاملة: فكرة المشروع · شجرة الملفات · خطوات النشر · تحسينات الواجهة · أداء خفيف · إصلاح الأخطاء · تحسين RAG · تحسين التسليم البشري
 
 ---
 
-## SECTION 1 — COMPLETE ANNOTATED FILE TREE
+## الفهرس
+
+1. [فكرة المشروع — ماذا بنيت](#1-فكرة-المشروع)
+2. [شجرة الملفات الكاملة](#2-شجرة-الملفات-الكاملة)
+3. [دليل النشر على Replit](#3-دليل-النشر-على-replit)
+4. [تحسينات الواجهة — تجربة إنسانية لا "ذكاء اصطناعي"](#4-تحسينات-الواجهة)
+5. [بناء خفيف ومحسّن (Lite Mode)](#5-بناء-خفيف-ومحسن)
+6. [إصلاح الأخطاء المعروفة](#6-إصلاح-الأخطاء-المعروفة)
+7. [تحسين جودة RAG والردود](#7-تحسين-rag-والردود)
+8. [تحسين نظام التسليم البشري (Handoff)](#8-تحسين-نظام-التسليم-البشري)
+
+---
+
+## 1. فكرة المشروع
+
+### ما هو clientMORE؟
+
+**clientMORE** هو نظام SaaS لدعم العملاء مدعوم بالذكاء الاصطناعي، مصمم للشركات (B2B) التي تريد أتمتة خدمة العملاء بشكل احترافي ومتعدد اللغات.
+
+### الميزات الجوهرية
+
+| الميزة | التفاصيل |
+|---|---|
+| **RAG من المستندات** | رفع PDF, DOCX, XLSX, TXT → تحويل تلقائي إلى Markdown → تقطيع → تضمين في ChromaDB |
+| **متعدد القنوات** | ويدجت الويب · Telegram · WhatsApp (Twilio) |
+| **ثنائي اللغة** | عربي / إنجليزي مع دعم RTL كامل في كل صفحة |
+| **تصعيد ذكي** | عند انخفاض الثقة أو طلب المستخدم → تحويل لوكيل بشري |
+| **آلة حالة الشراء** | محادثة موجَّهة لإتمام طلبات الشراء خطوة بخطوة |
+| **لوحة تحليلات** | معدل الانحراف · التوفير المقدر · CSAT · أعلى الأسئلة تكراراً |
+| **تعليم البوت** | حقن إجابات على الأسئلة غير المُجابة مباشرة من اللوحة |
+| **نموذج SaaS** | خطط Free / Pro / Ultra · إعدادات مستقلة لكل tenant |
+| **أمان متكامل** | JWT · تشفير Fernet لأسرار القنوات · rate limiting · مفتاح Admin API |
+
+### المعمارية التقنية
 
 ```
-MoreClint/                          ← git root
+┌─────────────────────────────────────────────────────────┐
+│                     المستخدم النهائي                      │
+│          ويب  ·  Telegram  ·  WhatsApp                   │
+└────────────────────┬────────────────────────────────────┘
+                     │ HTTP / WebSocket
+┌────────────────────▼────────────────────────────────────┐
+│            Vite + React Frontend  (:5000)                │
+│   لوحة التحكم · ويدجت المحادثة · صفحات عامة             │
+└────────────────────┬────────────────────────────────────┘
+                     │ REST API + WS
+┌────────────────────▼────────────────────────────────────┐
+│              FastAPI Backend  (:8000)                    │
+│  /api/chat  /api/files  /api/handoffs  /api/analytics   │
+│  /api/admin  /api/settings  /api/learn  /api/purchases  │
+└──────┬──────────┬──────────┬──────────┬─────────────────┘
+       │          │          │          │
+   SQLite/     ChromaDB   Gemini/     Telegram
+   Postgres    (Vector)   OpenAI/     WhatsApp
+   (SQLAlchemy)           GPT-4o      Channels
+```
+
+---
+
+## 2. شجرة الملفات الكاملة
+
+```
+clientMORE/
 │
-├── backend/                        ← Python FastAPI app (runs on :8000)
-│   ├── main.py                     ← App entry: lifespan, CORS, router mounts
+├── 📄 start.sh                    # نقطة البداية: backend + frontend معاً
+├── 📄 requirements.txt            # تبعيات Python (fastapi, chromadb, openai, ...)
+├── 📄 docker-compose.yml          # تشغيل محلي بـ Docker
+├── 📄 backend.Dockerfile          # صورة Docker للـ backend
+├── 📄 frontend.Dockerfile         # صورة Docker للـ frontend
+├── 📄 check_env.py                # التحقق من المتغيرات قبل البدء
+├── 📄 pytest.ini                  # إعدادات pytest
+├── 📄 .env.example                # قائمة المتغيرات المطلوبة
+│
+├── 📁 backend/
+│   ├── 📄 __init__.py
+│   ├── 📄 main.py                 # تهيئة FastAPI، ربط جميع الـ routers، CORS
 │   │
-│   ├── core/
-│   │   ├── config.py               ← All env vars with defaults + clamp validators
-│   │   ├── security.py             ← JWT creation/decode, bcrypt, admin key guard
-│   │   ├── crypto.py               ← Fernet encryption for Telegram/Twilio tokens in DB
-│   │   ├── language.py             ← detect_language(text) → "ar" | "en"
-│   │   ├── logging_config.py       ← Structured JSON logs with correlation IDs
-│   │   ├── memory.py               ← In-process deque for short-term conversation history
-│   │   ├── long_term_memory.py     ← Per-user Chroma collection (user_memory)
-│   │   └── ratelimit.py            ← Per-IP rate limiting via slowapi
+│   ├── 📁 core/
+│   │   ├── config.py              # ← مصدر الحقيقة لجميع إعدادات البيئة
+│   │   ├── crypto.py              # تشفير/فك تشفير Fernet للأسرار
+│   │   ├── language.py            # كشف اللغة (AR / EN)
+│   │   ├── logging_config.py      # إعداد structlog / JSON logging
+│   │   ├── long_term_memory.py    # ذاكرة طويلة (اختياري، ENABLE_LONG_TERM_MEMORY)
+│   │   ├── memory.py              # نافذة المحادثة قصيرة المدى
+│   │   └── ratelimit.py           # slowapi — تحديد معدل الطلبات
 │   │
-│   ├── models/
-│   │   ├── database.py             ← SQLAlchemy engine, SessionLocal, get_db(), init_db()
-│   │   └── tables.py               ← All ORM models (Document, Conversation, Message,
-│   │                                  Handoff, LearnedAnswer, PurchaseOrder, AuthUser,
-│   │                                  Setting, Tenant)
+│   ├── 📁 models/
+│   │   ├── database.py            # اتصال SQLAlchemy، create_all
+│   │   └── tables.py              # ← تعريف جميع الجداول (ORM)
+│   │                              #   Document · Conversation · Message
+│   │                              #   Handoff · PurchaseOrder · LearnedAnswer
+│   │                              #   Tenant · Setting
 │   │
-│   ├── routers/
-│   │   ├── chat.py                 ← POST /api/chat
-│   │   ├── handoffs.py             ← GET/POST /api/handoffs, /api/handoffs/{id}/resolve
-│   │   ├── analytics.py            ← GET /api/analytics
-│   │   ├── files.py                ← POST /api/upload, GET /api/files, DELETE /api/files/{id}
-│   │   ├── learn.py                ← POST /api/learn (teach bot new Q&A)
-│   │   ├── auth.py                 ← POST /api/auth/login, /api/auth/logout (stub)
-│   │   ├── admin.py                ← /api/admin/* (tenant CRUD, health, global KPIs)
-│   │   ├── purchases.py            ← /api/purchases (order state machine)
-│   │   ├── settings.py             ← GET/PUT /api/settings
-│   │   ├── channels.py             ← /telegram/webhook, /whatsapp/webhook
-│   │   └── ws.py                   ← /ws/chat/{session_id}, /ws/dashboard
+│   ├── 📁 routers/
+│   │   ├── admin.py               # /api/admin/* — إدارة المستأجرين والنظام
+│   │   ├── analytics.py           # /api/analytics — KPIs ومؤشرات الأداء
+│   │   ├── auth.py                # /api/auth/login, /register, /logout
+│   │   ├── channels.py            # /api/channels — إعداد Telegram/WhatsApp
+│   │   ├── chat.py                # /api/chat — نقطة الدخول الرئيسية للمحادثة
+│   │   ├── files.py               # /api/files — رفع ومعالجة المستندات
+│   │   ├── handoffs.py            # /api/handoffs — إدارة طلبات التصعيد
+│   │   ├── learn.py               # /api/learn — حقن إجابات على أسئلة مجهولة
+│   │   ├── purchases.py           # /api/purchases — عرض وإدارة طلبات الشراء
+│   │   ├── settings.py            # /api/settings — إعدادات المستأجر (الشعار، اللون، ...)
+│   │   └── ws.py                  # WebSocket /ws/dashboard — إشعارات فورية
 │   │
-│   ├── services/
-│   │   ├── chat_service.py         ← Orchestrates gate chain: handoff→purchase→intent→RAG
-│   │   ├── handoff_delivery.py     ← Sends agent replies back to Telegram/WhatsApp/Web
-│   │   ├── intent_classifier.py    ← Keyword + optional LLM intent detection
-│   │   ├── purchase_flow.py        ← Order state machine (product→qty→address→confirm)
-│   │   ├── realtime.py             ← WebSocket broadcast manager for dashboard
-│   │   ├── analytics.py            ← Snapshot builder for KPIs/charts/queue
+│   ├── 📁 schemas/
+│   │   ├── analytics.py           # Pydantic schemas لـ KPIs
+│   │   ├── auth.py                # LoginRequest · TokenResponse
+│   │   ├── chat.py                # ChatRequest · ChatResponse · RagResult
+│   │   ├── files.py               # DocumentOut · UploadResponse
+│   │   ├── handoffs.py            # HandoffOut · HandoffCreate
+│   │   ├── learn.py               # LearnRequest · LearnedAnswerOut
+│   │   ├── purchase.py            # PurchaseOrderOut
+│   │   ├── settings.py            # SettingsOut · SettingsUpdate
+│   │   └── tenants.py             # TenantOut
+│   │
+│   ├── 📁 services/
+│   │   ├── analytics.py           # حساب KPIs من DB
+│   │   ├── chat_service.py        # ← منسق المحادثة الرئيسي (intent → RAG → handoff)
+│   │   ├── handoff_delivery.py    # إرسال إشعارات Handoff للقنوات
+│   │   ├── intent_classifier.py   # تصنيف نية المستخدم
+│   │   ├── purchase_flow.py       # آلة حالة الشراء
+│   │   ├── realtime.py            # WebSocket broadcast للوحة التحكم
 │   │   │
-│   │   ├── ai/
-│   │   │   ├── rag.py              ← Strategy pattern: VectorRagStrategy vs FallbackStrategy
-│   │   │   ├── retrieval.py        ← Hybrid search: vector + BM25/lexical reranking
-│   │   │   ├── embeddings.py       ← Multi-provider embed: Gemini→OpenAI→MD5 hash
-│   │   │   ├── vectorstore.py      ← ChromaDB wrapper (persistent, cosine, deterministic IDs)
-│   │   │   ├── knowledge_sync.py   ← Ensures tenant docs are indexed on startup
-│   │   │   ├── text_normalize.py   ← Arabic diacritic + spelling normalization
-│   │   │   └── _eval.py            ← Evaluation harness
+│   │   ├── 📁 ai/
+│   │   │   ├── embeddings.py      # تضمين النصوص (OpenAI / Gemini)
+│   │   │   ├── knowledge_sync.py  # مزامنة LearnedAnswers مع ChromaDB
+│   │   │   ├── rag.py             # ← RAG الأساسي: VectorRagStrategy + FallbackStrategy
+│   │   │   ├── retrieval.py       # بحث هجين (dense + BM25)
+│   │   │   ├── text_normalize.py  # تطبيع النص (AR unicode، إزالة diacritics)
+│   │   │   └── vectorstore.py     # ChromaDB PersistentClient wrapper
 │   │   │
-│   │   ├── channels/
-│   │   │   ├── base.py             ← Channel ABC: parse() → reply() → deliver()
-│   │   │   ├── factory.py          ← ChannelFactory registry
-│   │   │   ├── telegram.py         ← Telegram Bot API integration
-│   │   │   ├── telegram_poller.py  ← Long-polling for Telegram updates
-│   │   │   ├── whatsapp.py         ← Twilio WhatsApp integration
-│   │   │   └── web.py              ← Web widget channel adapter
+│   │   ├── 📁 channels/
+│   │   │   ├── base.py            # ChannelHandler ABC
+│   │   │   ├── factory.py         # إنشاء handler حسب القناة
+│   │   │   ├── telegram.py        # إرسال رسائل Telegram
+│   │   │   ├── telegram_poller.py # استقبال رسائل Telegram
+│   │   │   ├── web.py             # ويدجت الويب
+│   │   │   └── whatsapp.py        # Twilio WhatsApp
 │   │   │
-│   │   └── ingestion/
-│   │       ├── ingest.py           ← Single entry point: ingest_document(db, filename, data)
-│   │       ├── pdf.py              ← PyMuPDF text extraction
-│   │       ├── docx.py             ← python-docx extraction
-│   │       ├── xlsx.py             ← openpyxl extraction
-│   │       ├── txt.py              ← UTF-8 text + Markdown extraction
-│   │       └── chunker.py          ← RecursiveCharacterTextSplitter (~800 chars, 120 overlap)
+│   │   └── 📁 ingestion/
+│   │       ├── chunker.py         # تقطيع النص إلى chunks
+│   │       ├── docx.py            # استخراج DOCX → Markdown
+│   │       ├── ingest.py          # ← تنسيق الاستيعاب الكامل
+│   │       ├── pdf.py             # استخراج PDF (PyMuPDF)
+│   │       ├── txt.py             # ملفات TXT
+│   │       └── xlsx.py            # جداول Excel → Markdown جدولي
 │   │
-│   ├── schemas/                    ← Pydantic response models (camelCase aliases for frontend)
-│   │   ├── chat.py
-│   │   ├── analytics.py
-│   │   ├── handoffs.py
-│   │   ├── auth.py
-│   │   ├── files.py
-│   │   ├── learn.py
-│   │   ├── purchase.py
-│   │   ├── settings.py
-│   │   └── tenants.py
+│   ├── 📁 scripts/
+│   │   ├── seed_demo.py           # زرع بيانات تجريبية أساسية
+│   │   ├── seed_demo_store.py     # زرع متجر تجريبي مع منتجات
+│   │   ├── seed_clothing_store.py # متجر ملابس تجريبي
+│   │   ├── benchmark_chat.py      # قياس أداء الردود
+│   │   ├── make_qr.py             # توليد QR لرابط Telegram
+│   │   └── setup_telegram.py      # إعداد Telegram webhook
 │   │
-│   ├── seed/                       ← Demo knowledge base files
-│   │   ├── ngo_faq_en.md           ← English NGO FAQ (demo)
-│   │   ├── ngo_faq_ar.md           ← Arabic NGO FAQ (demo)
-│   │   ├── demo_store_ar.md        ← Arabic e-commerce demo
-│   │   └── clothing_store_ar.md    ← Arabic clothing store FAQ
-│   │
-│   ├── scripts/
-│   │   ├── seed_demo.py            ← Load seed KB: python -m backend.scripts.seed_demo
-│   │   ├── seed_clothing_store.py  ← Load clothing KB
-│   │   ├── seed_demo_store.py      ← Load demo store KB
-│   │   ├── benchmark_chat.py       ← Latency gate: p95 < 3s
-│   │   ├── make_qr.py              ← QR code for Telegram link
-│   │   └── setup_telegram.py       ← Telegram webhook registration
-│   │
-│   └── tests/
-│       ├── conftest.py
+│   └── 📁 tests/
+│       ├── conftest.py            # fixtures: DB، client، tenant تجريبي
 │       ├── test_chat_service_routing.py
-│       ├── test_rag.py
+│       ├── test_crypto.py
+│       ├── test_files_upload.py
 │       ├── test_handoff_delivery.py
 │       ├── test_intent_classifier.py
-│       ├── test_purchase_flow.py
-│       ├── test_realtime_dashboard.py
-│       ├── test_security.py
-│       ├── test_settings_secrets.py
-│       ├── test_files_upload.py
-│       ├── test_crypto.py
-│       └── test_text_normalize.py
+│       └── test_purchase_flow.py
 │
-├── MoreClient/                     ← Next.js 16 frontend (runs on :5000)
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── layout.tsx          ← Root layout: fonts (Inter + Cairo), LanguageProvider
-│   │   │   ├── globals.css         ← Tailwind v4, dark theme CSS vars, RTL support
-│   │   │   ├── page.tsx            ← Landing page (marketing)
-│   │   │   ├── error.tsx           ← Client error boundary
-│   │   │   ├── global-error.tsx    ← Global error boundary
-│   │   │   ├── not-found.tsx       ← 404 page
-│   │   │   │
-│   │   │   ├── welcome/
-│   │   │   │   ├── layout.tsx
-│   │   │   │   └── page.tsx        ← Login: email/password + social stubs + demo access
-│   │   │   │
-│   │   │   ├── sign-up/
-│   │   │   │   ├── layout.tsx
-│   │   │   │   └── [[...sign-up]]/page.tsx  ← Sign-up form
-│   │   │   │
-│   │   │   ├── pricing/
-│   │   │   │   ├── layout.tsx
-│   │   │   │   └── page.tsx
-│   │   │   │
-│   │   │   ├── dashboard/
-│   │   │   │   ├── layout.tsx      ← Sticky header, sidebar nav, notification bell
-│   │   │   │   ├── page.tsx        ← Analytics: KPI cards, bar chart, pie chart, queue
-│   │   │   │   ├── files/page.tsx  ← Knowledge base: drag-drop upload, table, delete
-│   │   │   │   ├── handoffs/page.tsx ← Ticket queue: split panel, chat, reply, resolve
-│   │   │   │   ├── settings/page.tsx ← Bot config, channels, purchase flow, widget snippet
-│   │   │   │   └── upgrade/page.tsx  ← Subscription plan selector
-│   │   │   │
-│   │   │   ├── admin/
-│   │   │   │   ├── layout.tsx
-│   │   │   │   └── page.tsx        ← Tenant CRUD (no auth guard — bug, see Section 5)
-│   │   │   │
-│   │   │   ├── (public)/
-│   │   │   │   ├── layout.tsx
-│   │   │   │   └── t/[handle]/
-│   │   │   │       ├── page.tsx    ← Public per-business chat page
-│   │   │   │       └── loading.tsx ← Skeleton loader
-│   │   │   │
-│   │   │   ├── widget/page.tsx     ← Embeddable standalone chat widget
-│   │   │   │
-│   │   │   └── legal/
-│   │   │       ├── privacy/page.tsx
-│   │   │       └── terms/page.tsx
-│   │   │
-│   │   ├── components/
-│   │   │   ├── language-provider.tsx   ← EN/AR context, RTL, i18n t(), settings state
-│   │   │   ├── notification-bell.tsx   ← Real-time handoff alerts (WebSocket)
-│   │   │   ├── login-carousel.tsx      ← Carousel for welcome page
-│   │   │   ├── login-view.tsx          ← Login form component
-│   │   │   │
-│   │   │   ├── auth/
-│   │   │   │   └── auth-shell.tsx
-│   │   │   │
-│   │   │   ├── dashboard/
-│   │   │   │   └── subscription-plans.tsx  ← Usage bar + Pro/Ultra upgrade buttons
-│   │   │   │
-│   │   │   ├── landing/
-│   │   │   │   ├── hero.tsx
-│   │   │   │   ├── about-us.tsx
-│   │   │   │   ├── feature-grid.tsx
-│   │   │   │   ├── showcase.tsx
-│   │   │   │   ├── pricing.tsx
-│   │   │   │   ├── faq.tsx
-│   │   │   │   ├── landing-nav.tsx
-│   │   │   │   ├── landing-footer.tsx
-│   │   │   │   ├── logo-cloud.tsx
-│   │   │   │   ├── how-it-works.tsx
-│   │   │   │   └── final-cta.tsx
-│   │   │   │
-│   │   │   └── ui/
-│   │   │       ├── badge.tsx
-│   │   │       ├── button.tsx
-│   │   │       ├── card.tsx
-│   │   │       ├── container.tsx
-│   │   │       ├── logo.tsx
-│   │   │       ├── skeleton.tsx
-│   │   │       └── spinner.tsx
-│   │   │
-│   │   └── lib/
-│   │       ├── api.ts              ← All backend calls: apiGet, apiSend, apiUpload, types
-│   │       ├── use-async-effect.ts ← useAsyncOnMount, usePolling (avoids lint rule)
-│   │       └── use-session-role.ts ← useSyncExternalStore for sessionStorage role
-│   │
-│   ├── public/
-│   │   ├── clientmore-logo.jpeg
-│   │   ├── embed.js               ← Widget embed script (injected by <script> tag)
-│   │   └── test-embed.html
-│   │
-│   ├── next.config.ts
-│   ├── tsconfig.json
-│   ├── tailwind.config.ts
-│   ├── postcss.config.mjs
-│   └── package.json
-│
-├── start.sh                        ← Run entire stack (frontend :5000 + backend :8000)
-├── requirements.txt                ← Python deps
-├── docker-compose.yml              ← Local dev containers
-├── backend.Dockerfile
-├── frontend.Dockerfile
-├── pytest.ini
-├── check_env.py                    ← Pre-boot env validation
-└── CLAUDE.md                       ← Architecture guide for AI assistants
+└── 📁 MoreClient/                 # ← واجهة Vite + React (بعد الترحيل)
+    ├── 📄 index.html
+    ├── 📄 vite.config.ts
+    ├── 📄 package.json
+    ├── 📄 tsconfig.json
+    │
+    └── 📁 src/
+        ├── 📄 main.tsx             # نقطة دخول React
+        ├── 📄 App.tsx              # wouter router — جميع المسارات
+        ├── 📄 index.css            # design tokens + Tailwind v4
+        │
+        ├── 📁 app/                 # صفحات المسارات (Next.js → Vite)
+        │   ├── page.tsx            # / الصفحة الرئيسية
+        │   ├── layout.tsx          # Layout الجذر
+        │   ├── not-found.tsx
+        │   ├── welcome/page.tsx    # /welcome تسجيل الدخول
+        │   ├── sign-up/            # /sign-up إنشاء حساب
+        │   ├── pricing/page.tsx    # /pricing
+        │   ├── widget/page.tsx     # /widget ويدجت المحادثة
+        │   ├── legal/              # /legal/privacy · /legal/terms
+        │   ├── (public)/           # صفحات عامة (t/:handle)
+        │   ├── dashboard/          # /dashboard/* لوحة التحكم
+        │   │   ├── layout.tsx      # ← DashboardLayout (sidebar + header)
+        │   │   ├── page.tsx        # Analytics & KPIs
+        │   │   ├── files/page.tsx
+        │   │   ├── handoffs/page.tsx
+        │   │   ├── settings/page.tsx
+        │   │   └── upgrade/page.tsx
+        │   └── admin/              # /admin لوحة Super Admin
+        │       ├── layout.tsx
+        │       └── page.tsx
+        │
+        ├── 📁 components/
+        │   ├── language-provider.tsx   # ← Context عالمي: t(), isRtl, companyLogo
+        │   ├── notification-bell.tsx   # جرس الإشعارات (WebSocket)
+        │   ├── login-view.tsx
+        │   ├── login-carousel.tsx
+        │   ├── auth/                   # مكونات المصادقة
+        │   ├── landing/                # صفحة الهبوط
+        │   └── ui/                     # shadcn/ui + مكونات مخصصة
+        │       ├── button.tsx
+        │       ├── card.tsx
+        │       ├── input.tsx
+        │       ├── logo.tsx
+        │       └── ...
+        │
+        └── 📁 lib/
+            ├── api.ts                  # REST client + WebSocket URL builder
+            ├── use-session-role.ts     # hook: قراءة role من sessionStorage
+            ├── use-async-effect.ts
+            └── next-shim/             # ← shimmed Next.js modules
+                ├── link.tsx           # next/link → wouter Link
+                ├── navigation.ts      # usePathname · useRouter · useSearchParams
+                ├── font-google.ts     # Inter · Cairo · Outfit (no-op)
+                ├── index.ts           # Metadata · Viewport types
+                └── types.ts
 ```
 
 ---
 
-## SECTION 2 — REPLIT DEPLOYMENT (Step-by-Step)
+## 3. دليل النشر على Replit
 
-### Step 2.1 — Create Replit Project
+### 3.1 متطلبات المشروع
 
-1. Go to **replit.com** → **Create Repl**
-2. Choose template: **Python** (we'll add Node.js manually)
-3. Name: `clientmore`
-4. Click **Create Repl**
-5. In the shell, clone or upload your files:
-   ```bash
-   # If uploading via zip, extract to /home/runner/clientmore/
-   # Or push from GitHub:
-   git clone https://github.com/YOUR_USERNAME/MoreClint.git .
-   ```
+استخدم قالب **Python + Node.js** في Replit لتشغيل كلا الخدمتين.
 
-### Step 2.2 — Create `.replit` File
-
-Create a file called `.replit` in the project root with this EXACT content:
-
-```toml
-# .replit — Replit run configuration
-run = "bash start_replit.sh"
-entrypoint = "start_replit.sh"
-
-[nix]
-channel = "stable-24_05"
-
-[deployment]
-run = ["bash", "start_replit.sh"]
-deploymentTarget = "cloudrun"
-
-[[ports]]
-localPort = 8000
-externalPort = 8000
-
-[[ports]]
-localPort = 5000
-externalPort = 80
+```
+Python:  3.11+
+Node.js: 20+
+pnpm:    9+
 ```
 
-### Step 2.3 — Create `replit.nix` File
+### 3.2 إعداد الأسرار (Secrets)
 
-Create `replit.nix` in the project root:
+في لوحة Replit، أضف الأسرار التالية (**Tools → Secrets**):
+
+#### أسرار مطلوبة
+
+| المتغير | الوصف | مثال |
+|---|---|---|
+| `GEMINI_API_KEY` | مفتاح Google Gemini (الأساسي) | `AIza...` |
+| `APP_SECRET` | مفتاح JWT (32+ حرف عشوائي) | `openssl rand -hex 32` |
+| `ADMIN_API_KEY` | مفتاح الوصول للوحة Admin | `adm_...` |
+| `DEFAULT_TENANT_KEY` | معرف المستأجر الافتراضي | `my_company` |
+
+#### أسرار اختيارية
+
+| المتغير | الوصف |
+|---|---|
+| `OPENAI_API_KEY` | بديل أو إضافة لـ Gemini |
+| `TELEGRAM_BOT_TOKEN` | لتفعيل قناة Telegram |
+| `TWILIO_ACCOUNT_SID` | لتفعيل WhatsApp |
+| `TWILIO_AUTH_TOKEN` | مطابق لـ TWILIO_ACCOUNT_SID |
+| `TWILIO_WHATSAPP_FROM` | رقم الإرسال `whatsapp:+14155238886` |
+| `DATABASE_URL` | Postgres بدلاً من SQLite |
+| `CHROMA_DIR` | مسار ChromaDB (افتراضي: `./chroma_store`) |
+
+#### أسرار الواجهة (VITE_*)
+
+| المتغير | الوصف |
+|---|---|
+| `VITE_API_URL` | عنوان الـ backend (افتراضي: `http://localhost:8000`) |
+| `VITE_WS_URL` | عنوان WebSocket (افتراضي: مشتق من VITE_API_URL) |
+
+### 3.3 ملف `.replit`
+
+```toml
+[workflows]
+runButton = "Start All"
+
+[[workflows.workflow]]
+name = "Start All"
+mode = "parallel"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "bash start.sh"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "pnpm --filter @workspace/clientmore run dev"
+
+[deployment]
+run = ["sh", "-c", "bash start.sh"]
+deploymentTarget = "cloudrun"
+```
+
+### 3.4 ملف `replit.nix`
 
 ```nix
 { pkgs }:
+
 {
   deps = [
     pkgs.python311
     pkgs.python311Packages.pip
     pkgs.nodejs_20
-    pkgs.nodePackages.npm
-    pkgs.gcc
+    pkgs.nodePackages.pnpm
+    pkgs.libgcc
+    pkgs.libstdcxx5
+    pkgs.zlib
+    # لـ PyMuPDF و chromadb
     pkgs.libffi
     pkgs.openssl
-    pkgs.sqlite
-    pkgs.bash
-    pkgs.curl
   ];
-
-  env = {
-    PYTHON_LD_LIBRARY_PATH = pkgs.lib.makeLibraryPath [
-      pkgs.libffi
-      pkgs.openssl
-    ];
-    PYTHONBIN = "${pkgs.python311}/bin/python3.11";
-    LANG = "en_US.UTF-8";
-  };
 }
 ```
 
-### Step 2.4 — Create `start_replit.sh` (Replit-specific startup)
+### 3.5 خطوات النشر خطوة بخطوة
 
-Create `start_replit.sh` in the project root:
+#### الخطوة 1: تثبيت التبعيات
 
 ```bash
-#!/usr/bin/env bash
-set -e
+# Python
+pip install -r requirements.txt
 
-echo "=== clientMORE startup ==="
-
-# ---- Install Python deps ----
-echo "[1/4] Installing Python dependencies..."
-pip install -r requirements.txt --quiet
-
-# ---- Install Node deps ----
-echo "[2/4] Installing Node.js dependencies..."
-cd MoreClient
-npm install --silent
-cd ..
-
-# ---- Seed knowledge base (only if DB is empty) ----
-echo "[3/4] Seeding demo knowledge base (skipped if already seeded)..."
-python -c "
-from backend.models.database import SessionLocal, init_db
-from backend.models.tables import Document
-init_db()
-db = SessionLocal()
-count = db.query(Document).count()
-db.close()
-if count == 0:
-    import subprocess, sys
-    subprocess.run([sys.executable, '-m', 'backend.scripts.seed_demo'], check=True)
-    print('Seed complete.')
-else:
-    print(f'KB already has {count} documents, skipping seed.')
-"
-
-# ---- Start frontend in background ----
-echo "[4/4] Starting frontend on :5000 and backend on :8000..."
-cd MoreClient && npm run build && npm run start &
-cd ..
-
-# ---- Start backend (foreground) ----
-python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+# Node.js (Workspace)
+pnpm install
 ```
 
-Make it executable:
+#### الخطوة 2: تهيئة قاعدة البيانات
+
 ```bash
-chmod +x start_replit.sh
+# إنشاء الجداول
+python -c "from backend.models.database import Base, engine; Base.metadata.create_all(engine)"
+
+# زرع بيانات تجريبية (اختياري)
+python -m backend.scripts.seed_demo
 ```
 
-### Step 2.5 — Set Replit Secrets (Environment Variables)
+#### الخطوة 3: التحقق من البيئة
 
-In Replit sidebar → **Secrets** tab, add these key-value pairs:
-
-#### Required (app will not start without these in production)
-| Secret Key | Value | Notes |
-|-----------|-------|-------|
-| `APP_SECRET` | `any-long-random-string-32chars` | Generate with: `python -c "import secrets; print(secrets.token_hex(32))"` |
-| `ADMIN_API_KEY` | `your-admin-key-here` | Used in `X-Admin-Key` header to access `/api/admin/*` |
-
-#### LLM Keys (need at least ONE)
-| Secret Key | Example Value | Provider |
-|-----------|--------------|---------|
-| `GEMINI_API_KEY` | `AIzaSy...` | Google AI Studio → free tier available |
-| `OPENAI_API_KEY` | `sk-...` | OpenAI platform |
-| `NVIDIA_API_KEY` | `nvapi-...` | NVIDIA (DeepSeek) |
-
-#### Channel Keys (only if using Telegram/WhatsApp)
-| Secret Key | Value | Notes |
-|-----------|-------|-------|
-| `TELEGRAM_BOT_TOKEN` | `123456:ABC...` | BotFather on Telegram |
-| `TWILIO_ACCOUNT_SID` | `ACxxx...` | Twilio console |
-| `TWILIO_AUTH_TOKEN` | `...` | Twilio console |
-| `TWILIO_WHATSAPP_NUMBER` | `whatsapp:+14155238886` | Twilio sandbox number |
-
-#### URLs (set after Replit gives you a domain)
-| Secret Key | Value | Notes |
-|-----------|-------|-------|
-| `NEXT_PUBLIC_API_URL` | `https://YOUR-REPLIT-SLUG.replit.app:8000` | Backend public URL |
-| `ALLOWED_ORIGINS` | `https://YOUR-REPLIT-SLUG.replit.app` | CORS (no trailing slash) |
-| `BACKEND_PUBLIC_URL` | `https://YOUR-REPLIT-SLUG.replit.app:8000` | For Twilio webhook validation |
-| `FRONTEND_URL` | `https://YOUR-REPLIT-SLUG.replit.app` | For OAuth redirects |
-
-#### Optional Performance Tweaks
-| Secret Key | Value | Notes |
-|-----------|-------|-------|
-| `LLM_PROVIDER` | `gemini` | Pin to fastest provider |
-| `CONFIDENCE_THRESHOLD` | `0.40` | Lower = more answers, fewer escalations |
-| `RETRIEVAL_K` | `3` | Chunks to retrieve (3 is good balance) |
-| `MEMORY_WINDOW` | `8` | Conversation history turns |
-| `ENV` | `production` | Enables strict security checks |
-
-### Step 2.6 — Update `MoreClient/package.json` start command
-
-Make sure the `start` script uses port 5000 and binds to 0.0.0.0:
-```json
-{
-  "scripts": {
-    "dev": "next dev -p 5000 --hostname 0.0.0.0",
-    "build": "next build",
-    "start": "next start -p 5000 --hostname 0.0.0.0",
-    "lint": "eslint",
-    "typecheck": "tsc --noEmit"
-  }
-}
+```bash
+python check_env.py
 ```
 
-### Step 2.7 — Verify Deployment
+الناتج المتوقع في وضع `dev`:
+```
+✓ ENV=dev  (keyless demo mode — non-fatal missing secrets)
+⚠ GEMINI_API_KEY missing  → RAG will fail, demo answers only
+✓ APP_SECRET is set
+✓ DEFAULT_TENANT_KEY = my_company
+```
 
-After clicking **Run** in Replit, check these URLs:
+#### الخطوة 4: تشغيل الخدمتين
 
-| URL | Expected Response |
-|-----|------------------|
-| `https://YOUR-SLUG.replit.app` | Frontend landing page |
-| `https://YOUR-SLUG.replit.app/dashboard` | Dashboard (login required) |
-| `https://YOUR-SLUG.replit.app:8000/health` | `{"status":"ok","db":"ok","chroma":"ok"}` |
-| `https://YOUR-SLUG.replit.app:8000/api/settings` | JSON with bot settings |
-| `https://YOUR-SLUG.replit.app/widget` | Standalone chat widget |
+```bash
+# في workflow منفصل أو عبر start.sh
+bash start.sh
+```
+
+#### الخطوة 5: اختبار الصحة
+
+```bash
+# Backend health
+curl http://localhost:8000/health
+# → {"status":"ok","version":"...","db":"ok"}
+
+# Frontend
+curl http://localhost:5000/
+# → HTML للصفحة الرئيسية
+
+# Admin (مع مفتاح)
+curl -H "X-Admin-Key: $ADMIN_API_KEY" http://localhost:8000/api/admin/tenants
+# → [{"key":"my_company",...}]
+```
+
+### 3.6 إعداد ChromaDB للثبات على Replit
+
+ChromaDB تخزن ملفاتها محلياً. على Replit، تأكد من:
+
+```python
+# backend/core/config.py
+CHROMA_DIR: str = os.getenv("CHROMA_DIR", "/home/runner/workspace/chroma_store")
+```
+
+وأضف `chroma_store/` إلى `.gitignore` لتجنب رفع ملفات الـ embeddings:
+
+```gitignore
+chroma_store/
+*.db
+__pycache__/
+.env
+```
+
+### 3.7 قائمة endpoints الرئيسية للتحقق
+
+| Endpoint | الوصف |
+|---|---|
+| `GET /health` | صحة الـ backend والـ DB |
+| `POST /api/auth/login` | تسجيل دخول، إرجاع JWT |
+| `POST /api/chat` | إرسال رسالة، تلقي رد RAG |
+| `GET /api/files` | قائمة المستندات المستوعبة |
+| `GET /api/handoffs` | قائمة التصعيدات البشرية |
+| `GET /api/analytics/kpis` | مؤشرات الأداء |
+| `WS /ws/dashboard` | WebSocket للإشعارات الفورية |
+| `GET /api/admin/tenants` | قائمة المستأجرين (Admin) |
 
 ---
 
-## SECTION 3 — UI ENHANCEMENTS (Don't Show as AI)
+## 4. تحسينات الواجهة
 
-**Goal:** The end customer should feel they're talking to the company's support team, not a bot.
-Every "AI" label, robot icon, and technical term must be replaced with human-facing language.
+### المشكلة
 
-### 3.1 — Update Translation Keys in `MoreClient/src/components/language-provider.tsx`
+الواجهة تستخدم مصطلحات "ذكاء اصطناعي" بشكل صريح مما يجعلها تبدو باردة وغير شخصية. الهدف: تجربة إنسانية دافئة.
 
-Find these keys and replace their values:
+### 4.1 تغييرات `language-provider.tsx`
 
-**CHANGE these English translations:**
 ```typescript
-// BEFORE:
-"bot": "AI Bot"
-"escalating": "Escalating to human agent..."
-"handoff": "Handoff"
-"aiResponse": "AI Response"
-"poweredBy": "Powered by AI"
+// قبل — language-provider.tsx
+const translationsEn = {
+  kpiAnswerRate: "AI Resolution Rate",
+  handoffNotificationLowConfidence: "Low-confidence question needs review",
+  botName: "AI Assistant",
+  escalationMessage: "Escalating to human agent...",
+  // ...
+};
 
-// AFTER:
-"bot": "Support Team"          // Use company bot_name from settings
-"escalating": "Connecting you with our support team..."
-"handoff": "Support Ticket"
-"aiResponse": "Response"
-"poweredBy": "clientMORE"
+// بعد
+const translationsEn = {
+  kpiAnswerRate: "Support Resolution Rate",
+  handoffNotificationLowConfidence: "Customer question needs team review",
+  botName: "Support Team",
+  escalationMessage: "Connecting you with our support team...",
+  // ...
+};
+
+const translationsAr = {
+  kpiAnswerRate: "معدل حل الدعم",
+  handoffNotificationLowConfidence: "سؤال عميل يحتاج مراجعة الفريق",
+  botName: "فريق الدعم",
+  escalationMessage: "جاري التواصل مع فريق الدعم...",
+  // ...
+};
 ```
 
-**CHANGE these Arabic translations:**
-```typescript
-// BEFORE:
-"bot": "روبوت الذكاء الاصطناعي"
-"escalating": "جاري التصعيد إلى وكيل بشري..."
-"handoff": "تحويل"
+**ملفات للتعديل:**
+- `MoreClient/src/components/language-provider.tsx` — جميع مفاتيح الترجمة
 
-// AFTER:
-"bot": "فريق الدعم"
-"escalating": "جاري تحويلك إلى فريق الدعم..."
-"handoff": "تذكرة دعم"
-```
+**قواعد الاستبدال:**
 
-### 3.2 — Humanize the Bot's System Prompt in `backend/services/ai/rag.py`
+| قبل | بعد |
+|---|---|
+| "AI Assistant" | اسم البوت من `Setting.bot_name` |
+| "AI Resolution Rate" | "Support Resolution Rate" |
+| "Escalating to human" | "Connecting with support team" |
+| "Bot" badge | اسم `Setting.bot_name` |
+| "AI generated" | "Based on our knowledge base" |
+| "تصعيد إلى إنسان" | "جاري التواصل مع فريق الدعم" |
+| "معدل حل الذكاء الاصطناعي" | "معدل حل الدعم" |
 
-Find the `_build_system_prompt()` function (or wherever the system prompt is constructed).
-Replace the system prompt template with this:
+### 4.2 تحسين `rag.py` — الرد بضمير المتكلم
 
 ```python
-SYSTEM_PROMPT_TEMPLATE = """You are a helpful support representative for {company_name}.
+# backend/services/ai/rag.py
+
+SYSTEM_PROMPT_TEMPLATE = """You are the support assistant for {company_name}.
 Your name is {bot_name}.
 
-CRITICAL RULES:
-1. ONLY answer using the information provided in the context below. Never make up facts.
-2. If the context does not contain the answer, respond ONLY with: __NO_ANSWER__
-3. Speak in first person ("I", "we", "our team").
-4. Never mention "AI", "language model", "artificial intelligence", or "bot" — you are a human support rep.
-5. Keep answers concise and warm. Maximum 4 sentences unless the question requires more detail.
-6. If the customer asks if you are a human or AI, say: "I'm {bot_name} from {company_name}'s support team, here to help!"
-7. Match the customer's language: if they write in Arabic, respond in Arabic. If English, respond in English.
-8. Tone: {bot_tone}.
+RULES:
+- Always speak in first person: "I found...", "Based on our records...", "I can help..."
+- Never say "AI", "artificial intelligence", "language model", or "system"
+- If you don't know, say: "I'll connect you with our support team" — never "I cannot answer"
+- Match the customer's language: if they write Arabic, respond in Arabic
+- Keep answers concise (2-4 sentences) unless a detailed explanation is requested
+- For Arabic: use formal "أنت/حضرتك", never casual slang
+- Sign off warmly: "Is there anything else I can help you with?"
 
-KNOWLEDGE BASE CONTEXT:
+CONTEXT (from {company_name} knowledge base):
 {context}
 
-CONVERSATION HISTORY:
-{history}
-
-Remember: Answer ONLY from the context above. If unsure, say __NO_ANSWER__."""
+CONVERSATION:
+{history}"""
 ```
 
-### 3.3 — Humanize Escalation Messages in `backend/services/chat_service.py`
-
-Find the `_escalation_message()` function or wherever escalation responses are returned.
-Replace with:
+### 4.3 تحسين `chat_service.py` — رسائل التصعيد
 
 ```python
+# backend/services/chat_service.py
+
 ESCALATION_MESSAGES = {
     "en": (
-        "I'd like to make sure you get the best help possible. "
-        "I'm connecting you with one of our support team members right now. "
-        "They'll be with you shortly — please hold on. 🙏"
+        "I want to make sure you get the best help possible. "
+        "Let me connect you with a member of our support team — "
+        "they'll be with you shortly."
     ),
     "ar": (
         "أريد التأكد من حصولك على أفضل مساعدة ممكنة. "
-        "سأقوم بتحويلك إلى أحد أعضاء فريق الدعم الآن. "
-        "سيكونون معك قريباً — يرجى الانتظار. 🙏"
-    ),
-}
-
-ALREADY_IN_HANDOFF_MESSAGES = {
-    "en": (
-        "Our support team has your request and will respond shortly. "
-        "Thank you for your patience! 😊"
-    ),
-    "ar": (
-        "فريق الدعم لدينا لديه طلبك وسيرد قريباً. "
-        "شكراً على صبرك! 😊"
+        "سأوصلك بأحد أعضاء فريق الدعم لدينا — "
+        "وسيتواصلون معك قريباً."
     ),
 }
 ```
 
-### 3.4 — Replace "Bot" Badge in Handoffs Page
+### 4.4 تحسين `handoffs/page.tsx` — تجربة بشرية
 
-In `MoreClient/src/app/dashboard/handoffs/page.tsx`, find where the message role is displayed.
-
-**BEFORE:**
 ```tsx
-{msg.role === "assistant" && <span className="badge">Bot</span>}
+// MoreClient/src/app/dashboard/handoffs/page.tsx
+
+// قبل
+<Badge variant="outline">Bot</Badge>
+
+// بعد
+<Badge variant="outline">{companyName} Bot</Badge>
+
+// إضافة مؤقت SLA
+const timeInQueue = differenceInMinutes(new Date(), new Date(handoff.created_at));
+const isUrgent = timeInQueue > 60;
+
+<span className={cn(
+  "text-xs tabular-nums",
+  isUrgent ? "text-red-400 font-semibold" : "text-gray-400"
+)}>
+  {isUrgent ? "⚠ " : ""}{formatDistanceToNow(new Date(handoff.created_at))}
+</span>
 ```
 
-**AFTER:**
+### 4.5 تخصيص الويدجت بألوان الشركة
+
 ```tsx
-{msg.role === "assistant" && (
-  <span className="badge">{botName || "Support Bot"}</span>
-)}
-```
+// MoreClient/src/app/widget/page.tsx
 
-Where `botName` comes from: `const { botName } = useLanguage();` (already in context).
+// بدلاً من الأيقونة الثابتة، استخدم شعار الشركة
+<img
+  src={companyLogo || "/clientmore-logo.jpeg"}
+  alt={companyName}
+  className="h-9 w-9 rounded-xl object-cover"
+/>
 
-### 3.5 — Widget: Show Company Logo and Name
-
-In `MoreClient/src/app/widget/page.tsx`, replace the generic AI icon with:
-```tsx
-// Show company logo from settings, with name fallback
-<div className="flex items-center gap-2">
-  {companyLogo ? (
-    <img src={companyLogo} alt={companyName} className="h-8 w-8 rounded-full object-cover" />
-  ) : (
-    <div className="h-8 w-8 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold text-sm">
-      {(companyName || "S").charAt(0).toUpperCase()}
-    </div>
-  )}
-  <span className="font-semibold text-sm">{botName || companyName || "Support"}</span>
-</div>
-```
-
-### 3.6 — Remove "Powered by AI" footers
-
-Search all `.tsx` files for "powered by" (case-insensitive) and remove or replace with:
-```tsx
-// REMOVE any "Powered by AI" or "Built with AI" text
-// REPLACE with empty string or:
-<span className="text-xs text-gray-500">clientMORE</span>
+// تطبيق لون الشركة
+<div
+  className="widget-header"
+  style={{ backgroundColor: setting?.brand_color ?? "var(--brand-600)" }}
+>
 ```
 
 ---
 
-## SECTION 4 — LITE / OPTIMIZED BUILD
+## 5. بناء خفيف ومحسّن
 
-### 4.1 — Backend: Switch to Lighter LLM Model
+### 5.1 تحسينات الـ Backend
 
-In `backend/core/config.py`, change these defaults:
+#### استخدام نموذج أسرع وأرخص
 
 ```python
-# BEFORE:
-GEMINI_CHAT_MODEL: str = "gemini-2.5-flash"
+# backend/core/config.py — أضف
+GEMINI_LITE_MODEL: str = os.getenv("GEMINI_LITE_MODEL", "gemini-2.0-flash-lite")
+ENABLE_LITE_MODE: bool = _bool(os.getenv("ENABLE_LITE_MODE"), False)
 
-# AFTER (2x faster, 3x cheaper, nearly same quality for support):
-GEMINI_CHAT_MODEL: str = "gemini-2.0-flash-lite"
+# backend/services/ai/rag.py
+model_name = (
+    cfg.GEMINI_LITE_MODEL
+    if cfg.ENABLE_LITE_MODE
+    else cfg.GEMINI_CHAT_MODEL
+)
 ```
 
-Also add a new env flag:
+#### تقليل عمق البحث
+
 ```python
-ENABLE_LONG_TERM_MEMORY: bool = Field(default=False, env="ENABLE_LONG_TERM_MEMORY")
+# backend/core/config.py
+# قبل
+RETRIEVAL_K: int = _clamp_int(os.getenv("RETRIEVAL_K"), 4, 1, 20)
+
+# بعد — 3 في Lite Mode
+RETRIEVAL_K: int = _clamp_int(
+    os.getenv("RETRIEVAL_K"),
+    3 if _bool(os.getenv("ENABLE_LITE_MODE")) else 4,
+    1, 20
+)
 ```
 
-### 4.2 — Backend: Cache Language Detection
-
-In `backend/services/chat_service.py`, inside the `handle()` function, BEFORE calling `detect_language`:
+#### تعطيل الذاكرة طويلة المدى
 
 ```python
-# Cache language on the conversation so we don't re-detect every message
+# backend/core/config.py — أضف
+ENABLE_LONG_TERM_MEMORY: bool = _bool(os.getenv("ENABLE_LONG_TERM_MEMORY"), True)
+
+# backend/core/long_term_memory.py — أضف guard
+from backend.core.config import settings as cfg
+
+def retrieve(conv_id: int, query: str, db) -> list[str]:
+    if not cfg.ENABLE_LONG_TERM_MEMORY:
+        return []
+    # ... الكود الحالي
+```
+
+#### Cache كشف اللغة لكل محادثة
+
+```python
+# backend/services/chat_service.py
+
+# قبل — كشف اللغة في كل رسالة
+lang = detect_language(user_message)
+
+# بعد — cache على مستوى المحادثة
 if conv.language:
     lang = conv.language
 else:
-    lang = detect_language(message)
+    lang = detect_language(user_message)
     conv.language = lang
-    db.add(conv)
-    # Do NOT commit here — commit happens at end of handle()
+    db.commit()
 ```
 
-This requires `language` column on Conversation. Add to `backend/models/tables.py`:
-```python
-class Conversation(Base):
-    # ... existing columns ...
-    language: Mapped[Optional[str]] = mapped_column(String(2), nullable=True)  # "en" or "ar"
-```
+> **ملاحظة:** يتطلب هذا إضافة عمود `language VARCHAR(10)` لجدول `Conversation`.
 
-### 4.3 — Backend: Disable Long-Term Memory by Default
-
-In `backend/services/chat_service.py`, wrap the long-term memory call:
+#### تنظيف الـ imports غير المستخدمة
 
 ```python
-from backend.core.config import settings
-
-# Inside handle():
-long_term_context = ""
-if settings.ENABLE_LONG_TERM_MEMORY:
-    long_term_context = await get_long_term_memory(conv.customer_ref)
+# backend/main.py — احذف
+# import anthropic  ← غير موصول بعد، يُبطئ الـ boot time
 ```
 
-### 4.4 — Frontend: Remove Dead Scaffold
+### 5.2 تحسينات الـ Frontend
 
-Delete these directories (they are never used and add confusion):
-```bash
-rm -rf MoreClient/src/app/api/
-rm -rf MoreClient/src/server/
-```
+#### تفعيل وضع Standalone لـ Next.js (للنسخة الأصلية)
 
-### 4.5 — Frontend: Standalone Output for Smaller Docker Image
-
-In `MoreClient/next.config.ts`, add:
 ```typescript
+// next.config.ts
 const nextConfig: NextConfig = {
-  output: 'standalone',   // ← add this line
-  // ... rest of config
+  output: "standalone",
+  // ...
 };
 ```
 
-### 4.6 — Lower Retrieval K for Faster Responses
+#### حذف الصفحات الفارغة
 
-In `backend/core/config.py`:
-```python
-RETRIEVAL_K: int = Field(default=3, env="RETRIEVAL_K")  # was 4
+```bash
+# صفحات scaffold غير مستخدمة (إن وُجدت)
+rm -rf src/app/api/v1/
+rm -rf src/server/
 ```
 
-Or set `RETRIEVAL_K=3` in Replit Secrets.
+#### تقليل حجم Bundle
+
+```typescript
+// vite.config.ts — إضافة code splitting
+build: {
+  rollupOptions: {
+    output: {
+      manualChunks: {
+        vendor: ["react", "react-dom", "wouter"],
+        charts: ["recharts"],
+        ui: ["lucide-react", "@radix-ui/react-tooltip"],
+      },
+    },
+  },
+},
+```
+
+### 5.3 متغيرات بيئة Lite Mode
+
+```bash
+# أضف في Replit Secrets
+ENABLE_LITE_MODE=true
+ENABLE_LONG_TERM_MEMORY=false
+RETRIEVAL_K=3
+MEMORY_WINDOW=6
+GEMINI_CHAT_MODEL=gemini-2.0-flash-lite
+```
 
 ---
 
-## SECTION 5 — BUG FIXES (All Known Issues)
+## 6. إصلاح الأخطاء المعروفة
 
-### Bug #1 CRITICAL — Admin Routes Have No Authentication
+### 🔴 حرج: Admin بدون حماية
 
-**File:** `backend/routers/admin.py`
+**المشكلة:** بعض مسارات `/api/admin/*` قد لا تُطبق `require_admin_key` بشكل موحد.
 
-**Problem:** All `/api/admin/*` routes are publicly accessible — anyone can read/delete tenants.
-
-**Fix:** Add the `require_admin_key` dependency to every admin router endpoint.
-
-Find the file and add at the top:
 ```python
+# backend/routers/admin.py — تأكد من وجود الـ dependency في كل router
+
 from backend.core.security import require_admin_key
+
+router = APIRouter(
+    prefix="/api/admin",
+    tags=["admin"],
+    dependencies=[Depends(require_admin_key)],  # ← تطبيق على جميع المسارات
+)
 ```
 
-Then add `Depends(require_admin_key)` to every route:
+### 🔴 حرج: فشل صامت في تسليم الـ Handoff
+
+**المشكلة:** إذا فشل الإرسال لـ Telegram/WhatsApp، لا يوجد retry ولا سجل للفشل.
+
 ```python
-# BEFORE:
-@router.get("/tenants")
-async def list_tenants(db: Session = Depends(get_db)):
+# backend/services/handoff_delivery.py
 
-# AFTER:
-@router.get("/tenants")
-async def list_tenants(
-    db: Session = Depends(get_db),
-    _: None = Depends(require_admin_key)   # ← add this
-):
-```
+import asyncio
+from datetime import datetime
 
-Repeat for ALL routes in `admin.py`: list_tenants, create_tenant, update_tenant, delete_tenant,
-toggle_status, get_kpis, get_health.
+MAX_RETRIES = 3
+RETRY_DELAY_SECONDS = 5
 
-### Bug #2 HIGH — Handoff Delivery Failures Are Silent
-
-**File:** `backend/services/handoff_delivery.py`
-
-**Problem:** If Telegram/Twilio delivery fails, the exception is caught and swallowed. The customer
-never gets the agent's reply. No one knows about the failure.
-
-**Fix Step 1:** Add `delivery_status` column to `Handoff` table in `backend/models/tables.py`:
-```python
-class Handoff(Base):
-    # ... existing columns ...
-    delivery_status: Mapped[str] = mapped_column(
-        String(20), default="not_attempted"
-    )  # not_attempted | sent | failed
-    delivery_attempts: Mapped[int] = mapped_column(Integer, default=0)
-    delivery_error: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-```
-
-**Fix Step 2:** In `backend/services/handoff_delivery.py`, update the delivery functions:
-```python
-async def deliver_agent_reply(db: Session, handoff_id: int, reply_text: str) -> bool:
-    handoff = db.get(Handoff, handoff_id)
-    if not handoff:
-        return False
-
-    success = False
-    error_msg = None
-    
-    for attempt in range(3):  # retry up to 3 times
+async def deliver_with_retry(handoff, setting, db) -> bool:
+    for attempt in range(1, MAX_RETRIES + 1):
         try:
-            if handoff.channel == "telegram":
-                await _deliver_telegram(handoff, reply_text)
-            elif handoff.channel == "whatsapp":
-                await _deliver_whatsapp(handoff, reply_text)
-            elif handoff.channel == "web":
-                await _deliver_web(handoff, reply_text)
-            success = True
-            break
-        except Exception as e:
-            error_msg = str(e)
-            logger.warning(f"Delivery attempt {attempt+1}/3 failed for handoff {handoff_id}: {e}")
-            if attempt < 2:
-                await asyncio.sleep(2 ** attempt)  # 1s, 2s backoff
-    
-    handoff.delivery_status = "sent" if success else "failed"
-    handoff.delivery_attempts = 3 if not success else (attempt + 1)
-    handoff.delivery_error = error_msg if not success else None
-    db.add(handoff)
-    db.commit()
-    
-    if not success:
-        logger.error(f"DELIVERY FAILED for handoff {handoff_id} after 3 attempts: {error_msg}")
-    
-    return success
+            await deliver_handoff_notification(handoff, setting)
+            handoff.delivery_status = "sent"
+            handoff.delivery_attempts = attempt
+            db.commit()
+            return True
+        except Exception as exc:
+            if attempt == MAX_RETRIES:
+                handoff.delivery_status = "failed"
+                handoff.delivery_failed_at = datetime.utcnow()
+                handoff.delivery_error = str(exc)[:500]
+                db.commit()
+                return False
+            await asyncio.sleep(RETRY_DELAY_SECONDS * attempt)
+    return False
 ```
 
-### Bug #3 HIGH — Demo Access Bypasses All Auth
+**وأضف الأعمدة للجدول:**
 
-**File:** `MoreClient/src/app/welcome/page.tsx`
-
-**Problem:** `handleDemoAccess()` just sets `sessionStorage.setItem("userRole", "company")` and
-redirects to `/dashboard`. No backend validation. Anyone can access the dashboard.
-
-**Fix:** Create a real demo endpoint on the backend that returns a time-limited token.
-
-In `backend/routers/auth.py`, add:
 ```python
+# backend/models/tables.py — Handoff class
+delivery_status = Column(String(20), default="pending", nullable=False)
+delivery_attempts = Column(Integer, default=0, nullable=False)
+delivery_failed_at = Column(DateTime, nullable=True)
+delivery_error = Column(Text, nullable=True)
+```
+
+### 🔴 حرج: تجاوز Demo Access بدون تحقق حقيقي
+
+**المشكلة:** وضع Demo يعتمد فقط على `sessionStorage` في المتصفح — يمكن تعديله.
+
+```python
+# backend/routers/auth.py — أضف endpoint خاص بـ Demo
 @router.post("/demo-login")
 async def demo_login(db: Session = Depends(get_db)):
-    """Returns a 1-hour demo session token."""
-    from backend.core.security import create_access_token
-    from datetime import timedelta
+    """Demo session: read-only tenant, no real data."""
+    demo_tenant = db.query(Tenant).filter_by(key="demo").first()
+    if not demo_tenant:
+        raise HTTPException(404, "Demo tenant not configured")
     token = create_access_token(
-        data={"sub": "demo_user", "role": "company", "tenant_key": settings.DEFAULT_TENANT_KEY},
-        expires_delta=timedelta(hours=1)
+        sub=f"demo_{demo_tenant.key}",
+        role="viewer",       # read-only role
+        tenant=demo_tenant.key,
     )
-    return {"token": token, "role": "company", "redirectTo": "/dashboard"}
+    return {"token": token, "role": "viewer", "tenant": demo_tenant.key}
 ```
 
-In `MoreClient/src/lib/api.ts`, add:
-```typescript
-export async function demoLogin(): Promise<AuthSessionOut> {
-  return apiSend<AuthSessionOut>("/api/auth/demo-login", "POST", {});
-}
-```
+### 🟡 عالي: إجابات متعلمة يتيمة في Chroma
 
-In `MoreClient/src/app/welcome/page.tsx`, replace `handleDemoAccess`:
-```typescript
-async function handleDemoAccess() {
-  try {
-    const session = await demoLogin();
-    localStorage.setItem("authToken", session.token);
-    sessionStorage.setItem("userRole", session.role);
-    router.push(session.redirectTo || "/dashboard");
-  } catch {
-    setError("Demo access unavailable. Please try again.");
-  }
-}
-```
+**المشكلة:** عند حذف `LearnedAnswer` من DB، تبقى في ChromaDB.
 
-### Bug #4 MEDIUM — Learned Answer Chunks Orphan in ChromaDB
-
-**File:** `backend/routers/learn.py` (or wherever learned answers are deleted)
-
-**Problem:** When an admin deletes a learned answer from the DB, its vector chunk in ChromaDB
-(`learned-{id}`) is never removed. Over time the KB fills with stale knowledge.
-
-**Fix:** In the delete endpoint for learned answers, also delete from Chroma:
 ```python
-@router.delete("/learn/{answer_id}")
-async def delete_learned_answer(answer_id: int, db: Session = Depends(get_db)):
-    answer = db.get(LearnedAnswer, answer_id)
+# backend/routers/learn.py
+
+@router.delete("/{learn_id}")
+async def delete_learned_answer(learn_id: int, db: Session = Depends(get_db)):
+    answer = db.query(LearnedAnswer).get(learn_id)
     if not answer:
-        raise HTTPException(404, "Learned answer not found")
-    
-    # Delete from ChromaDB first
-    from backend.services.ai.vectorstore import get_collection
-    collection = get_collection()
+        raise HTTPException(404)
+
+    # ← احذف من ChromaDB أولاً
     try:
-        collection.delete(ids=[f"learned-{answer_id}"])
-    except Exception as e:
-        logger.warning(f"Chroma delete failed for learned-{answer_id}: {e}")
-    
-    # Delete from SQL
+        vectorstore.delete_document(f"learned-{learn_id}", answer.tenant_key)
+    except Exception:
+        pass  # لا توقف الحذف من DB إذا فشل Chroma
+
     db.delete(answer)
     db.commit()
-    return {"deleted": answer_id}
+    return {"deleted": learn_id}
 ```
 
-### Bug #5 MEDIUM — Files Page Polling Silently Gives Up
+### 🟡 عالي: طلبات الشراء عالقة في "pending"
 
-**File:** `MoreClient/src/app/dashboard/files/page.tsx`
+**المشكلة:** طلبات تبقى `pending` إلى الأبد إذا انقطعت المحادثة.
 
-**Problem:** After 20 polling attempts (~20 seconds), the code stops polling and the UI shows
-"Indexing..." indefinitely with no feedback to the user.
+```python
+# backend/main.py — أضف background cleanup task
 
-**Fix:** After the polling loop, update the file status to show it's taking longer:
+from datetime import datetime, timedelta
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+
+scheduler = AsyncIOScheduler()
+
+@scheduler.scheduled_job("interval", minutes=30)
+async def cleanup_stale_purchases():
+    """ألغِ طلبات الشراء التي لم تُكمل خلال 2 ساعة."""
+    cutoff = datetime.utcnow() - timedelta(hours=2)
+    with SessionLocal() as db:
+        stale = db.query(PurchaseOrder).filter(
+            PurchaseOrder.status == "pending",
+            PurchaseOrder.created_at < cutoff,
+        ).all()
+        for order in stale:
+            order.status = "cancelled"
+            order.cancel_reason = "timeout"
+        db.commit()
+
+@app.on_event("startup")
+async def start_scheduler():
+    scheduler.start()
+```
+
+### 🟡 عالي: صفحة الملفات تتوقف بصمت بعد 20 محاولة
+
+**المشكلة:** المكون يتوقف عن الـ polling لكن لا يُعلم المستخدم.
+
 ```typescript
-// After the polling loop exits (attempt === MAX_ATTEMPTS):
-if (attempt >= MAX_ATTEMPTS) {
-  setFiles(prev => prev.map(f =>
-    f.id === uploadedFile.id
-      ? { ...f, status: "processing", statusLabel: "Still indexing... (may take a few minutes)" }
-      : f
-  ));
-  // Switch to slower background polling every 30s
-  const slowPoll = setInterval(async () => {
-    const files = await apiGet<FileOut[]>("/api/files");
-    const updated = files.find(f => f.id === uploadedFile.id);
-    if (updated?.status === "completed") {
-      clearInterval(slowPoll);
-      setFiles(prev => prev.map(f => f.id === uploadedFile.id ? updated : f));
-    }
-  }, 30_000);
-  setTimeout(() => clearInterval(slowPoll), 10 * 60_000); // give up after 10 min
+// MoreClient/src/app/dashboard/files/page.tsx
+
+const MAX_POLL_ATTEMPTS = 20;
+const [pollExhausted, setPollExhausted] = useState(false);
+
+// في دالة الـ polling
+if (attempt >= MAX_POLL_ATTEMPTS) {
+  setPollExhausted(true);
+  clearInterval(pollInterval);
+  return;
 }
-```
 
-### Bug #6 MEDIUM — WebSocket No User Feedback on Persistent Disconnect
-
-**File:** `MoreClient/src/components/notification-bell.tsx`
-**Also:** `MoreClient/src/app/dashboard/page.tsx`
-
-**Problem:** If the backend is down for more than 5 failed reconnects, the user has no idea
-that real-time updates have stopped.
-
-**Fix:** Add a connection status state and show a banner:
-```typescript
-const [wsConnected, setWsConnected] = useState(true);
-const reconnectAttempts = useRef(0);
-
-// In the WebSocket setup:
-ws.onopen = () => {
-  reconnectAttempts.current = 0;
-  setWsConnected(true);
-};
-
-ws.onclose = () => {
-  reconnectAttempts.current += 1;
-  if (reconnectAttempts.current >= 5) {
-    setWsConnected(false);
-  }
-  // ... existing reconnect logic
-};
-
-// In the JSX:
-{!wsConnected && (
-  <div className="bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs px-3 py-1 rounded-full">
-    Live updates paused — reconnecting...
+// في JSX
+{pollExhausted && (
+  <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm text-amber-300">
+    {t("fileStillProcessing")}
+    {" — "}
+    <button onClick={() => window.location.reload()} className="underline">
+      {t("refresh")}
+    </button>
   </div>
 )}
 ```
 
-### Bug #7 LOW — Optimistic Delete Flicker on Failure
+### 🟠 متوسط: شعار الإعدادات لا يتزامن
 
-**File:** `MoreClient/src/app/dashboard/files/page.tsx`
+**المشكلة:** `logoDraft` في صفحة الإعدادات لا يتحدث عند تغيير `companyLogo`.
 
-**Problem:** File is removed from UI before server confirms deletion. If server returns error,
-file disappears and then reappears — confusing UX.
-
-**Fix:** Remove optimistically, restore on error:
 ```typescript
-async function handleDelete(fileId: number) {
-  const previous = files;           // save snapshot
-  setFiles(prev => prev.filter(f => f.id !== fileId));  // optimistic remove
+// MoreClient/src/app/dashboard/settings/page.tsx
+
+const { companyLogo } = useLanguage();
+const [logoDraft, setLogoDraft] = useState(companyLogo);
+
+// ← أضف useEffect للمزامنة
+useEffect(() => {
+  setLogoDraft(companyLogo);
+}, [companyLogo]);
+```
+
+### 🟠 متوسط: وميض الحذف التفاؤلي
+
+**المشكلة:** العناصر تختفي من الواجهة قبل تأكيد نجاح الـ API.
+
+```typescript
+// المبدأ الصحيح
+const handleDelete = async (id: number) => {
+  // ← لا تحذف من الـ state قبل النجاح
   try {
-    await apiSend(`/api/files/${fileId}`, "DELETE", {});
-  } catch (err) {
-    setFiles(previous);             // restore on failure
-    setError("Failed to delete file. Please try again.");
+    await apiDelete(`/api/files/${id}`);
+    setFiles(prev => prev.filter(f => f.id !== id)); // ← بعد النجاح فقط
+  } catch {
+    toast.error(t("deleteFailed"));
   }
-}
+};
 ```
 
-### Bug #8 LOW — Admin Key in sessionStorage (XSS Risk)
+### 🟠 متوسط: WebSocket لا يُعلم عند الانقطاع المتكرر
 
-**File:** `MoreClient/src/lib/api.ts`
-
-**Problem:** Admin API key is stored in `sessionStorage`, readable by any XSS script.
-
-**Fix (short-term):** Move admin key to an in-memory variable (lost on page refresh, but safer):
 ```typescript
-// In api.ts:
-let _adminKeyMemory: string | null = null;
+// MoreClient/src/components/notification-bell.tsx
 
-export function setAdminKey(key: string) {
-  _adminKeyMemory = key;
-}
+const MAX_RECONNECTS = 5;
+const [disconnected, setDisconnected] = useState(false);
+let reconnectCount = useRef(0);
 
-export function getAdminKey(): string | null {
-  return _adminKeyMemory ?? sessionStorage.getItem("adminKey");
-}
+ws.onclose = () => {
+  reconnectCount.current++;
+  if (reconnectCount.current >= MAX_RECONNECTS) {
+    setDisconnected(true);
+    return; // توقف عن المحاولة
+  }
+  // إعادة المحاولة بعد تأخير تصاعدي
+  setTimeout(connect, Math.min(1000 * 2 ** reconnectCount.current, 30000));
+};
+
+// في JSX — شريط إشعار انقطاع الاتصال
+{disconnected && (
+  <div className="fixed bottom-4 left-1/2 -translate-x-1/2 rounded-full bg-red-500/90 px-4 py-2 text-sm text-white shadow-lg z-50">
+    {t("disconnected")} — <button onClick={reconnect}>{t("reconnect")}</button>
+  </div>
+)}
 ```
-
-**Fix (long-term):** Use HttpOnly cookies set by the server after admin login — requires backend
-auth to be fully wired.
 
 ---
 
-## SECTION 6 — RAG + REPLY QUALITY ENHANCEMENTS
+## 7. تحسين RAG والردود
 
-### 6.1 — Better System Prompt (Full Replacement)
+### 7.1 تفعيل البحث الهجين
 
-In `backend/services/ai/rag.py`, replace the system prompt builder with this:
+```bash
+# Replit Secrets — أضف
+ENABLE_HYBRID=true
+```
 
 ```python
-def _build_system_prompt(settings: Setting, context: str, history: str, lang: str) -> str:
-    tone_map = {
-        "friendly": "warm, friendly, and approachable",
-        "professional": "professional and clear",
-        "formal": "formal and polished",
-    }
-    tone = tone_map.get(settings.bot_tone, "professional and clear")
-    
-    lang_instruction = (
-        "Respond in Arabic (العربية). Use clear Modern Standard Arabic."
-        if lang == "ar"
-        else "Respond in English."
-    )
-    
-    return f"""You are {settings.bot_name}, a support representative for {settings.company_name}.
-You speak directly to customers and help them get answers quickly.
+# backend/core/config.py
+ENABLE_HYBRID: bool = _bool(os.getenv("ENABLE_HYBRID"), True)
+```
 
-STYLE: {tone}
-LANGUAGE: {lang_instruction}
+> البحث الهجين (Dense + BM25) مُنفَّذ في `retrieval.py` — تأكد فقط من تفعيل `ENABLE_HYBRID=true`.
 
-HARD RULES:
-- Answer ONLY from the KNOWLEDGE BASE CONTEXT provided below.
-- If the context does not contain the answer, respond with ONLY: __NO_ANSWER__
-- Never say "AI", "language model", "bot", or "artificial intelligence".
-- Never make up information, prices, dates, or facts not in the context.
-- Use first person: "I", "we", "our team", "our products".
-- If asked "are you a bot/AI/robot?": say "I'm {settings.bot_name} from {settings.company_name}, happy to help!"
-- Keep answers SHORT (2-4 sentences) unless the question requires a detailed list.
-- For lists, use bullet points: •
-- End Arabic responses naturally; no "والله أعلم" or religious phrases unless context uses them.
+### 7.2 إعادة كتابة System Prompt
 
-{('ADDITIONAL INSTRUCTIONS: ' + settings.system_prompt_extra) if settings.system_prompt_extra else ''}
+```python
+# backend/services/ai/rag.py
 
---- KNOWLEDGE BASE CONTEXT ---
+SYSTEM_PROMPT = """You are {bot_name}, the friendly support assistant for {company_name}.
+
+## Your personality
+- Warm, helpful, and professional
+- First-person voice: "I found...", "Based on our information...", "I can confirm..."
+- Never mention AI, LLM, language model, or technology
+- If unsure: "I'd like to connect you with our team to give you the most accurate answer"
+
+## Language rules
+- Detect and match the customer's language exactly
+- Arabic: use formal Modern Standard Arabic, avoid transliteration
+- Arabic: use "أنا" / "لدينا" / "يمكنني مساعدتك"
+- End every Arabic response warmly: "هل يمكنني مساعدتك في شيء آخر؟"
+- End every English response warmly: "Is there anything else I can help you with?"
+
+## Answer rules
+- Stay grounded in the context below — do not invent facts
+- Short answers: 2-4 sentences for simple questions
+- Detailed answers: use numbered steps for processes
+- Always emit {no_answer_sentinel} if the context lacks the answer
+
+## Context from {company_name} knowledge base:
 {context}
---- END CONTEXT ---
 
---- RECENT CONVERSATION ---
+## Conversation so far:
 {history}
---- END CONVERSATION ---
-
-Customer's question will follow. Answer based ONLY on the context above."""
+"""
 ```
 
-### 6.2 — Confidence Calibration for Arabic
-
-Arabic text has lower cosine similarity scores than English with the same semantic meaning.
-In `backend/services/ai/rag.py`, adjust the threshold check:
+### 7.3 معايرة عتبة الثقة للعربية
 
 ```python
-# Find the confidence gate check and update:
-def _get_effective_threshold(lang: str, setting_threshold: float) -> float:
-    """Arabic embeddings score lower — apply a correction."""
+# backend/services/ai/rag.py
+
+def _threshold(setting, lang: str = "en") -> float:
+    base = getattr(setting, "confidence_threshold", None) or cfg.CONFIDENCE_THRESHOLD
+    # تضمينات العربية تُقيَّم بشكل أقل — خفّض العتبة قليلاً
     if lang == "ar":
-        return max(0.30, setting_threshold - 0.08)  # lower threshold for AR
-    return setting_threshold
-
-# Use it:
-effective_threshold = _get_effective_threshold(lang, settings.confidence_threshold)
-if top_confidence < effective_threshold:
-    return FallbackStrategy(reason="low_confidence")
+        return max(0.0, base - 0.10)
+    return base
 ```
 
-### 6.3 — Deduplicate Overlapping Chunks
-
-Before passing context to LLM, deduplicate chunks from the same document that overlap.
-In `backend/services/ai/rag.py` inside `VectorRagStrategy.run()`:
+### 7.4 التحكم في طول الإجابة
 
 ```python
-def _dedup_chunks(chunks: list[dict]) -> list[dict]:
-    """Remove chunks whose text is >80% contained in a longer chunk from same doc."""
-    seen_texts = []
-    result = []
-    for chunk in sorted(chunks, key=lambda c: -len(c["document"])):  # longest first
-        text = chunk["document"].strip()
-        is_duplicate = any(
-            text in seen or seen.startswith(text[:100])
-            for seen in seen_texts
+# backend/services/ai/rag.py
+
+def _max_tokens(query: str, lang: str) -> int:
+    """إجابات قصيرة للأسئلة الواقعية، أطول للشرح المفصل."""
+    factual_keywords = ("what is", "who is", "when", "ما هو", "من هو", "متى", "أين")
+    is_factual = any(kw in query.lower() for kw in factual_keywords)
+    return 250 if is_factual else 600
+```
+
+### 7.5 وضع الاقتباس من المصدر
+
+```python
+# backend/services/ai/rag.py
+
+def _format_answer_with_citation(answer: str, sources: list[str]) -> str:
+    if not sources:
+        return answer
+    source_names = ", ".join(
+        s.split("/")[-1].replace(".pdf", "").replace(".docx", "")
+        for s in sources[:2]  # أول مصدرين فقط
+    )
+    citation_en = f"\n\n_Source: {source_names}_"
+    citation_ar = f"\n\n_المصدر: {source_names}_"
+    # كشف لغة الإجابة
+    if re.search(r"[\u0600-\u06FF]", answer):
+        return answer + citation_ar
+    return answer + citation_en
+```
+
+### 7.6 تحسين كشف الرفض العربي
+
+```python
+# backend/services/ai/rag.py
+
+_NO_ANSWER_HINTS = (
+    # الإنجليزية
+    "i don't know", "i do not know", "i'm not sure", "cannot find", "can't find",
+    "no information", "don't have enough information", "not available",
+    # العربية — مُحسَّنة
+    "لا أعرف", "لا اعرف", "لا تتوفر", "لا يوجد لدي", "لست متأكد",
+    "لا أملك معلومات", "لا تتوفر لدي", "غير متوفر", "لا أستطيع الإجابة",
+    "لم أجد", "لا يوجد في قاعدة", "لا توجد معلومات",
+)
+```
+
+### 7.7 زيادة نافذة الذاكرة
+
+```bash
+# Replit Secrets
+MEMORY_WINDOW=10
+```
+
+### 7.8 إزالة تكرار الـ Chunks قبل التوليد
+
+```python
+# backend/services/ai/rag.py
+
+def _deduplicate_chunks(chunks: list[str], threshold: float = 0.85) -> list[str]:
+    """احذف chunks متشابهة جداً من نفس المستند."""
+    unique: list[str] = []
+    for chunk in chunks:
+        is_dup = any(
+            SequenceMatcher(None, chunk[:200], u[:200]).ratio() > threshold
+            for u in unique
         )
-        if not is_duplicate:
-            seen_texts.append(text)
-            result.append(chunk)
-    return result
-
-# Call before building context:
-chunks = _dedup_chunks(retrieved_chunks)
-```
-
-### 6.4 — Source Citation in Answers
-
-After generating an answer, append the source document name for transparency.
-In `backend/services/ai/rag.py`:
-
-```python
-# After LLM generation, if answer is valid:
-if top_chunk and settings.show_source_citation:  # add show_source_citation to Setting
-    source_title = top_chunk.get("metadata", {}).get("source", "")
-    if source_title:
-        if lang == "ar":
-            answer += f"\n\n📄 *المصدر: {source_title}*"
-        else:
-            answer += f"\n\n📄 *Source: {source_title}*"
-```
-
-Add to `Setting` model in `backend/models/tables.py`:
-```python
-show_source_citation: Mapped[bool] = mapped_column(Boolean, default=False)
-```
-
-### 6.5 — Expand Arabic Rejection Detection
-
-In `backend/services/ai/rag.py`, in the `_is_no_answer()` or equivalent function:
-
-```python
-NO_ANSWER_PHRASES = [
-    # Sentinel
-    "__NO_ANSWER__",
-    # English
-    "i don't have information", "i don't know", "i cannot find",
-    "not available in", "not mentioned", "no information",
-    "outside the scope", "cannot answer", "unable to answer",
-    # Arabic — expanded list
-    "لا أعلم", "لا أعرف", "لا توجد معلومات", "غير متاح",
-    "لم يُذكر", "خارج نطاق", "لا يمكنني الإجابة",
-    "لا تتوفر لدي معلومات", "لا أملك إجابة",
-    "المعلومات غير موجودة", "لا يوجد في السياق",
-    "لم أجد", "لا أستطيع الإجابة",
-]
-
-def _is_no_answer(text: str) -> bool:
-    text_lower = text.strip().lower()
-    return any(phrase in text_lower for phrase in NO_ANSWER_PHRASES)
-```
-
-### 6.6 — Hybrid Search Configuration
-
-Make sure hybrid search is enabled. In `backend/core/config.py`:
-```python
-ENABLE_HYBRID_SEARCH: bool = Field(default=True, env="ENABLE_HYBRID_SEARCH")
-```
-
-In `backend/services/ai/retrieval.py`, check that `hybrid_search()` is called when enabled:
-```python
-from backend.core.config import settings
-
-def search(query: str, k: int, tenant_key: str) -> list[dict]:
-    if settings.ENABLE_HYBRID_SEARCH:
-        return hybrid_search(query, k, tenant_key)
-    else:
-        return vector_search(query, k, tenant_key)
+        if not is_dup:
+            unique.append(chunk)
+    return unique
 ```
 
 ---
 
-## SECTION 7 — HANDOFF FEEDBACK ENHANCEMENTS
+## 8. تحسين نظام التسليم البشري
 
-### 7.1 — Show Time-in-Queue (SLA Timer)
+### 8.1 تتبع حالة التسليم
 
-In `MoreClient/src/app/dashboard/handoffs/page.tsx`, add a helper and render it:
-
-```typescript
-function getTimeInQueue(createdAt: string): string {
-  const diffMs = Date.now() - new Date(createdAt).getTime();
-  const diffMin = Math.floor(diffMs / 60_000);
-  if (diffMin < 60) return `${diffMin}m`;
-  const diffHr = Math.floor(diffMin / 60);
-  return `${diffHr}h ${diffMin % 60}m`;
-}
-
-function isOverdue(createdAt: string): boolean {
-  const diffMs = Date.now() - new Date(createdAt).getTime();
-  return diffMs > 60 * 60_000; // 1 hour
-}
-
-// In the ticket list item:
-<div className={`text-xs ${isOverdue(ticket.createdAt) ? "text-red-400 font-semibold" : "text-gray-500"}`}>
-  ⏱ {getTimeInQueue(ticket.createdAt)}
-  {isOverdue(ticket.createdAt) && " — OVERDUE"}
-</div>
-```
-
-### 7.2 — Resolution Satisfaction Prompt
-
-After resolving a handoff ticket, ask the admin:
-
-In `MoreClient/src/app/dashboard/handoffs/page.tsx`, after the resolve call succeeds:
-
-```typescript
-// After resolving:
-const satisfied = window.confirm(
-  `Was this ticket resolved satisfactorily?\n\nClick OK for Yes, Cancel for No.`
-);
-
-// Send feedback to backend:
-await apiSend(`/api/handoffs/${activeHandoff.id}/feedback`, "POST", {
-  satisfied
-});
-
-// Remove from list
-setHandoffs(prev => prev.filter(h => h.id !== activeHandoff.id));
-setActiveHandoff(null);
-```
-
-In `backend/routers/handoffs.py`, add the feedback endpoint:
 ```python
-@router.post("/handoffs/{handoff_id}/feedback")
-async def handoff_feedback(
+# backend/models/tables.py — أضف إلى Handoff
+
+delivery_status = Column(
+    String(20), default="pending", nullable=False,
+    # pending | sent | failed
+)
+delivery_attempts = Column(Integer, default=0, nullable=False)
+delivery_failed_at = Column(DateTime, nullable=True)
+delivery_error = Column(Text, nullable=True)
+resolved_satisfactorily = Column(Boolean, nullable=True)  # null = لم يُقيَّم بعد
+```
+
+### 8.2 طابور إعادة المحاولة
+
+```python
+# backend/services/handoff_delivery.py
+
+@scheduler.scheduled_job("interval", seconds=60)
+async def retry_failed_deliveries():
+    """إعادة محاولة التسليم الفاشلة كل دقيقة، حتى 3 محاولات."""
+    with SessionLocal() as db:
+        failed = db.query(Handoff).filter(
+            Handoff.delivery_status == "failed",
+            Handoff.delivery_attempts < 3,
+        ).all()
+        for handoff in failed:
+            setting = get_setting(handoff.tenant_key, db)
+            await deliver_with_retry(handoff, setting, db)
+```
+
+### 8.3 ردود الوكيل البشري في الدردشة
+
+```python
+# backend/routers/handoffs.py
+
+@router.post("/{handoff_id}/reply")
+async def agent_reply(
     handoff_id: int,
-    body: dict,
-    db: Session = Depends(get_db)
+    body: AgentReplyRequest,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_auth),
 ):
-    handoff = db.get(Handoff, handoff_id)
+    """إرسال رد من الوكيل البشري ضمن المحادثة."""
+    handoff = db.query(Handoff).get(handoff_id)
     if not handoff:
         raise HTTPException(404)
-    handoff.resolved_satisfactorily = body.get("satisfied", True)
-    db.add(handoff)
+
+    msg = Message(
+        conversation_id=handoff.conversation_id,
+        role="agent",
+        content=f"**{current_user.display_name}:** {body.message}",
+    )
+    db.add(msg)
     db.commit()
-    return {"ok": True}
+
+    # broadcast للـ WebSocket
+    await broadcast_new_message(handoff.conversation_id, msg)
+    return {"sent": True}
 ```
 
-Add column to `Handoff` in `backend/models/tables.py`:
+### 8.4 تقييم جودة الحل
+
 ```python
-resolved_satisfactorily: Mapped[Optional[bool]] = mapped_column(Boolean, nullable=True)
+# backend/routers/handoffs.py
+
+@router.patch("/{handoff_id}/resolve-feedback")
+async def resolve_feedback(
+    handoff_id: int,
+    satisfied: bool,
+    db: Session = Depends(get_db),
+    _=Depends(require_auth),
+):
+    """هل تم حل المشكلة بشكل مُرضٍ؟"""
+    handoff = db.query(Handoff).get(handoff_id)
+    if not handoff:
+        raise HTTPException(404)
+    handoff.resolved_satisfactorily = satisfied
+    db.commit()
+    return {"updated": True}
 ```
 
-### 7.3 — One-Click "Use Bot Reply as Answer" in Handoffs
+### 8.5 مؤقت SLA في اللوحة
 
-In `MoreClient/src/app/dashboard/handoffs/page.tsx`, add a button next to each bot message
-in the active chat panel that auto-fills the "Inject Answer" modal:
+```tsx
+// MoreClient/src/app/dashboard/handoffs/page.tsx
 
-```typescript
-// Find the last bot message in the conversation
-const lastBotMessage = activeHandoff.messages
-  .filter(m => m.role === "assistant")
-  .at(-1);
+import { formatDistanceToNow, differenceInMinutes } from "date-fns";
+import { ar } from "date-fns/locale";
 
-// Find the question that triggered the handoff
-const escalationQuestion = activeHandoff.messages
-  .filter(m => m.role === "user")
-  .at(-1);
+function SlaTimer({ createdAt }: { createdAt: string }) {
+  const { language } = useLanguage();
+  const minutes = differenceInMinutes(new Date(), new Date(createdAt));
+  const isBreached = minutes > 60;
 
-// Button in the "Add to KB" section:
-<button
-  onClick={() => {
-    setLearnQuestion(escalationQuestion?.content || "");
-    setLearnAnswer(lastBotMessage?.content || "");
-    setLearnModalOpen(true);
-  }}
-  disabled={!lastBotMessage || !escalationQuestion}
-  className="text-xs px-3 py-1.5 bg-purple-600/20 text-purple-300 rounded-lg hover:bg-purple-600/30 disabled:opacity-40"
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 text-xs tabular-nums font-mono",
+        isBreached
+          ? "text-red-400 font-semibold"
+          : minutes > 30
+          ? "text-amber-400"
+          : "text-gray-500"
+      )}
+      title={`${minutes} دقيقة في الطابور`}
+    >
+      {isBreached && <span>⚠</span>}
+      {formatDistanceToNow(new Date(createdAt), {
+        addSuffix: true,
+        locale: language === "ar" ? ar : undefined,
+      })}
+    </span>
+  );
+}
+```
+
+### 8.6 اختصار "استخدم رد البوت كإجابة"
+
+```tsx
+// MoreClient/src/app/dashboard/handoffs/page.tsx
+
+async function teachFromBotReply(handoff: HandoffOut) {
+  const lastBotMessage = handoff.messages
+    ?.filter(m => m.role === "assistant")
+    .at(-1);
+
+  if (!lastBotMessage) return;
+
+  await apiPost("/api/learn", {
+    question: handoff.user_question,
+    answer: lastBotMessage.content,
+    tenant_key: handoff.tenant_key,
+  });
+
+  toast.success(t("taughtFromHandoff"));
+}
+
+// في JSX — زر صغير داخل بطاقة الـ Handoff
+<Button
+  size="sm"
+  variant="ghost"
+  onClick={() => teachFromBotReply(handoff)}
+  title={t("useAsBotAnswer")}
 >
-  📚 Use last bot reply as KB answer
-</button>
+  <BookOpen className="h-3.5 w-3.5" />
+  {t("teachBot")}
+</Button>
 ```
 
-### 7.4 — Delivery Status Badge in Handoffs List
-
-In `MoreClient/src/app/dashboard/handoffs/page.tsx`, in the ticket list, show delivery status:
-
-```typescript
-// In the ticket list item (left panel):
-{ticket.deliveryStatus === "failed" && (
-  <span className="text-xs bg-red-500/20 text-red-400 px-2 py-0.5 rounded-full">
-    ⚠ Delivery failed
-  </span>
-)}
-{ticket.deliveryStatus === "sent" && (
-  <span className="text-xs bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full">
-    ✓ Delivered
-  </span>
-)}
-```
-
-Make sure `HandoffOut` schema in `backend/schemas/handoffs.py` includes:
-```python
-class HandoffOut(BaseModel):
-    # ... existing fields ...
-    delivery_status: Optional[str] = Field(None, alias="deliveryStatus")
-    delivery_error: Optional[str] = Field(None, alias="deliveryError")
-```
-
-### 7.5 — Unread Handoff Count in Browser Tab Title
-
-In `MoreClient/src/app/dashboard/handoffs/page.tsx`:
-
-```typescript
-// Count unreplied tickets
-const unrepliedCount = handoffs.filter(h => !h.hasAgentReply).length;
-
-useEffect(() => {
-  if (unrepliedCount > 0) {
-    document.title = `(${unrepliedCount}) Handoffs — clientMORE`;
-  } else {
-    document.title = "Handoffs — clientMORE";
-  }
-  return () => { document.title = "clientMORE"; };
-}, [unrepliedCount]);
-```
-
----
-
-## SECTION 8 — DATABASE SCHEMA MIGRATIONS
-
-Since there is **no migration tool**, add new columns safely using SQLAlchemy's `create_all`
-plus a manual `upgrade_existing_schema()` pattern already used in `backend/models/tables.py`.
-
-Add this to the `upgrade_existing_schema()` function in `backend/models/tables.py`:
+### 8.7 رضا العميل بعد الحل
 
 ```python
-def upgrade_existing_schema(engine):
-    """Safely add new columns to existing DB without dropping data."""
-    with engine.connect() as conn:
-        # Add new columns to handoffs table
-        _add_column_if_missing(conn, "handoffs", "delivery_status", "VARCHAR(20) DEFAULT 'not_attempted'")
-        _add_column_if_missing(conn, "handoffs", "delivery_attempts", "INTEGER DEFAULT 0")
-        _add_column_if_missing(conn, "handoffs", "delivery_error", "TEXT")
-        _add_column_if_missing(conn, "handoffs", "resolved_satisfactorily", "BOOLEAN")
-        
-        # Add new column to conversations table
-        _add_column_if_missing(conn, "conversations", "language", "VARCHAR(2)")
-        
-        # Add new column to settings table
-        _add_column_if_missing(conn, "settings", "show_source_citation", "BOOLEAN DEFAULT 0")
-        
-        conn.commit()
+# backend/services/handoff_delivery.py
 
-def _add_column_if_missing(conn, table: str, column: str, column_def: str):
-    """Add column to table if it doesn't already exist."""
-    from sqlalchemy import text
-    try:
-        conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {column} {column_def}"))
-    except Exception:
-        pass  # Column already exists — ignore
-```
+async def send_csat_prompt(handoff: Handoff, setting) -> None:
+    """إرسال استطلاع رضا للعميل بعد إغلاق التذكرة."""
+    channel_handler = get_channel_handler(handoff.channel, setting)
+    if not channel_handler:
+        return
 
-Make sure `upgrade_existing_schema(engine)` is called in `backend/models/database.py`
-inside `init_db()`:
-```python
-def init_db():
-    Base.metadata.create_all(bind=engine)
-    upgrade_existing_schema(engine)
+    msg_en = (
+        "We've resolved your support request. "
+        "How would you rate your experience today? (1–5)\n"
+        "Reply with a number from 1 (poor) to 5 (excellent)."
+    )
+    msg_ar = (
+        "تم حل طلب الدعم الخاص بك. "
+        "كيف تُقيّم تجربتك اليوم؟ (1–5)\n"
+        "أرسل رقماً من 1 (ضعيف) إلى 5 (ممتاز)."
+    )
+
+    msg = msg_ar if handoff.language == "ar" else msg_en
+    await channel_handler.send_message(handoff.customer_ref, msg)
 ```
 
 ---
 
-## SECTION 9 — ENVIRONMENT VARIABLE REFERENCE (Complete List)
+## خلاصة خطة التطبيق
 
-Copy this as a `.env` file template (fill in your values, never commit to git):
+### الأولويات الموصى بها
 
-```env
-# ============================================================
-# clientMORE — Environment Variables
-# ============================================================
-
-# --- Core ---
-ENV=production                          # dev | production
-APP_SECRET=CHANGE_ME_RANDOM_64_CHARS    # JWT signing secret
-ADMIN_API_KEY=CHANGE_ME_ADMIN_KEY       # Admin API key for /api/admin/*
-DATABASE_URL=sqlite:///./backend.db     # SQLite path (or PostgreSQL URL)
-CHROMA_DIR=./chroma_store               # ChromaDB persistent path
-DEFAULT_TENANT_KEY=telnet               # Default single-tenant key
-ALLOWED_ORIGINS=http://localhost:5000   # CORS (comma-separated)
-
-# --- LLM Providers (need at least ONE) ---
-GEMINI_API_KEY=                         # Google AI Studio
-OPENAI_API_KEY=                         # OpenAI
-NVIDIA_API_KEY=                         # NVIDIA (DeepSeek)
-MISTRAL_API_KEY=                        # Mistral
-LLM_PROVIDER=auto                       # auto | gemini | openai | deepseek | mistral
-
-# --- LLM Models ---
-GEMINI_CHAT_MODEL=gemini-2.0-flash-lite # Lite model (fast + cheap)
-GEMINI_EMBED_MODEL=gemini-embedding-001
-CHAT_MODEL=gpt-4o                       # OpenAI fallback
-EMBED_MODEL=text-embedding-3-small
-EMBED_DIM=1536
-
-# --- RAG Configuration ---
-CONFIDENCE_THRESHOLD=0.40               # 0.35-0.50 recommended
-RETRIEVAL_K=3                           # Chunks to retrieve (3-5)
-MEMORY_WINDOW=8                         # Conversation history turns (5-10)
-ENABLE_HYBRID_SEARCH=true               # true = vector + lexical reranking
-ENABLE_LONG_TERM_MEMORY=false           # false = faster, less memory
-
-# --- URLs (update after Replit gives you domain) ---
-NEXT_PUBLIC_API_URL=http://localhost:8000
-FRONTEND_URL=http://localhost:5000
-BACKEND_PUBLIC_URL=http://localhost:8000
-
-# --- Channels (optional) ---
-TELEGRAM_WEBHOOK_SECRET=                # Optional header check
-TWILIO_ACCOUNT_SID=                     # Twilio for WhatsApp
-TWILIO_AUTH_TOKEN=
-TWILIO_WHATSAPP_NUMBER=
-
-# --- Auth (scaffolded, not fully wired) ---
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-APPLE_CLIENT_ID=
-APPLE_CLIENT_SECRET=
+```
+المرحلة 1 (حرج):    إصلاح /api/admin — retry التسليم — Session تحقق
+المرحلة 2 (أسبوع):  تحسين Prompt — إزالة مصطلح "AI" — SLA Timer
+المرحلة 3 (شهر):    CSAT — Agent Reply — KB Shortcut — Lite Mode
 ```
 
----
+### ملفات جاهزة للتعديل
 
-## SECTION 10 — QUICK VERIFICATION CHECKLIST
-
-After deploying, verify each item:
-
-### Backend Health
-```bash
-# Should return: {"status":"ok","db":"ok","chroma":"ok","llm_providers":["gemini"]}
-curl https://YOUR-SLUG.replit.app:8000/health
-
-# Should return settings JSON (not 401)
-curl https://YOUR-SLUG.replit.app:8000/api/settings
-
-# Should return 401 Unauthorized (admin key required)
-curl https://YOUR-SLUG.replit.app:8000/api/admin/tenants
-# Should return tenant list
-curl -H "X-Admin-Key: YOUR_ADMIN_KEY" https://YOUR-SLUG.replit.app:8000/api/admin/tenants
-```
-
-### Chat Flow Test
-```bash
-# Test a question (should return confident answer or handoff)
-curl -X POST https://YOUR-SLUG.replit.app:8000/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "What services do you offer?", "session_id": "test-123", "channel": "web"}'
-
-# Test escalation trigger
-curl -X POST https://YOUR-SLUG.replit.app:8000/api/chat \
-  -H "Content-Type: application/json" \
-  -d '{"message": "I want to talk to a human", "session_id": "test-123", "channel": "web"}'
-```
-
-### Frontend Pages
-- [ ] `/` — Landing page loads (no blank page)
-- [ ] `/welcome` — Login form visible, no console errors
-- [ ] `/dashboard` — Redirects to login if no token
-- [ ] `/dashboard` (logged in) — KPI cards load, charts visible
-- [ ] `/dashboard/files` — Upload zone visible
-- [ ] `/dashboard/handoffs` — Ticket queue loads (may be empty)
-- [ ] `/dashboard/settings` — Bot config form loads
-- [ ] `/widget` — Chat widget loads with company name (NOT "AI Bot")
-- [ ] `/admin` — Requires admin key (should prompt or show 401)
-
-### UI Human-Facing Check
-- [ ] Widget header shows company name, NOT "AI Bot"
-- [ ] Bot messages in handoffs show bot_name, NOT "Bot"
-- [ ] Escalation message says "Connecting you with our support team..."
-- [ ] No "Powered by AI" text visible anywhere in widget or public chat
+| الملف | القسم |
+|---|---|
+| `backend/core/config.py` | §5, §7 — متغيرات بيئة جديدة |
+| `backend/services/ai/rag.py` | §4.2, §7 — Prompt + calibration |
+| `backend/services/chat_service.py` | §4.3 — رسائل تصعيد إنسانية |
+| `backend/services/handoff_delivery.py` | §6, §8 — retry + CSAT |
+| `backend/models/tables.py` | §8.1 — أعمدة جديدة |
+| `backend/routers/admin.py` | §6 — حماية موحدة |
+| `backend/routers/handoffs.py` | §8.3, §8.4 — ردود + تقييم |
+| `MoreClient/src/components/language-provider.tsx` | §4.1 — ترجمات |
+| `MoreClient/src/app/dashboard/handoffs/page.tsx` | §4.4, §8.5, §8.6 |
+| `MoreClient/src/app/dashboard/files/page.tsx` | §6 — إشعار timeout |
+| `MoreClient/src/lib/api.ts` | §8.4 — endpoint تقييم |
 
 ---
 
-## SECTION 11 — RECOMMENDED REPLIT PLAN & RESOURCE NOTES
-
-- **Replit Hacker plan or above** is recommended (always-on + more RAM)
-- The app needs ~512MB RAM minimum (ChromaDB loads into memory)
-- SQLite + ChromaDB persist in the Replit workspace — they survive restarts
-- If you restart the Replit after seeding, ChromaDB stays — no need to re-seed
-- The backend takes ~15-30 seconds to cold-start (Chroma warm-up)
-- For production traffic, consider upgrading to Replit Teams + Autoscale, or migrate to Railway/Render
-
----
-
-## SECTION 12 — COMMON ERRORS & FIXES
-
-| Error | Cause | Fix |
-|-------|-------|-----|
-| `ChromaDB: collection not found` | Server started before Chroma warmed up | Wait 30s and refresh; or restart backend |
-| `500 on retrieval after seeding` | Chroma is single-writer — seeding from separate process conflicts | Always seed BEFORE starting the server; restart after seeding |
-| `CORS error in browser` | `ALLOWED_ORIGINS` doesn't match your Replit URL | Add exact Replit URL to `ALLOWED_ORIGINS` secret (no trailing slash) |
-| `WebSocket connection failed` | Frontend `NEXT_PUBLIC_API_URL` uses `http://` but needs `https://` | Update env to use `https://` URL on Replit |
-| `429 Too Many Requests` from LLM | Free tier rate limit hit | Add sleep between requests, or upgrade to paid LLM tier |
-| `401 Unauthorized` on `/api/admin/*` | Missing `X-Admin-Key` header | Pass `X-Admin-Key: YOUR_ADMIN_KEY` header in all admin requests |
-| Next.js `Module not found: server/` | Dead scaffold imported | Delete `MoreClient/src/server/` and `MoreClient/src/app/api/` |
-| `backend.db` permission error on Replit | Wrong working directory | Ensure uvicorn is run from git root, not from `backend/` |
-
----
-
-*End of clientMORE Replit Deployment & Enhancement Guide*
-*Generated for project at: /home/mahmoud/Desktop/MoreClint*
+> **Built in Gaza · Deployed Globally** 🇵🇸  
+> clientMORE — نظام الدعم الذكي الذي يتحدث لغة عميلك

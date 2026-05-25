@@ -243,7 +243,7 @@ export default function DashboardPage() {
     },
     {
       name: t("kpiDeflectionRate"),
-      value: `${(kpis.deflection_rate * 100).toFixed(1)}%`,
+      value: `${kpis.deflection_rate.toFixed(1)}%`,
       change: "+3.2%",
       icon: CheckCircle,
       color: "from-purple-500/10 to-violet-500/10 border-purple-500/30",

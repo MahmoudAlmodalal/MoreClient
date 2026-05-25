@@ -1,0 +1,2 @@
+- [Next.js shims for Vite](nextjs-shims.md) — clientmore uses wouter+shims at src/lib/next-shim/ to replace next/link, next/navigation, next/font/google
+- [pgvector setup](pgvector-setup.md) — DB schema uses vector type; must run CREATE EXTENSION IF NOT EXISTS vector before drizzle-kit push

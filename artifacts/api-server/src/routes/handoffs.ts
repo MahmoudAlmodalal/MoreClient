@@ -1,0 +1,240 @@
+import { Router, type IRouter } from "express";
+import { and, desc, eq, inArray } from "drizzle-orm";
+import { db, handoffs, conversations, messages } from "../lib/db";
+import { requireJwt } from "../middlewares/auth";
+import { handoffOut } from "../lib/serialize";
+import { deliverHandoffReply } from "../lib/delivery";
+import { broadcastDashboard } from "../lib/ws";
+
+const router: IRouter = Router();
+
+async function loadHandoff(id: number, tenantId: number) {
+  const [h] = await db
+    .select()
+    .from(handoffs)
+    .where(and(eq(handoffs.id, id), eq(handoffs.tenantId, tenantId)))
+    .limit(1);
+  if (!h) return null;
+  const [conv] = await db
+    .select()
+    .from(conversations)
+    .where(eq(conversations.id, h.conversationId))
+    .limit(1);
+  const msgs = await db
+    .select()
+    .from(messages)
+    .where(eq(messages.conversationId, h.conversationId))
+    .orderBy(messages.id);
+  return { handoff: h, conv, msgs };
+}
+
+router.get("/handoffs", requireJwt, async (req, res) => {
+  const tenantId = req.auth!.tid;
+  const status = (req.query["status"] as string | undefined) || undefined;
+  const channel = (req.query["channel"] as string | undefined) || undefined;
+  const filters = [eq(handoffs.tenantId, tenantId)];
+  if (status === "pending" || status === "resolved") filters.push(eq(handoffs.status, status));
+  if (channel) filters.push(eq(handoffs.channel, channel));
+  const rows = await db
+    .select()
+    .from(handoffs)
+    .where(and(...filters))
+    .orderBy(desc(handoffs.createdAt))
+    .limit(200);
+
+  if (rows.length === 0) return res.json([]);
+  const convIds = Array.from(new Set(rows.map((r) => r.conversationId)));
+  const convs = await db.select().from(conversations).where(inArray(conversations.id, convIds));
+  const convMap = new Map(convs.map((c) => [c.id, c]));
+  const msgs = await db
+    .select()
+    .from(messages)
+    .where(inArray(messages.conversationId, convIds))
+    .orderBy(messages.id);
+  const msgMap = new Map<number, typeof msgs>();
+  for (const m of msgs) {
+    const list = msgMap.get(m.conversationId) || [];
+    list.push(m);
+    msgMap.set(m.conversationId, list);
+  }
+  return res.json(
+    rows.map((h) => handoffOut(h, convMap.get(h.conversationId), msgMap.get(h.conversationId) || [])),
+  );
+});
+
+router.post("/handoffs/simulate", requireJwt, async (req, res) => {
+  const tenantId = req.auth!.tid;
+  const channel = (req.body?.channel ?? "telegram").toString().toLowerCase();
+  const messageText = (req.body?.message ?? "Hi, I need help with my order").toString().trim();
+
+  if (!["telegram", "web"].includes(channel)) {
+    return res.status(400).json({ detail: "channel must be telegram or web" });
+  }
+
+  const customerRef = `test-${crypto.randomUUID().slice(0, 8)}`;
+
+  const [conv] = await db
+    .insert(conversations)
+    .values({ tenantId, customerRef, channel, language: "en" })
+    .returning();
+
+  await db.insert(messages).values({
+    conversationId: conv.id,
+    role: "user",
+    content: messageText,
+  });
+
+  const [handoff] = await db
+    .insert(handoffs)
+    .values({
+      tenantId,
+      conversationId: conv.id,
+      channel,
+      reason: "test",
+      question: messageText,
+      unreplied: true,
+    })
+    .returning();
+
+  broadcastDashboard(tenantId, {
+    type: "handoff.created",
+    data: {
+      id: handoff.id,
+      conversationId: conv.id,
+      channel,
+      reason: "test",
+      question: messageText,
+      createdAt: handoff.createdAt?.toISOString() ?? null,
+    },
+  });
+
+  const loaded = await loadHandoff(handoff.id, tenantId);
+  return res.json(handoffOut(loaded!.handoff, loaded!.conv, loaded!.msgs));
+});
+
+router.post("/handoffs/:id/reply", requireJwt, async (req, res) => {
+  const tenantId = req.auth!.tid;
+  const id = Number(req.params.id);
+  // Canonical field is `message`. We still accept `content` for one release
+  // so any in-flight clients don't break, but new code should send `message`.
+  const content = (req.body?.message ?? req.body?.content ?? "").toString().trim();
+  if (!content) return res.status(400).json({ detail: "message required" });
+  const loaded = await loadHandoff(id, tenantId);
+  if (!loaded) return res.status(404).json({ detail: "Not found" });
+
+  await db.insert(messages).values({
+    conversationId: loaded.handoff.conversationId,
+    role: "agent",
+    content,
+  });
+  await db.update(handoffs).set({ unreplied: false }).where(eq(handoffs.id, id));
+
+  const delivery = await deliverHandoffReply(id, content);
+  broadcastDashboard(tenantId, {
+    type: "handoff.replied",
+    data: { id, delivery },
+  });
+
+  const updated = await loadHandoff(id, tenantId);
+  return res.json(handoffOut(updated!.handoff, updated!.conv, updated!.msgs));
+});
+
+router.post("/handoffs/:id/resolve", requireJwt, async (req, res) => {
+  const tenantId = req.auth!.tid;
+  const id = Number(req.params.id);
+  const loaded = await loadHandoff(id, tenantId);
+  if (!loaded) return res.status(404).json({ detail: "Not found" });
+  await db
+    .update(handoffs)
+    .set({ status: "resolved", resolvedAt: new Date() })
+    .where(eq(handoffs.id, id));
+  broadcastDashboard(tenantId, { type: "handoff.resolved", data: { id } });
+  return res.json({ ok: true });
+});
+
+router.delete("/handoffs", requireJwt, async (req, res) => {
+  const tenantId = req.auth!.tid;
+  const ids = req.body?.ids;
+  if (!Array.isArray(ids) || ids.length === 0) {
+    return res.status(400).json({ detail: "ids must be a non-empty array" });
+  }
+  const parsedIds = ids.map(Number).filter((n) => Number.isInteger(n) && n > 0);
+  if (parsedIds.length === 0) {
+    return res.status(400).json({ detail: "ids must contain valid positive integers" });
+  }
+
+  // Fetch matching handoffs that belong to this tenant.
+  const owned = await db
+    .select({ id: handoffs.id, conversationId: handoffs.conversationId })
+    .from(handoffs)
+    .where(and(eq(handoffs.tenantId, tenantId), inArray(handoffs.id, parsedIds)));
+
+  if (owned.length === 0) {
+    return res.json({ deleted: 0 });
+  }
+
+  const ownedIds = owned.map((h) => h.id);
+  const affectedConvIds = Array.from(new Set(owned.map((h) => h.conversationId)));
+
+  // Wrap in a transaction to avoid partial state on failure.
+  await db.transaction(async (tx) => {
+    // 1. Delete only the selected handoff rows (not blindly all handoffs for
+    //    the conversation — a conversation can accumulate multiple handoffs
+    //    over its lifetime; we must not delete unselected ones).
+    await tx.delete(handoffs).where(inArray(handoffs.id, ownedIds));
+
+    // 2. For each affected conversation, delete it — and cascade its messages
+    //    via the FK onDelete:cascade — only when no other handoffs remain.
+    //    This prevents us from orphaning messages that belong to a still-live
+    //    handoff on the same conversation.
+    for (const convId of affectedConvIds) {
+      const remaining = await tx
+        .select({ id: handoffs.id })
+        .from(handoffs)
+        .where(eq(handoffs.conversationId, convId))
+        .limit(1);
+      if (remaining.length === 0) {
+        // No handoffs left — safe to remove the conversation (messages cascade).
+        await tx.delete(conversations).where(eq(conversations.id, convId));
+      }
+    }
+  });
+
+  for (const id of ownedIds) {
+    broadcastDashboard(tenantId, { type: "handoff.deleted", data: { id } });
+  }
+
+  return res.json({ deleted: ownedIds.length });
+});
+
+router.post("/handoffs/:id/feedback", requireJwt, async (req, res) => {
+  const tenantId = req.auth!.tid;
+  const id = Number(req.params.id);
+  const score = Number(req.body?.score);
+  if (!Number.isInteger(score) || score < 1 || score > 5) {
+    return res.status(400).json({ detail: "score must be 1-5" });
+  }
+  const result = await db
+    .update(handoffs)
+    .set({ csatScore: score })
+    .where(and(eq(handoffs.id, id), eq(handoffs.tenantId, tenantId)));
+  void result;
+  return res.json({ ok: true });
+});
+
+router.post("/handoffs/:id/retry-delivery", requireJwt, async (req, res) => {
+  const tenantId = req.auth!.tid;
+  const id = Number(req.params.id);
+  const loaded = await loadHandoff(id, tenantId);
+  if (!loaded) return res.status(404).json({ detail: "Not found" });
+  const lastAgent = [...loaded.msgs].reverse().find((m) => m.role === "agent");
+  if (!lastAgent) return res.status(400).json({ detail: "No agent reply to retry" });
+  await db
+    .update(handoffs)
+    .set({ deliveryAttempts: 0, deliveryStatus: "pending", deliveryDetail: null })
+    .where(eq(handoffs.id, id));
+  const delivery = await deliverHandoffReply(id, lastAgent.content);
+  return res.json({ delivery });
+});
+
+export default router;

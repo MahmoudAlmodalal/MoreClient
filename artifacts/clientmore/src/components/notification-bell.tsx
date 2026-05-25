@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Bell, WifiOff } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
-import { apiGet, createWebSocketUrl, createAuthenticatedWebSocketUrl, type HandoffOut, type DashboardSocketMessage } from "@/lib/api";
+import { apiGet, createWebSocketUrl, createAuthenticatedWebSocketUrl, hasAuthToken, subscribeAuthToken, type HandoffOut, type DashboardSocketMessage } from "@/lib/api";
 import { useAsyncOnMount } from "@/lib/use-async-effect";
 
 interface NotificationItem {
@@ -95,10 +95,19 @@ export function NotificationBell() {
 
   useAsyncOnMount(loadHandoffs, [loadHandoffs]);
 
+  // Re-run the WS effect whenever the auth token changes (login/logout).
+  const [authTick, setAuthTick] = useState(0);
+  useEffect(() => subscribeAuthToken(() => setAuthTick((n) => n + 1)), []);
+
   // Live updates via the shared /ws/dashboard socket. Reconnects use
   // exponential backoff capped at 30s; after 5 consecutive failures we
   // surface a "live updates paused — reconnecting…" banner (PRD B7).
+  //
+  // Gated on a present auth token — connecting without one would be 401'd by
+  // the server upgrade handler and produce "WebSocket is closed before the
+  // connection is established" noise plus a reconnect storm.
   useEffect(() => {
+    if (!hasAuthToken()) return;
     let ws: WebSocket | null = null;
     let stopped = false;
     let attemptCount = 0;
@@ -165,7 +174,7 @@ export function NotificationBell() {
       if (reconnectTimer !== null) window.clearTimeout(reconnectTimer);
       ws?.close();
     };
-  }, [t]);
+  }, [t, authTick]);
 
   // Close dropdown on outside click.
   useEffect(() => {

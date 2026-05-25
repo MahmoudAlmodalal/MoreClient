@@ -73,10 +73,44 @@ export function authHeader(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+/** True when a non-empty JWT is present in localStorage. */
+export function hasAuthToken(): boolean {
+  if (typeof window === "undefined") return false;
+  const token = window.localStorage.getItem(JWT_TOKEN_STORAGE);
+  return Boolean(token && token.length > 0);
+}
+
+/**
+ * In-tab notification for auth-token changes. `storage` events only fire in
+ * *other* tabs, so we dispatch our own event whenever the token is written or
+ * cleared within this tab (login, logout, 401 handler).
+ */
+const AUTH_TOKEN_EVENT = "clientmore:auth-token-changed";
+
+function emitAuthTokenChanged(): void {
+  if (typeof window === "undefined") return;
+  try { window.dispatchEvent(new Event(AUTH_TOKEN_EVENT)); } catch { /* ignore */ }
+}
+
+/** Subscribe to auth-token changes (same-tab + cross-tab). Returns an unsubscribe fn. */
+export function subscribeAuthToken(cb: () => void): () => void {
+  if (typeof window === "undefined") return () => {};
+  const onStorage = (e: StorageEvent) => {
+    if (e.key === null || e.key === JWT_TOKEN_STORAGE) cb();
+  };
+  window.addEventListener(AUTH_TOKEN_EVENT, cb);
+  window.addEventListener("storage", onStorage);
+  return () => {
+    window.removeEventListener(AUTH_TOKEN_EVENT, cb);
+    window.removeEventListener("storage", onStorage);
+  };
+}
+
 function persistSession(res: AuthSessionOut): void {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(JWT_TOKEN_STORAGE, res.token);
   window.sessionStorage.setItem("userRole", res.role);
+  emitAuthTokenChanged();
 }
 
 export async function login(email: string, password: string): Promise<AuthSessionOut> {
@@ -95,6 +129,7 @@ export function logout(): void {
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(JWT_TOKEN_STORAGE);
     window.sessionStorage.removeItem("userRole");
+    emitAuthTokenChanged();
   }
   clearAdminKey();
 }
@@ -114,6 +149,7 @@ function handle401(path: string): void {
   if (window.location.pathname.endsWith("/welcome")) return;
   window.localStorage.removeItem(JWT_TOKEN_STORAGE);
   window.sessionStorage.removeItem("userRole");
+  emitAuthTokenChanged();
   // Use replace() so the broken page doesn't pollute back-button history.
   const base = window.location.pathname.replace(/\/dashboard.*$|\/admin.*$|\/widget.*$/, "").replace(/\/$/, "");
   const target = `${base}/welcome`;

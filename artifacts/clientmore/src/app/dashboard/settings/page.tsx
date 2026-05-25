@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useSyncExternalStore } from "react";
 import { useLanguage } from "@/components/language-provider";
-import { apiSend, apiGet, type SettingsOut } from "@/lib/api";
+import { apiSend, apiGet, hasAuthToken, subscribeAuthToken, type SettingsOut } from "@/lib/api";
 import { SubscriptionPlans } from "@/components/dashboard/subscription-plans";
 import {
   Bot,
@@ -88,8 +88,14 @@ export default function SettingsPage() {
   const [tgDeliveryDetail, setTgDeliveryDetail] = useState<string | null>(null);
   const [tgDeliveryAt, setTgDeliveryAt] = useState<string | null>(null);
 
-  // Load tenantKey and last Telegram delivery status on mount.
+  // Load tenantKey and last Telegram delivery status on mount. Gated on a
+  // present auth token so we don't fire a guaranteed 401 (and trigger the
+  // shared handle401 redirect) before login completes. Re-runs when the token
+  // appears post-login.
+  const [authTick, setAuthTick] = useState(0);
+  useEffect(() => subscribeAuthToken(() => setAuthTick((n) => n + 1)), []);
   useEffect(() => {
+    if (!hasAuthToken()) return;
     apiGet<SettingsOut>("/api/settings")
       .then((s) => {
         if (s.tenantKey) setSavedTenantKey(s.tenantKey);
@@ -98,7 +104,7 @@ export default function SettingsPage() {
         setTgDeliveryAt(s.telegramLastDeliveryAt ?? null);
       })
       .catch(() => {});
-  }, []);
+  }, [authTick]);
 
   // Dynamic host origin states & Clipboard helpers
   const currentOrigin = useSyncExternalStore(

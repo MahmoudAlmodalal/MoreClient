@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { apiGet, type SettingsOut } from "@/lib/api";
+import { apiGet, hasAuthToken, subscribeAuthToken, type SettingsOut } from "@/lib/api";
 
 type Language = "en" | "ar";
 
@@ -977,7 +977,13 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
   // Hydrate the shared config state from the backend on mount. Keeps the
   // existing mock defaults as a fallback if the fetch fails (offline/dev).
+  // Only fires when an auth token is present — unauthenticated visitors (e.g.
+  // landing/welcome pages) would otherwise trigger a 401 that bounces them to
+  // /welcome. Re-runs when the token appears post-login.
+  const [authTick, setAuthTick] = useState(0);
+  useEffect(() => subscribeAuthToken(() => setAuthTick((n) => n + 1)), []);
   useEffect(() => {
+    if (!hasAuthToken()) return;
     let cancelled = false;
     (async () => {
       try {
@@ -1016,7 +1022,7 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [authTick]);
 
   const t = (key: keyof Translations, variables?: Record<string, string | number>): string => {
     const dict = language === "ar" ? translationsAr : translationsEn;

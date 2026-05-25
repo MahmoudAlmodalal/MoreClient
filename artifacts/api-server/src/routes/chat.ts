@@ -67,11 +67,14 @@ router.post("/chat", async (req, res) => {
   const confidence = confidenceFrom(retrieved);
 
   let answer: string;
+  let usedLlm = false;
+  let fallback: string | null = null;
   if (retrieved.length === 0) {
     answer =
       conv.language === "ar"
         ? "لا توجد لدي معلومات كافية حالياً. سأقوم بتحويلك إلى موظف بشري."
         : "I don't have enough information yet. Let me connect you to a human agent.";
+    fallback = "no_context";
   } else {
     const context = retrieved.map((c, i) => `[${i + 1}] ${c.content}`).join("\n\n");
     const sysPrompt = `You are ${settingsRow?.botName || "a helpful assistant"} for ${
@@ -83,8 +86,13 @@ Respond in ${conv.language === "ar" ? "Arabic" : "English"}.`;
       { role: "system", content: sysPrompt },
       { role: "user", content: `Context:\n${context}\n\nQuestion: ${message}` },
     ]);
-    // Keyless fallback: return top chunk verbatim.
-    answer = llmAnswer || retrieved[0].content;
+    if (llmAnswer) {
+      answer = llmAnswer;
+      usedLlm = true;
+    } else {
+      answer = buildFallbackAnswer(retrieved[0].content, conv.language || language);
+      fallback = "llm_unavailable";
+    }
   }
 
   const lowConfidence = confidence < threshold;
@@ -154,8 +162,23 @@ Respond in ${conv.language === "ar" ? "Arabic" : "English"}.`;
     language: conv.language || language,
     escalate: shouldEscalate,
     sender: shouldEscalate ? "human" : "bot",
+    usedLlm,
+    fallback,
   });
 });
+
+// Build a coherent answer from the top retrieved chunk when the LLM is
+// unavailable: take the first 1-2 sentences (so we don't dump mid-paragraph
+// garbage) and wrap with a clear "from your knowledge base" preamble.
+function buildFallbackAnswer(chunk: string, lang: string | null): string {
+  const clean = chunk.replace(/\s+/g, " ").trim();
+  const sentences = clean.match(/[^.!?؟]+[.!?؟]+\s?/g) || [clean];
+  const excerpt = sentences.slice(0, 2).join(" ").trim().slice(0, 500);
+  if (lang === "ar") {
+    return `من قاعدة المعرفة: ${excerpt}`;
+  }
+  return `From your knowledge base: ${excerpt}`;
+}
 
 // Polled by the widget once escalated, to pick up agent replies streamed
 // over /ws/chat/:sessionId for clients without a live socket.

@@ -199,6 +199,27 @@ export function deleteFile(id: number): Promise<void> {
   return apiDelete(`/api/files/${id}`);
 }
 
+export type UploadResponse = { file: string; chunks: number; status: string };
+
+/**
+ * Upload a file to the knowledge base via the canonical /api/files/upload
+ * endpoint. Mirrors the web client's apiUpload — the caller passes the
+ * picked asset; we build the multipart form and attach the JWT.
+ */
+export async function uploadFile(asset: {
+  uri: string;
+  name: string;
+  mimeType?: string | null;
+}): Promise<UploadResponse> {
+  const form = new FormData();
+  form.append("file", {
+    uri: asset.uri,
+    name: asset.name,
+    type: asset.mimeType ?? "application/octet-stream",
+  } as unknown as Blob);
+  return apiFetch<UploadResponse>("/api/files/upload", "POST", form);
+}
+
 export function fetchHandoffs(status?: string): Promise<HandoffOut[]> {
   const q = status ? `?status=${status}` : "";
   return apiGet(`/api/handoffs${q}`);

@@ -41,12 +41,12 @@ async function processAndStore(
       name: filename,
       type: parsed.type,
       sizeBytes: buffer.length,
-      status: chunks.length > 0 ? "Indexed" : "Empty",
+      status: chunks.length > 0 ? "indexed" : "empty",
     })
     .returning();
 
   if (chunks.length === 0) {
-    return { documentId: doc.id, chunkCount: 0, status: "Empty", type: parsed.type };
+    return { documentId: doc.id, chunkCount: 0, status: "empty", type: parsed.type };
   }
 
   const embeddings = await embedTexts(chunks);
@@ -66,23 +66,22 @@ async function processAndStore(
       });
     }
   }
-  return { documentId: doc.id, chunkCount: chunks.length, status: "Indexed", type: parsed.type };
+  return { documentId: doc.id, chunkCount: chunks.length, status: "indexed", type: parsed.type };
 }
 
-async function uploadHandler(
-  req: Express.Request & { auth?: { tid: number } } & { file?: Express.Multer.File },
-  res: { status: (n: number) => { json: (b: unknown) => void }; json: (b: unknown) => void },
-) {
+// Canonical upload endpoint. Both web and mobile call this path through
+// their shared api.ts helper.
+router.post("/files/upload", requireJwt, upload.single("file"), async (req, res) => {
   const file = (req as unknown as { file?: Express.Multer.File }).file;
   if (!file) return res.status(400).json({ detail: "No file uploaded" });
   const tenantId = req.auth!.tid;
-  const result = await processAndStore(tenantId, file.originalname, file.mimetype, file.buffer);
-  return res.json({ file: file.originalname, chunks: result.chunkCount, status: result.status });
-}
-
-// Both names are used across web and mobile.
-router.post("/upload", requireJwt, upload.single("file"), uploadHandler as never);
-router.post("/files/upload", requireJwt, upload.single("file"), uploadHandler as never);
+  try {
+    const result = await processAndStore(tenantId, file.originalname, file.mimetype, file.buffer);
+    return res.json({ file: file.originalname, chunks: result.chunkCount, status: result.status });
+  } catch (err) {
+    return res.status(500).json({ detail: (err as Error).message || "Upload failed" });
+  }
+});
 
 router.delete("/files/:id", requireJwt, async (req, res) => {
   const tenantId = req.auth!.tid;

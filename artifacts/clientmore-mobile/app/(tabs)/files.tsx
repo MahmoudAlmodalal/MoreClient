@@ -17,7 +17,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 import { useColors } from "@/hooks/useColors";
-import { deleteFile, fetchFiles, type FileOut } from "@/lib/api";
+import { deleteFile, fetchFiles, uploadFile, type FileOut } from "@/lib/api";
 
 const FILE_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
   pdf: "document-text",
@@ -36,8 +36,10 @@ function fileIcon(name: string): keyof typeof Ionicons.glyphMap {
 }
 
 function statusColor(status: string, c: ReturnType<typeof useColors>) {
-  if (status === "processed") return c.success;
-  if (status === "processing") return c.warning;
+  const s = status.toLowerCase();
+  if (s === "indexed") return c.success;
+  if (s === "processing") return c.warning;
+  if (s === "failed") return c.destructive;
   return c.mutedForeground;
 }
 
@@ -85,24 +87,11 @@ export default function FilesScreen() {
       setUploading(true);
 
       const asset = result.assets[0];
-      const form = new FormData();
-      form.append("file", {
+      await uploadFile({
         uri: asset.uri,
         name: asset.name,
-        type: asset.mimeType ?? "application/octet-stream",
-      } as any);
-
-      const { JWT_TOKEN_KEY } = await import("@/lib/api");
-      const AsyncStorage = (await import("@react-native-async-storage/async-storage")).default;
-      const token = await AsyncStorage.getItem(JWT_TOKEN_KEY);
-      const base = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000";
-
-      const res = await fetch(`${base}/api/files/upload`, {
-        method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        body: form,
+        mimeType: asset.mimeType,
       });
-      if (!res.ok) throw new Error(`Upload failed (${res.status})`);
       await qc.invalidateQueries({ queryKey: ["files"] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (e: any) {

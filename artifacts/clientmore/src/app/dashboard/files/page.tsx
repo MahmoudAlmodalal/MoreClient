@@ -63,7 +63,7 @@ export default function FilesPage() {
       const rows = await fetchFiles();
       setFiles(rows);
       const uploaded = rows.find((row) => row.name === fileName);
-      if (!uploaded || uploaded.status !== "Processing") {
+      if (!uploaded || uploaded.status !== "processing") {
         return;
       }
       if (attempt < FAST_ATTEMPTS) {
@@ -134,15 +134,15 @@ export default function FilesPage() {
     }, 400);
 
     try {
-      const uploaded = await apiUpload<UploadResponse>("/api/upload", file);
+      const uploaded = await apiUpload<UploadResponse>("/api/files/upload", file);
       setUploadProgress(100);
       setProcessingStep(
-        uploaded.status === "Processing"
+        uploaded.status === "processing"
           ? "File saved. Indexing continues in the background..."
           : "File uploaded and indexed."
       );
       await loadFiles();
-      if (uploaded.status === "Processing") {
+      if (uploaded.status === "processing") {
         await waitForProcessing(uploaded.file);
       }
     } catch (err) {
@@ -296,16 +296,16 @@ export default function FilesPage() {
                     <td className="px-4 py-4">
                       <span
                         className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${
-                          file.status === "Failed"
+                          file.status === "failed"
                             ? "bg-red-500/10 text-red-400 ring-red-500/20"
-                            : file.status === "Processing"
+                            : file.status === "processing"
                             ? "bg-amber-500/10 text-amber-400 ring-amber-500/20"
                             : "bg-emerald-500/10 text-emerald-400 ring-emerald-500/20"
                         }`}
                       >
-                        {file.status === "Failed"
+                        {file.status === "failed"
                           ? t("failed")
-                          : file.status === "Processing"
+                          : file.status === "processing"
                           ? t("processing")
                           : t("completed")}
                       </span>

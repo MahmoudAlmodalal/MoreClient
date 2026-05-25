@@ -123,7 +123,16 @@ Answer concisely using only the provided context. Respond in ${language === "ar"
       { role: "system", content: sysPrompt },
       { role: "user", content: `Context:\n${context}\n\nQuestion: ${opts.message}` },
     ]);
-    answer = llm || retrieved[0].content;
+    if (llm) {
+      answer = llm;
+    } else {
+      // Build a coherent fallback (first 1-2 sentences from the top chunk)
+      // instead of dumping mid-paragraph content to the channel.
+      const clean = retrieved[0].content.replace(/\s+/g, " ").trim();
+      const sentences = clean.match(/[^.!?؟]+[.!?؟]+\s?/g) || [clean];
+      const excerpt = sentences.slice(0, 2).join(" ").trim().slice(0, 500);
+      answer = language === "ar" ? `من قاعدة المعرفة: ${excerpt}` : `From your knowledge base: ${excerpt}`;
+    }
   }
 
   const shouldEscalate =

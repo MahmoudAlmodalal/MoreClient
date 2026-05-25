@@ -167,7 +167,7 @@ export default function HandoffsPage() {
       const updated = await apiSend<HandoffOut>(
         "/api/handoffs/" + selectedTicketId + "/reply",
         "POST",
-        { content }
+        { message: content }
       );
       setTickets(prev => prev.map(t => (t.id === updated.id ? updated : t)));
       const delivery = updated.metadata.delivery as DeliveryMetadata | undefined;

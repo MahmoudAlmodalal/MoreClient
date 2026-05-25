@@ -100,6 +100,17 @@ export async function deliverHandoffReply(
     .limit(1);
   const sessionId = conv?.customerRef || "";
 
+  // Guard: external channels need a customer reference to route the reply.
+  // Without it we record a clear failure instead of crashing in dispatchOnce.
+  if (!sessionId && handoff.channel !== "web") {
+    const detail = "Missing customerRef for handoff (cannot route external reply)";
+    await db
+      .update(handoffs)
+      .set({ deliveryAttempts: 0, deliveryStatus: "failed", deliveryDetail: detail })
+      .where(eq(handoffs.id, handoffId));
+    return { ok: false, detail };
+  }
+
   let last: DeliveryResult = { ok: false, detail: "no attempts" };
   for (let attempt = 1; attempt <= 3; attempt++) {
     last = await dispatchOnce(handoff, sessionId, content);

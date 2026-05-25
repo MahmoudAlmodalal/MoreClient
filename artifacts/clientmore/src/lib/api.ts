@@ -173,10 +173,13 @@ export async function apiUpload<T>(path: string, file: File, headers?: Record<st
 
 export type ChatResponse = {
   reply: string;
+  answer: string;
   sender: "bot" | "human";
   escalate: boolean;
   confidence: number;
   language: "en" | "ar";
+  usedLlm: boolean;
+  fallback: string | null;
 };
 
 export type ChatMessageOut = {

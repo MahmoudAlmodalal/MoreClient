@@ -65,8 +65,10 @@ router.get("/handoffs", requireJwt, async (req, res) => {
 router.post("/handoffs/:id/reply", requireJwt, async (req, res) => {
   const tenantId = req.auth!.tid;
   const id = Number(req.params.id);
-  const content = (req.body?.content || req.body?.message || "").toString().trim();
-  if (!content) return res.status(400).json({ detail: "content required" });
+  // Canonical field is `message`. We still accept `content` for one release
+  // so any in-flight clients don't break, but new code should send `message`.
+  const content = (req.body?.message ?? req.body?.content ?? "").toString().trim();
+  if (!content) return res.status(400).json({ detail: "message required" });
   const loaded = await loadHandoff(id, tenantId);
   if (!loaded) return res.status(404).json({ detail: "Not found" });
 

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { Apple } from "lucide-react";
-import { login } from "@/lib/api";
+import { login, demoLogin } from "@/lib/api";
 
 const SLIDES = 3;
 
@@ -37,15 +37,22 @@ export default function WelcomePage() {
     }
   };
 
-  const handleSocialLogin = () => {
-    sessionStorage.setItem("userRole", "company");
-    router.push("/dashboard");
+  const handleDemoAccess = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const session = await demoLogin();
+      router.push(session.redirectTo || "/dashboard");
+    } catch (err: any) {
+      setError(err?.message || "Demo access unavailable");
+      setLoading(false);
+    }
   };
 
-  const handleDemoAccess = () => {
-    sessionStorage.setItem("userRole", "company");
-    router.push("/dashboard");
-  };
+  // Social SSO is not implemented yet — route the click through the same
+  // real demo-tenant login instead of dropping a fake role in sessionStorage,
+  // so the dashboard always loads against a real backend session.
+  const handleSocialLogin = handleDemoAccess;
 
   useEffect(() => {
     const id = setInterval(() => setSlide((s) => (s + 1) % SLIDES), 4500);

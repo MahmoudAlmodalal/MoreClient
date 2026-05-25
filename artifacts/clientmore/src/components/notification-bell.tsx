@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Bell } from "lucide-react";
+import { Bell, WifiOff } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { apiGet, createWebSocketUrl, createAuthenticatedWebSocketUrl, type HandoffOut, type DashboardSocketMessage } from "@/lib/api";
 import { useAsyncOnMount } from "@/lib/use-async-effect";
@@ -63,11 +63,20 @@ function relativeTime(iso: string): string {
   return `${Math.floor(hrs / 24)}d`;
 }
 
+// Number of consecutive failed reconnect attempts before we tell the user the
+// live feed is paused. PRD B7.
+const RECONNECT_BANNER_THRESHOLD = 5;
+
 export function NotificationBell() {
   const { t, isRtl } = useLanguage();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
+  const [reconnectAttempts, setReconnectAttempts] = useState(0);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const showPausedBanner =
+    reconnectAttempts >= RECONNECT_BANNER_THRESHOLD && !bannerDismissed;
 
   // Unread = handoff id is above the last-seen watermark.
   const unread = items.filter((item) => !item.readAt).length;
@@ -86,13 +95,23 @@ export function NotificationBell() {
 
   useAsyncOnMount(loadHandoffs, [loadHandoffs]);
 
-  // Live updates via the shared /ws/dashboard socket.
+  // Live updates via the shared /ws/dashboard socket. Reconnects use
+  // exponential backoff capped at 30s; after 5 consecutive failures we
+  // surface a "live updates paused — reconnecting…" banner (PRD B7).
   useEffect(() => {
     let ws: WebSocket | null = null;
     let stopped = false;
+    let attemptCount = 0;
+    let reconnectTimer: number | null = null;
 
     const connect = () => {
       ws = new WebSocket(createAuthenticatedWebSocketUrl("/ws/dashboard"));
+
+      ws.onopen = () => {
+        attemptCount = 0;
+        setReconnectAttempts(0);
+        setBannerDismissed(false);
+      };
 
       ws.onmessage = (event) => {
         try {
@@ -130,8 +149,11 @@ export function NotificationBell() {
 
       ws.onclose = () => {
         if (stopped) return;
-        // Reconnect with a 3s delay on unexpected close.
-        setTimeout(connect, 3000);
+        attemptCount += 1;
+        setReconnectAttempts(attemptCount);
+        // Exponential backoff (1s, 2s, 4s, 8s, …) capped at 30s.
+        const delay = Math.min(30_000, 1000 * 2 ** Math.min(attemptCount - 1, 5));
+        reconnectTimer = window.setTimeout(connect, delay);
       };
 
       ws.onerror = () => ws?.close();
@@ -140,6 +162,7 @@ export function NotificationBell() {
     connect();
     return () => {
       stopped = true;
+      if (reconnectTimer !== null) window.clearTimeout(reconnectTimer);
       ws?.close();
     };
   }, [t]);
@@ -162,13 +185,39 @@ export function NotificationBell() {
   };
 
   return (
-    <div className="relative" ref={containerRef}>
+    <div className="relative flex items-center gap-2" ref={containerRef}>
+      {showPausedBanner && (
+        <div
+          role="status"
+          className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold text-amber-300"
+          title={isRtl ? "تم إيقاف التحديثات المباشرة مؤقتاً — جاري إعادة المحاولة" : "Live updates paused — reconnecting…"}
+        >
+          <WifiOff className="h-3 w-3" />
+          <span>
+            {isRtl ? "متوقف — إعادة الاتصال…" : "Live updates paused — reconnecting…"}
+          </span>
+          <button
+            type="button"
+            aria-label={isRtl ? "إخفاء" : "Dismiss"}
+            onClick={() => setBannerDismissed(true)}
+            className="ml-1 text-amber-300/70 hover:text-amber-100"
+          >
+            ×
+          </button>
+        </div>
+      )}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label={t("notifications")}
         className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-[#1f1f2e] bg-[#0d0d15] text-gray-300 transition-colors hover:bg-[#1a1a26]"
       >
+        {showPausedBanner && (
+          <span
+            aria-hidden="true"
+            className="absolute -bottom-1 -right-1 inline-flex h-3 w-3 items-center justify-center rounded-full bg-amber-500 ring-2 ring-[#07070b]"
+          />
+        )}
         <Bell className="h-4 w-4 text-purple-400" />
         {unread > 0 && (
           <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-purple-600 px-1 text-[10px] font-semibold text-white">

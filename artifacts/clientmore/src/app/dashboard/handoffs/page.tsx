@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { useLanguage } from "@/components/language-provider";
-import { apiGet, apiSend, type HandoffOut } from "@/lib/api";
+import { apiGet, apiSend, type HandoffOut, type HandoffDeliveryMetadata } from "@/lib/api";
 import { useAsyncOnMount } from "@/lib/use-async-effect";
 import {
   MessageSquare,
@@ -17,18 +17,34 @@ import {
   BookPlus,
   PackageCheck,
   Hash,
-  MapPin
+  MapPin,
+  Clock,
+  RefreshCw,
+  CheckCircle2,
+  XCircle
 } from "lucide-react";
+
+// Format milliseconds as a compact "1h 4m" / "23m" / "12s" SLA string.
+function formatSlaAge(ms: number): string {
+  if (ms < 0) ms = 0;
+  const s = Math.floor(ms / 1000);
+  if (s < 60) return `${s}s`;
+  const m = Math.floor(s / 60);
+  if (m < 60) return `${m}m`;
+  const h = Math.floor(m / 60);
+  const rem = m - h * 60;
+  return rem ? `${h}h ${rem}m` : `${h}h`;
+}
+
+// SLA breaches at one hour: that's when the agent should see red.
+const SLA_BREACH_MS = 60 * 60 * 1000;
 
 // The backend HandoffOut shape (from @/lib/api) is the source of truth for a
 // ticket. `id` is a number, `channel` is the raw conversation channel
 // (e.g. "whatsapp" | "telegram" | "web"), and `metadata` is a free-form dict.
 type HandoffTicket = HandoffOut;
 
-type DeliveryMetadata = {
-  ok?: boolean;
-  detail?: string;
-};
+type DeliveryMetadata = HandoffDeliveryMetadata;
 
 // Channel filter chips use display-cased names; map a raw backend channel to
 // one of those buckets so filtering and the channel icon keep working.
@@ -50,6 +66,14 @@ export default function HandoffsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [retryingId, setRetryingId] = useState<number | null>(null);
+
+  // Ticking clock so the SLA badge re-renders even when no data changes.
+  const [, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = window.setInterval(() => setNow(Date.now()), 30_000);
+    return () => window.clearInterval(id);
+  }, []);
 
   const fetchTickets = () => apiGet<HandoffOut[]>("/api/handoffs");
 
@@ -88,6 +112,49 @@ export default function HandoffsPage() {
     const matchesUnreplied = !unrepliedOnly || ticket.unreplied;
     return matchesTab && matchesUnreplied;
   });
+
+  // Per-tab counts so the agent can see at a glance where the queue lives.
+  const channelCounts = tickets.reduce(
+    (acc, t) => {
+      if (unrepliedOnly && !t.unreplied) return acc;
+      const k = channelKey(t.channel);
+      acc.all += 1;
+      acc[k] += 1;
+      return acc;
+    },
+    { all: 0, Telegram: 0, WhatsApp: 0, Widget: 0 } as Record<
+      "all" | "Telegram" | "WhatsApp" | "Widget",
+      number
+    >,
+  );
+
+  const handleRetryDelivery = async (id: number) => {
+    setRetryingId(id);
+    try {
+      const result = await apiSend<{ delivery: DeliveryMetadata }>(
+        `/api/handoffs/${id}/retry-delivery`,
+        "POST",
+      );
+      setTickets(prev =>
+        prev.map(t =>
+          t.id === id
+            ? { ...t, metadata: { ...t.metadata, delivery: result.delivery } }
+            : t,
+        ),
+      );
+      if (result.delivery?.ok) {
+        setToast(t("addedToKb") /* fallback string handled visually */);
+        setError(null);
+      } else {
+        setError(`Retry failed: ${result.delivery?.detail || "check channel settings"}`);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Retry failed");
+    } finally {
+      setRetryingId(null);
+      setTimeout(() => setToast(null), 2500);
+    }
+  };
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -166,13 +233,22 @@ export default function HandoffsPage() {
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${
+              className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all ${
                 activeTab === tab
                   ? "bg-purple-600 text-white"
                   : "bg-[#0d0d15] text-gray-400 border border-[#1f1f2e] hover:bg-[#1a1a26]"
               }`}
             >
-              {tab === "all" ? t("all") : t(tab === "WhatsApp" ? "channelWhatsapp" : tab === "Telegram" ? "channelTelegram" : "channelWidget")}
+              <span>{tab === "all" ? t("all") : t(tab === "WhatsApp" ? "channelWhatsapp" : tab === "Telegram" ? "channelTelegram" : "channelWidget")}</span>
+              <span
+                className={`inline-flex min-w-5 items-center justify-center rounded-full px-1.5 text-[10px] font-bold ${
+                  activeTab === tab
+                    ? "bg-white/20 text-white"
+                    : "bg-[#1f1f2e] text-gray-300"
+                }`}
+              >
+                {channelCounts[tab]}
+              </span>
             </button>
           ))}
         </div>
@@ -220,6 +296,11 @@ export default function HandoffsPage() {
           <div className="space-y-3 lg:col-span-1">
             {filteredTickets.map((ticket) => {
               const lastMsg = ticket.messages[ticket.messages.length - 1];
+              const ageMs = ticket.createdAt
+                ? Date.now() - new Date(ticket.createdAt).getTime()
+                : 0;
+              const slaBreached = ticket.unreplied && ageMs > SLA_BREACH_MS;
+              const delivery = ticket.metadata.delivery as DeliveryMetadata | undefined;
               return (
                 <div
                   key={ticket.id}
@@ -237,14 +318,22 @@ export default function HandoffsPage() {
                       {channelKey(ticket.channel) === "Widget" && <Globe className="h-4 w-4 text-purple-400" />}
                       {ticket.user}
                     </span>
-                    <span className="text-[10px] text-gray-500">{ticket.timeAgo}</span>
+                    <span
+                      title={ticket.createdAt ?? undefined}
+                      className={`inline-flex items-center gap-1 text-[10px] font-semibold ${
+                        slaBreached ? "text-red-400" : "text-gray-500"
+                      }`}
+                    >
+                      <Clock className="h-3 w-3" />
+                      {ticket.createdAt ? formatSlaAge(ageMs) : ticket.timeAgo}
+                    </span>
                   </div>
 
                   <p className="mt-2 text-xs text-gray-400 truncate max-w-full text-right rtl:text-right">
                     {lastMsg ? lastMsg.content : "No messages."}
                   </p>
 
-                  <div className="mt-3 flex items-center justify-between border-t border-[#1f1f2e]/50 pt-2.5">
+                  <div className="mt-3 flex items-center justify-between gap-2 border-t border-[#1f1f2e]/50 pt-2.5">
                     <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-medium ${
                       ticket.reason === "low_confidence"
                         ? "bg-amber-500/10 text-amber-400 ring-1 ring-inset ring-amber-500/20"
@@ -255,9 +344,43 @@ export default function HandoffsPage() {
                       {reasonText(ticket.reason)}
                     </span>
 
-                    {ticket.unreplied && (
-                      <span className="inline-flex h-2 w-2 rounded-full bg-red-500 animate-pulse" title="Needs Agent Response" />
-                    )}
+                    <div className="flex items-center gap-1.5">
+                      {delivery && delivery.status && delivery.status !== "pending" && (
+                        <span
+                          title={delivery.detail ?? undefined}
+                          className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${
+                            delivery.ok
+                              ? "bg-emerald-500/10 text-emerald-400 ring-1 ring-inset ring-emerald-500/20"
+                              : "bg-red-500/10 text-red-400 ring-1 ring-inset ring-red-500/20"
+                          }`}
+                        >
+                          {delivery.ok ? (
+                            <CheckCircle2 className="h-3 w-3" />
+                          ) : (
+                            <XCircle className="h-3 w-3" />
+                          )}
+                          {delivery.ok ? "sent" : `failed${delivery.attempts ? ` (${delivery.attempts})` : ""}`}
+                        </span>
+                      )}
+                      {delivery && !delivery.ok && delivery.status && delivery.status !== "pending" && (
+                        <button
+                          type="button"
+                          disabled={retryingId === ticket.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            void handleRetryDelivery(ticket.id);
+                          }}
+                          className="inline-flex items-center gap-1 rounded-md border border-purple-500/30 bg-purple-500/10 px-1.5 py-0.5 text-[10px] font-semibold text-purple-300 hover:bg-purple-500/20 disabled:opacity-50"
+                          title="Retry delivery to channel"
+                        >
+                          <RefreshCw className={`h-3 w-3 ${retryingId === ticket.id ? "animate-spin" : ""}`} />
+                          Retry
+                        </button>
+                      )}
+                      {ticket.unreplied && (
+                        <span className="inline-flex h-2 w-2 rounded-full bg-red-500 animate-pulse" title="Needs Agent Response" />
+                      )}
+                    </div>
                   </div>
                 </div>
               );

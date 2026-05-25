@@ -1,8 +1,7 @@
 /**
- * Client-side fetch helpers for the Python FastAPI backend (cross-origin on
- * :8000). Errors come back as RFC 7807 problem+json; we surface `detail`
- * (or `title`) as the thrown Error message. Mirrors the shape of the admin
- * api.ts but prefixes every request with NEXT_PUBLIC_API_URL.
+ * Client-side fetch helpers for the Node/Express backend.
+ * Errors come back as RFC 7807 problem+json; we surface `detail`
+ * (or `title`) as the thrown Error message.
  */
 
 // @ts-ignore vite env
@@ -31,14 +30,29 @@ async function parseError(res: Response): Promise<never> {
   throw new ApiError(message, res.status);
 }
 
-/** sessionStorage key holding the admin API key (set on the /admin gate). */
-export const ADMIN_KEY_STORAGE = "adminKey";
+/**
+ * Admin API key — held in module memory only (never persisted), so a tab
+ * close or page reload forces re-entry. Set via `setAdminKey()` from the
+ * admin gate; cleared via `clearAdminKey()` on 401.
+ */
+let _adminKey: string | null = null;
+export const ADMIN_KEY_STORAGE = "adminKey"; // kept exported for back-compat callers; no longer used
+
+export function setAdminKey(key: string): void {
+  _adminKey = key && key.trim() ? key.trim() : null;
+}
+
+export function clearAdminKey(): void {
+  _adminKey = null;
+}
+
+export function hasAdminKey(): boolean {
+  return Boolean(_adminKey);
+}
 
 /** Header carrying the admin key, when present. Sent only on admin requests. */
 export function adminKeyHeader(): Record<string, string> {
-  if (typeof window === "undefined") return {};
-  const key = window.sessionStorage.getItem(ADMIN_KEY_STORAGE);
-  return key ? { "X-Admin-Key": key } : {};
+  return _adminKey ? { "X-Admin-Key": _adminKey } : {};
 }
 
 export const JWT_TOKEN_STORAGE = "authToken";
@@ -59,21 +73,33 @@ export function authHeader(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+function persistSession(res: AuthSessionOut): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(JWT_TOKEN_STORAGE, res.token);
+  window.sessionStorage.setItem("userRole", res.role);
+}
+
 export async function login(email: string, password: string): Promise<AuthSessionOut> {
   const res = await apiSend<AuthSessionOut>("/api/auth/login", "POST", { email, password });
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(JWT_TOKEN_STORAGE, res.token);
-    window.sessionStorage.setItem("userRole", res.role);
-  }
+  persistSession(res);
   return res;
 }
 
 export async function register(name: string, email: string, password: string, companyName: string): Promise<AuthSessionOut> {
   const res = await apiSend<AuthSessionOut>("/api/auth/register", "POST", { name, email, password, companyName });
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(JWT_TOKEN_STORAGE, res.token);
-    window.sessionStorage.setItem("userRole", res.role);
-  }
+  persistSession(res);
+  return res;
+}
+
+/**
+ * Demo-tenant access: hits the real /api/auth/demo-login endpoint, which
+ * returns a real JWT scoped to the seeded "demo" tenant. Replaces the old
+ * sessionStorage `userRole` bypass that let unauthenticated callers reach the
+ * dashboard.
+ */
+export async function demoLogin(): Promise<AuthSessionOut> {
+  const res = await apiSend<AuthSessionOut>("/api/auth/demo-login", "POST", {});
+  persistSession(res);
   return res;
 }
 
@@ -82,12 +108,35 @@ export function logout(): void {
     window.localStorage.removeItem(JWT_TOKEN_STORAGE);
     window.sessionStorage.removeItem("userRole");
   }
+  clearAdminKey();
+}
+
+/**
+ * Centralized 401 handler. For non-admin requests, an expired/invalid JWT
+ * means the operator should be sent back to the welcome screen. For admin
+ * requests we just clear the in-memory key so the admin gate reappears.
+ */
+function handle401(path: string): void {
+  if (typeof window === "undefined") return;
+  if (path.startsWith("/api/admin")) {
+    clearAdminKey();
+    return;
+  }
+  // Avoid redirect loops on the welcome screen itself.
+  if (window.location.pathname.endsWith("/welcome")) return;
+  window.localStorage.removeItem(JWT_TOKEN_STORAGE);
+  window.sessionStorage.removeItem("userRole");
+  // Use replace() so the broken page doesn't pollute back-button history.
+  const base = window.location.pathname.replace(/\/dashboard.*$|\/admin.*$|\/widget.*$/, "");
+  const target = `${base || ""}/welcome`;
+  window.location.replace(target);
 }
 
 export async function apiGet<T>(path: string, headers?: Record<string, string>): Promise<T> {
   const res = await fetch(joinBasePath(BASE, path), {
     headers: { Accept: "application/json", ...authHeader(), ...headers },
   });
+  if (res.status === 401) handle401(path);
   if (!res.ok) return parseError(res);
   return res.json() as Promise<T>;
 }
@@ -103,6 +152,8 @@ export async function apiSend<T>(
     headers: { "Content-Type": "application/json", Accept: "application/json", ...authHeader(), ...headers },
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
+  // Don't bounce the user away from the login flow on a bad-creds 401.
+  if (res.status === 401 && !path.startsWith("/api/auth/")) handle401(path);
   if (!res.ok) return parseError(res);
   return res.json() as Promise<T>;
 }
@@ -113,6 +164,7 @@ export async function apiUpload<T>(path: string, file: File, headers?: Record<st
   fd.append("file", file);
   const reqHeaders = { ...authHeader(), ...headers };
   const res = await fetch(joinBasePath(BASE, path), { method: "POST", body: fd, headers: reqHeaders });
+  if (res.status === 401) handle401(path);
   if (!res.ok) return parseError(res);
   return res.json() as Promise<T>;
 }
@@ -231,6 +283,13 @@ export type HandoffOrderMetadata = {
   orderData: Record<string, unknown>;
 };
 
+export type HandoffDeliveryMetadata = {
+  status: string | null;
+  attempts: number;
+  detail: string | null;
+  ok: boolean;
+};
+
 export type HandoffOut = {
   id: number;
   user: string;
@@ -244,6 +303,7 @@ export type HandoffOut = {
   metadata: {
     customerRef?: string;
     order?: HandoffOrderMetadata;
+    delivery?: HandoffDeliveryMetadata;
     [key: string]: unknown;
   };
 };

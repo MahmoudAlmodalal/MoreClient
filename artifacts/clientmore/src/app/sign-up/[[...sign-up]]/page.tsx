@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Apple } from "lucide-react";
-import { register } from "@/lib/api";
+import { register, demoLogin } from "@/lib/api";
 
 export default function SignUpPage() {
   const { t } = useLanguage();
@@ -43,9 +43,18 @@ export default function SignUpPage() {
     }
   };
 
-  const handleSocialSignUp = () => {
-    sessionStorage.setItem("userRole", "user");
-    router.push("/dashboard");
+  // Social SSO is not wired yet — fall back to the real demo-tenant login so
+  // the dashboard always loads against a real backend session.
+  const handleSocialSignUp = async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const session = await demoLogin();
+      router.push(session.redirectTo || "/dashboard");
+    } catch (err: any) {
+      setError(err?.message || "Demo access unavailable");
+      setLoading(false);
+    }
   };
 
   return (

@@ -11,7 +11,9 @@ import {
   deleteTenant as apiDeleteTenant,
   toggleTenantStatus,
   ApiError,
-  ADMIN_KEY_STORAGE,
+  setAdminKey,
+  clearAdminKey,
+  hasAdminKey,
 } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
@@ -92,7 +94,7 @@ export default function SuperAdminPage() {
 
   const handleAuthError = useCallback((err: unknown): boolean => {
     if (err instanceof ApiError && err.status === 401) {
-      if (typeof window !== "undefined") window.sessionStorage.removeItem(ADMIN_KEY_STORAGE);
+      clearAdminKey();
       setNeedsKey(true);
       return true;
     }
@@ -113,6 +115,13 @@ export default function SuperAdminPage() {
   }, [searchQuery, selectedPlanFilter, selectedStatusFilter, handleAuthError]);
 
   const loadAll = useCallback(async () => {
+    // If we don't yet have an in-memory key, prompt for it instead of firing
+    // off an admin request that's guaranteed to 401.
+    if (!hasAdminKey()) {
+      setNeedsKey(true);
+      setLoading(false);
+      return;
+    }
     await loadTenants();
     setLoading(false);
   }, [loadTenants]);
@@ -132,7 +141,7 @@ export default function SuperAdminPage() {
       setKeyError(isRtl ? "مفتاح المشرف مطلوب" : "Admin key is required");
       return;
     }
-    if (typeof window !== "undefined") window.sessionStorage.setItem(ADMIN_KEY_STORAGE, key);
+    setAdminKey(key);
     setKeyInput("");
     setKeyError(null);
     setNeedsKey(false);

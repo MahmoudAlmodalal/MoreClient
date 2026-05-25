@@ -49,16 +49,33 @@ export default function FilesPage() {
     }
   };
 
+  // Poll the file status. First 20 attempts at 1s (typical small docs finish
+  // here), then back off to 30s so large files don't hammer the API while
+  // still letting the agent know the upload is alive. PRD B5.
   const waitForProcessing = async (fileName: string) => {
-    for (let attempt = 0; attempt < 20; attempt += 1) {
+    const FAST_ATTEMPTS = 20;
+    const FAST_DELAY = 1000;
+    const SLOW_ATTEMPTS = 20; // up to ~10 more minutes
+    const SLOW_DELAY = 30_000;
+    let switched = false;
+
+    for (let attempt = 0; attempt < FAST_ATTEMPTS + SLOW_ATTEMPTS; attempt += 1) {
       const rows = await fetchFiles();
       setFiles(rows);
       const uploaded = rows.find((row) => row.name === fileName);
       if (!uploaded || uploaded.status !== "Processing") {
         return;
       }
-      setProcessingStep("Indexing in the background...");
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      if (attempt < FAST_ATTEMPTS) {
+        setProcessingStep("Indexing in the background...");
+        await new Promise((resolve) => setTimeout(resolve, FAST_DELAY));
+      } else {
+        if (!switched) {
+          switched = true;
+          setProcessingStep("Still processing — large files can take a minute.");
+        }
+        await new Promise((resolve) => setTimeout(resolve, SLOW_DELAY));
+      }
     }
   };
 

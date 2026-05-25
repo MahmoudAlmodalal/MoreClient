@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react";
 import { useLanguage } from "@/components/language-provider";
-import { apiGet, apiSend, type ChatMessageOut, type ChatResponse } from "@/lib/api";
+import { apiGet, apiSend, createWebSocketUrl, type ChatMessageOut, type ChatResponse } from "@/lib/api";
 import {
   Send,
   Bot,
@@ -69,37 +69,110 @@ export default function WidgetPage() {
       "telnet";
   }, []);
 
+  // Live agent replies: prefer a WebSocket to /ws/chat/:sessionId so we get
+  // server-pushed `{type:"agent.message"}` frames the moment the operator
+  // replies. Falls back to the legacy 5s long-poll when the socket is closed
+  // or proxied away (e.g. corporate WS blocks).
   useEffect(() => {
     if (!isEscalated) return;
+
+    const appendAgentRow = (row: { id?: number; content: string; time?: string }) => {
+      if (typeof row.id === "number") {
+        if (row.id <= lastAgentMessageIdRef.current) return; // duplicate
+        lastAgentMessageIdRef.current = row.id;
+      }
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `agent-${row.id ?? Date.now()}`,
+          sender: "human" as const,
+          text: row.content,
+          time: row.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        }
+      ]);
+    };
 
     const pollAgentMessages = async () => {
       try {
         const rows = await apiGet<ChatMessageOut[]>(
           `/api/chat/${encodeURIComponent(sessionId.current)}/agent-messages?after_id=${lastAgentMessageIdRef.current}&tenant_key=${encodeURIComponent(tenantKeyRef.current)}`
         );
-        if (rows.length === 0) return;
-
-        lastAgentMessageIdRef.current = Math.max(
-          lastAgentMessageIdRef.current,
-          ...rows.map(row => row.id)
-        );
-        setMessages(prev => [
-          ...prev,
-          ...rows.map(row => ({
-            id: `agent-${row.id}`,
-            sender: "human" as const,
-            text: row.content,
-            time: row.time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-          }))
-        ]);
+        rows.forEach(appendAgentRow);
       } catch {
         /* keep polling quietly; the chat form already handles connection errors */
       }
     };
 
-    void pollAgentMessages();
-    const interval = window.setInterval(pollAgentMessages, 3000);
-    return () => window.clearInterval(interval);
+    let ws: WebSocket | null = null;
+    let pollInterval: number | null = null;
+    let stopped = false;
+    let wsOpen = false;
+
+    const startPolling = (intervalMs: number) => {
+      if (pollInterval !== null) return;
+      void pollAgentMessages();
+      pollInterval = window.setInterval(pollAgentMessages, intervalMs);
+    };
+
+    const stopPolling = () => {
+      if (pollInterval !== null) {
+        window.clearInterval(pollInterval);
+        pollInterval = null;
+      }
+    };
+
+    try {
+      const url = new URL(
+        createWebSocketUrl(`/ws/chat/${encodeURIComponent(sessionId.current)}`),
+      );
+      url.searchParams.set("tenant_key", tenantKeyRef.current);
+      ws = new WebSocket(url.toString());
+
+      ws.onopen = () => {
+        wsOpen = true;
+        // Catch up on anything that arrived before the socket opened, then let
+        // the push channel take over.
+        void pollAgentMessages();
+        stopPolling();
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg?.type === "agent.message" && typeof msg.content === "string") {
+            appendAgentRow({ id: msg.id, content: msg.content, time: msg.time });
+          }
+        } catch {
+          /* ignore malformed frames */
+        }
+      };
+
+      const fallback = () => {
+        if (stopped) return;
+        wsOpen = false;
+        // Drop back to a slower poll cadence than the original 3s — we only
+        // need it when the socket is down.
+        startPolling(5000);
+      };
+      ws.onclose = fallback;
+      ws.onerror = () => ws?.close();
+    } catch {
+      // No WebSocket support at all — keep the old polling cadence.
+      startPolling(3000);
+    }
+
+    // If the socket hasn't opened within 2s, fall back to polling so the user
+    // never sits in dead air waiting for a stuck handshake.
+    const guardTimer = window.setTimeout(() => {
+      if (!wsOpen && !stopped) startPolling(5000);
+    }, 2000);
+
+    return () => {
+      stopped = true;
+      window.clearTimeout(guardTimer);
+      stopPolling();
+      ws?.close();
+    };
   }, [isEscalated]);
 
   const nextMessageId = () => {

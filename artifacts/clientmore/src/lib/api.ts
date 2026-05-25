@@ -324,6 +324,7 @@ export type SettingsOut = {
   intentLlmEnabled: boolean;
   intentConfidenceThreshold: number;
   autoHandoffOnComplaint: boolean;
+  tenantKey: string;
 };
 
 export type PurchaseOrderOut = {

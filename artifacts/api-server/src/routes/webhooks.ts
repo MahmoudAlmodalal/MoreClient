@@ -209,12 +209,44 @@ router.post("/telegram/webhook", async (req, res) => {
   const update = req.body ?? {};
   const msg = update.message;
   if (!msg?.text || !msg?.chat?.id) return res.json({ ok: true });
-  await ingest({
+
+  // Re-load settings so we have the token handy for the reply (ingest loads
+  // them internally too, but we need the token after ingest returns).
+  const [settingsForReply] = await db
+    .select()
+    .from(settings)
+    .where(eq(settings.tenantId, tenant.id))
+    .limit(1);
+
+  const result = await ingest({
     tenantKey,
     channel: "telegram",
     customerRef: String(msg.chat.id),
     message: String(msg.text),
   });
+
+  // Send the AI-generated reply back to the user in the same Telegram chat.
+  if (result && settingsForReply?.telegramToken && settingsForReply?.isTelegramActive) {
+    try {
+      const tgRes = await fetch(
+        `https://api.telegram.org/bot${settingsForReply.telegramToken}/sendMessage`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ chat_id: msg.chat.id, text: result.answer }),
+        },
+      );
+      if (!tgRes.ok) {
+        const detail = await tgRes.text().catch(() => String(tgRes.status));
+        console.warn(`[telegram] sendMessage failed: ${detail}`);
+      }
+    } catch (err) {
+      // Log but do not rethrow — Telegram must receive { ok: true } or it will
+      // keep retrying the webhook indefinitely.
+      console.warn("[telegram] sendMessage error:", (err as Error).message);
+    }
+  }
+
   return res.json({ ok: true });
 });
 

@@ -36,6 +36,12 @@ export const GEMINI_BASE_URL =
   process.env["GEMINI_BASE_URL"] ||
   "https://generativelanguage.googleapis.com/v1beta";
 
+// Public-facing API URL for building absolute callback URLs (e.g. Telegram
+// setWebhook).  In production set this to your deployed domain, e.g.
+// "https://my-app.replit.app/api".  Omit the trailing slash.
+// If unset, auto-registration of the Telegram webhook is skipped.
+export const PUBLIC_API_URL = (process.env["PUBLIC_API_URL"] || "").replace(/\/$/, "");
+
 export function hasLlm(): boolean {
   return Boolean(OPENAI_API_KEY || GEMINI_API_KEY);
 }

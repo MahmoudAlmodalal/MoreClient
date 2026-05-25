@@ -4,6 +4,8 @@ import { db, settings, messages, conversations } from "../lib/db";
 import { ensureSettings, getSettings } from "../lib/tenant";
 import { requireJwt } from "../middlewares/auth";
 import { settingsOut } from "../lib/serialize";
+import { PUBLIC_API_URL } from "../lib/env";
+import { logger } from "../lib/logger";
 
 const router: IRouter = Router();
 
@@ -18,8 +20,9 @@ async function usedMessages(tenantId: number): Promise<number> {
 
 router.get("/settings", requireJwt, async (req, res) => {
   const tenantId = req.auth!.tid;
+  const tenantKey = req.auth!.tk;
   const s = await ensureSettings(tenantId);
-  return res.json(settingsOut(s, await usedMessages(tenantId)));
+  return res.json({ ...settingsOut(s, await usedMessages(tenantId)), tenantKey });
 });
 
 const ALLOWED_SETTINGS_KEYS = [
@@ -32,8 +35,29 @@ const ALLOWED_SETTINGS_KEYS = [
   "intentLlmEnabled", "intentConfidenceThreshold", "autoHandoffOnComplaint",
 ] as const;
 
+async function registerTelegramWebhook(token: string, tenantKey: string): Promise<void> {
+  if (!PUBLIC_API_URL) return;
+  const webhookUrl = `${PUBLIC_API_URL}/telegram/webhook?tenantKey=${encodeURIComponent(tenantKey)}`;
+  try {
+    const tgRes = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: webhookUrl }),
+    });
+    const json = (await tgRes.json()) as { ok: boolean; description?: string };
+    if (!json.ok) {
+      logger.warn({ tenantKey, description: json.description }, "[telegram] setWebhook failed");
+    } else {
+      logger.info({ tenantKey, webhookUrl }, "[telegram] setWebhook registered");
+    }
+  } catch (err) {
+    logger.warn({ tenantKey, err: (err as Error).message }, "[telegram] setWebhook error");
+  }
+}
+
 async function updateSettings(req: import("express").Request, res: import("express").Response) {
   const tenantId = req.auth!.tid;
+  const tenantKey = req.auth!.tk;
   await ensureSettings(tenantId);
   const body = (req.body ?? {}) as Record<string, unknown>;
   const patch: Record<string, unknown> = {};
@@ -43,8 +67,15 @@ async function updateSettings(req: import("express").Request, res: import("expre
   if (Object.keys(patch).length > 0) {
     await db.update(settings).set(patch).where(eq(settings.tenantId, tenantId));
   }
+
+  // Auto-register Telegram webhook when a token is being saved.
+  const newToken = patch["telegramToken"];
+  if (typeof newToken === "string" && newToken.trim()) {
+    await registerTelegramWebhook(newToken.trim(), tenantKey);
+  }
+
   const s = await getSettings(tenantId);
-  return res.json(settingsOut(s, await usedMessages(tenantId)));
+  return res.json({ ...settingsOut(s, await usedMessages(tenantId)), tenantKey });
 }
 
 router.put("/settings", requireJwt, updateSettings);

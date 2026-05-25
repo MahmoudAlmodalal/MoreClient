@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useSyncExternalStore } from "react";
+import React, { useState, useEffect, useSyncExternalStore } from "react";
 import { useLanguage } from "@/components/language-provider";
-import { apiSend, type SettingsOut } from "@/lib/api";
+import { apiSend, apiGet, type SettingsOut } from "@/lib/api";
 import { SubscriptionPlans } from "@/components/dashboard/subscription-plans";
 import {
   Bot,
@@ -22,6 +22,8 @@ import {
 const fallbackOrigin = "http://localhost:5000";
 // @ts-ignore vite env
 const defaultTenantKey = (import.meta as any).env?.VITE_DEFAULT_TENANT_KEY ?? "telnet";
+// @ts-ignore vite env
+const viteApiUrl: string = (import.meta as any).env?.VITE_API_URL ?? "";
 const subscribeOrigin = () => () => {};
 const getClientOrigin = () =>
   typeof window === "undefined" ? fallbackOrigin : window.location.origin;
@@ -80,6 +82,15 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [successToast, setSuccessToast] = useState(false);
   const [errorToast, setErrorToast] = useState(false);
+  const [savedTenantKey, setSavedTenantKey] = useState<string>("");
+  const [copiedWebhook, setCopiedWebhook] = useState(false);
+
+  // Load tenantKey on mount so the webhook URL is shown even before the first save.
+  useEffect(() => {
+    apiGet<SettingsOut>("/api/settings")
+      .then((s) => { if (s.tenantKey) setSavedTenantKey(s.tenantKey); })
+      .catch(() => {});
+  }, []);
 
   // Dynamic host origin states & Clipboard helpers
   const currentOrigin = useSyncExternalStore(
@@ -243,6 +254,7 @@ export default function SettingsPage() {
         setSubscriptionPlan(saved.subscriptionPlan);
       }
 
+      if (saved.tenantKey) setSavedTenantKey(saved.tenantKey);
       setSuccessToast(true);
       setTimeout(() => setSuccessToast(false), 3000);
     } catch {
@@ -491,17 +503,62 @@ export default function SettingsPage() {
             </div>
 
             {isTelegramActive && (
-              <div>
-                <label className="block text-[11px] font-bold text-gray-500 uppercase mb-2">
-                  {t("telegramToken")}
-                </label>
-                <input
-                  required
-                  type="password"
-                  value={telegramToken}
-                  onChange={(e) => setTelegramToken(e.target.value)}
-                  className="w-full rounded-xl border border-[#1f1f2e] bg-[#0d0d15] px-4 py-2.5 text-xs text-white focus:border-purple-500 focus:outline-none"
-                />
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-gray-500 uppercase mb-2">
+                    {t("telegramToken")}
+                  </label>
+                  <input
+                    required
+                    type="password"
+                    value={telegramToken}
+                    onChange={(e) => setTelegramToken(e.target.value)}
+                    className="w-full rounded-xl border border-[#1f1f2e] bg-[#0d0d15] px-4 py-2.5 text-xs text-white focus:border-purple-500 focus:outline-none"
+                  />
+                </div>
+
+                {savedTenantKey && (() => {
+                  const apiBase = viteApiUrl || (typeof window !== "undefined" ? window.location.origin : fallbackOrigin);
+                  const webhookUrl = `${apiBase}/telegram/webhook?tenantKey=${encodeURIComponent(savedTenantKey)}`;
+                  return (
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <label className="block text-[11px] font-bold text-gray-500 uppercase">
+                          {language === "ar" ? "رابط الويب هوك" : "Webhook URL"}
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            navigator.clipboard.writeText(webhookUrl);
+                            setCopiedWebhook(true);
+                            setTimeout(() => setCopiedWebhook(false), 2000);
+                          }}
+                          className="flex items-center gap-1.5 rounded-lg border border-[#1f1f2e] bg-[#07070b] px-3 py-1.5 text-xs text-purple-400 hover:text-white transition-colors"
+                        >
+                          {copiedWebhook ? (
+                            <>
+                              <Check className="h-3.5 w-3.5 text-emerald-400 animate-in zoom-in duration-200" />
+                              <span className="text-emerald-400">{t("copied")}</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="h-3.5 w-3.5" />
+                              <span>{language === "ar" ? "نسخ" : "Copy"}</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      <div className="rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-2.5">
+                        <code className="text-[11px] text-purple-300 break-all">{webhookUrl}</code>
+                      </div>
+                      <p className="mt-1.5 text-[11px] text-gray-500">
+                        {language === "ar"
+                          ? "الصق هذا الرابط في BotFather ← /setwebhook"
+                          : "Paste this URL into BotFather → /setwebhook"}
+                      </p>
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>

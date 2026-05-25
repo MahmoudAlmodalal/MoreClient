@@ -123,6 +123,7 @@ export function handoffOut(
     })),
     metadata: {
       customerRef: conv?.customerRef,
+      isTest: handoff.reason === "test",
       delivery: {
         status: handoff.deliveryStatus,
         attempts: handoff.deliveryAttempts,

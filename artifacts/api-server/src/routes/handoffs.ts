@@ -62,6 +62,56 @@ router.get("/handoffs", requireJwt, async (req, res) => {
   );
 });
 
+router.post("/handoffs/simulate", requireJwt, async (req, res) => {
+  const tenantId = req.auth!.tid;
+  const channel = (req.body?.channel ?? "telegram").toString().toLowerCase();
+  const messageText = (req.body?.message ?? "Hi, I need help with my order").toString().trim();
+
+  if (!["telegram", "web"].includes(channel)) {
+    return res.status(400).json({ detail: "channel must be telegram or web" });
+  }
+
+  const customerRef = `test-${crypto.randomUUID().slice(0, 8)}`;
+
+  const [conv] = await db
+    .insert(conversations)
+    .values({ tenantId, customerRef, channel, language: "en" })
+    .returning();
+
+  await db.insert(messages).values({
+    conversationId: conv.id,
+    role: "user",
+    content: messageText,
+  });
+
+  const [handoff] = await db
+    .insert(handoffs)
+    .values({
+      tenantId,
+      conversationId: conv.id,
+      channel,
+      reason: "test",
+      question: messageText,
+      unreplied: true,
+    })
+    .returning();
+
+  broadcastDashboard(tenantId, {
+    type: "handoff.created",
+    data: {
+      id: handoff.id,
+      conversationId: conv.id,
+      channel,
+      reason: "test",
+      question: messageText,
+      createdAt: handoff.createdAt?.toISOString() ?? null,
+    },
+  });
+
+  const loaded = await loadHandoff(handoff.id, tenantId);
+  return res.json(handoffOut(loaded!.handoff, loaded!.conv, loaded!.msgs));
+});
+
 router.post("/handoffs/:id/reply", requireJwt, async (req, res) => {
   const tenantId = req.auth!.tid;
   const id = Number(req.params.id);

@@ -29,3 +29,10 @@ externalPort = 80
 [[ports]]
 localPort = 24441
 externalPort = 3000
+
+[userenv]
+
+[userenv.shared]
+EMBED_DIM = "3072"
+LLM_PROVIDER = "auto"
+ALLOW_INSECURE_ADMIN = "1"

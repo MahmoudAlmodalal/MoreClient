@@ -5,7 +5,7 @@
  */
 
 // @ts-ignore vite env
-const BASE = (import.meta as any).env?.VITE_API_URL ?? "http://localhost:8000";
+const BASE = (import.meta as any).env?.VITE_API_URL ?? "";
 
 function joinBasePath(base: string, path: string): string {
   return `${base.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;

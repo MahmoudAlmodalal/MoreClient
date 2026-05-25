@@ -3,7 +3,11 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 export const JWT_TOKEN_KEY = "authToken";
 export const USER_ROLE_KEY = "userRole";
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://localhost:8000";
+const BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL ??
+  (process.env.EXPO_PUBLIC_DOMAIN
+    ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
+    : "http://localhost:8080");
 
 function joinPath(base: string, path: string): string {
   return `${base.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;

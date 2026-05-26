@@ -26,6 +26,8 @@ tags:
     description: Public chat / RAG pipeline
   - name: admin
     description: Admin console (X-Admin-Key)
+  - name: webhooks
+    description: Inbound channel webhooks (Telegram, Twilio/WhatsApp)
 paths:
   /healthz:
     get:
@@ -652,6 +654,51 @@ paths:
             application/json:
               schema:
                 type: object
+
+  /telegram/webhook:
+    post:
+      operationId: telegramWebhook
+      tags: [webhooks]
+      summary: Inbound Telegram update (registered via setWebhook)
+      description: |
+        Receives updates from Telegram. Validates the `X-Telegram-Bot-Api-Secret-Token`
+        header against the tenant's stored secret. Always returns 200 so Telegram
+        does not retry on tenant-side errors. The request body is the raw Telegram
+        Update object and is not modeled here.
+      parameters:
+        - name: tenant_key
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Acknowledged (always 200)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OkResponse"
+
+  /whatsapp/webhook:
+    post:
+      operationId: whatsappWebhook
+      tags: [webhooks]
+      summary: Inbound WhatsApp message (Twilio webhook)
+      description: |
+        Receives WhatsApp messages via Twilio. Validates `X-Twilio-Signature`
+        against the tenant's Twilio auth token. Returns an empty TwiML
+        `<Response>` document. The request body is Twilio-formatted form data.
+      parameters:
+        - name: tenant_key
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: TwiML response
+          content:
+            application/xml:
+              schema:
+                type: string
 
 components:
   securitySchemes:

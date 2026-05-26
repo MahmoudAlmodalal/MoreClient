@@ -138,29 +138,41 @@ export function logout(): void {
  * Centralized 401 handler. For non-admin requests, an expired/invalid JWT
  * means the operator should be sent back to the welcome screen. For admin
  * requests we just clear the in-memory key so the admin gate reappears.
+ *
+ * Returns `true` when the request should be treated as terminally
+ * unauthorized — the caller must abort with an `Unauthorized` rejection so
+ * `parseError` doesn't run while the page is navigating away (and so a
+ * second concurrent 401 doesn't double-fire side effects).
  */
-function handle401(path: string): void {
-  if (typeof window === "undefined") return;
+let redirectingToWelcome = false;
+
+function handle401(path: string): boolean {
+  if (typeof window === "undefined") return false;
   if (path.startsWith("/api/admin")) {
     clearAdminKey();
-    return;
+    return true;
   }
-  // Avoid redirect loops on the welcome screen itself.
-  if (window.location.pathname.endsWith("/welcome")) return;
+  if (window.location.pathname.endsWith("/welcome")) return true;
+  if (redirectingToWelcome) return true;
+  redirectingToWelcome = true;
   window.localStorage.removeItem(JWT_TOKEN_STORAGE);
   window.sessionStorage.removeItem("userRole");
   emitAuthTokenChanged();
-  // Use replace() so the broken page doesn't pollute back-button history.
   const base = window.location.pathname.replace(/\/dashboard.*$|\/admin.*$|\/widget.*$/, "").replace(/\/$/, "");
   const target = `${base}/welcome`;
   window.location.replace(target);
+  return true;
+}
+
+function unauthorized(): never {
+  throw new Error("Unauthorized");
 }
 
 export async function apiGet<T>(path: string, headers?: Record<string, string>): Promise<T> {
   const res = await fetch(joinBasePath(BASE, path), {
     headers: { Accept: "application/json", ...authHeader(), ...headers },
   });
-  if (res.status === 401) handle401(path);
+  if (res.status === 401 && handle401(path)) unauthorized();
   if (!res.ok) return parseError(res);
   return res.json() as Promise<T>;
 }
@@ -177,7 +189,7 @@ export async function apiSend<T>(
     body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   // Don't bounce the user away from the login flow on a bad-creds 401.
-  if (res.status === 401 && !path.startsWith("/api/auth/")) handle401(path);
+  if (res.status === 401 && !path.startsWith("/api/auth/") && handle401(path)) unauthorized();
   if (!res.ok) return parseError(res);
   return res.json() as Promise<T>;
 }
@@ -188,7 +200,7 @@ export async function apiUpload<T>(path: string, file: File, headers?: Record<st
   fd.append("file", file);
   const reqHeaders = { ...authHeader(), ...headers };
   const res = await fetch(joinBasePath(BASE, path), { method: "POST", body: fd, headers: reqHeaders });
-  if (res.status === 401) handle401(path);
+  if (res.status === 401 && handle401(path)) unauthorized();
   if (!res.ok) return parseError(res);
   return res.json() as Promise<T>;
 }

@@ -94,6 +94,8 @@ async def demo_login(db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Demo account not available")
     result = await db.execute(select(Tenant).where(Tenant.id == user.tenant_id))
     tenant = result.scalar_one_or_none()
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Demo tenant not available")
     token = sign_jwt(user.id, tenant.id, tenant.tenant_key, user.role)
     return AuthResponse(
         token=token, user_id=user.id, email=user.email, name=user.name,

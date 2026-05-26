@@ -47,10 +47,12 @@ import type {
   RetryDelivery200,
   Settings,
   SettingsPatch,
+  TelegramWebhookParams,
   Tenant,
   UploadFileBody,
   UploadResult,
-  UserInfo
+  UserInfo,
+  WhatsappWebhookParams
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -2212,4 +2214,167 @@ export function useAdminHealth<TData = Awaited<ReturnType<typeof adminHealth>>, 
 
 
 
+
+export const getTelegramWebhookUrl = (params: TelegramWebhookParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/telegram/webhook?${stringifiedParams}` : `/api/telegram/webhook`
+}
+
+/**
+ * Receives updates from Telegram. Validates the `X-Telegram-Bot-Api-Secret-Token`
+header against the tenant's stored secret. Always returns 200 so Telegram
+does not retry on tenant-side errors. The request body is the raw Telegram
+Update object and is not modeled here.
+
+ * @summary Inbound Telegram update (registered via setWebhook)
+ */
+export const telegramWebhook = async (params: TelegramWebhookParams, options?: RequestInit): Promise<OkResponse> => {
+
+  return customFetch<OkResponse>(getTelegramWebhookUrl(params),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getTelegramWebhookMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof telegramWebhook>>, TError,{params: TelegramWebhookParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof telegramWebhook>>, TError,{params: TelegramWebhookParams}, TContext> => {
+
+const mutationKey = ['telegramWebhook'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof telegramWebhook>>, {params: TelegramWebhookParams}> = (props) => {
+          const {params} = props ?? {};
+
+          return  telegramWebhook(params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type TelegramWebhookMutationResult = NonNullable<Awaited<ReturnType<typeof telegramWebhook>>>
+
+    export type TelegramWebhookMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Inbound Telegram update (registered via setWebhook)
+ */
+export const useTelegramWebhook = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof telegramWebhook>>, TError,{params: TelegramWebhookParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof telegramWebhook>>,
+        TError,
+        {params: TelegramWebhookParams},
+        TContext
+      > => {
+      return useMutation(getTelegramWebhookMutationOptions(options));
+    }
+
+export const getWhatsappWebhookUrl = (params: WhatsappWebhookParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/whatsapp/webhook?${stringifiedParams}` : `/api/whatsapp/webhook`
+}
+
+/**
+ * Receives WhatsApp messages via Twilio. Validates `X-Twilio-Signature`
+against the tenant's Twilio auth token. Returns an empty TwiML
+`<Response>` document. The request body is Twilio-formatted form data.
+
+ * @summary Inbound WhatsApp message (Twilio webhook)
+ */
+export const whatsappWebhook = async (params: WhatsappWebhookParams, options?: RequestInit): Promise<string> => {
+
+  return customFetch<string>(getWhatsappWebhookUrl(params),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getWhatsappWebhookMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof whatsappWebhook>>, TError,{params: WhatsappWebhookParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof whatsappWebhook>>, TError,{params: WhatsappWebhookParams}, TContext> => {
+
+const mutationKey = ['whatsappWebhook'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof whatsappWebhook>>, {params: WhatsappWebhookParams}> = (props) => {
+          const {params} = props ?? {};
+
+          return  whatsappWebhook(params,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type WhatsappWebhookMutationResult = NonNullable<Awaited<ReturnType<typeof whatsappWebhook>>>
+
+    export type WhatsappWebhookMutationError = ErrorType<unknown>
+
+    /**
+ * @summary Inbound WhatsApp message (Twilio webhook)
+ */
+export const useWhatsappWebhook = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof whatsappWebhook>>, TError,{params: WhatsappWebhookParams}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof whatsappWebhook>>,
+        TError,
+        {params: WhatsappWebhookParams},
+        TContext
+      > => {
+      return useMutation(getWhatsappWebhookMutationOptions(options));
+    }
 

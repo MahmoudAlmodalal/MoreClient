@@ -98,3 +98,104 @@ describe("createAuthenticatedWebSocketUrl", () => {
     expect(url).not.toContain("token=")
   })
 })
+
+describe("apiSend Authorization header", () => {
+  it("includes Authorization header when JWT token is present", async () => {
+    const api = await import("@/lib/api")
+    window.localStorage.setItem(api.JWT_TOKEN_STORAGE, "my-jwt-token")
+
+    let capturedHeaders: Record<string, string> = {}
+    vi.spyOn(global, "fetch" as never).mockImplementationOnce(
+      ((_url: string, init: RequestInit) => {
+        capturedHeaders = Object.fromEntries(
+          new Headers(init.headers as HeadersInit).entries(),
+        )
+        return Promise.resolve(
+          new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        )
+      }) as never,
+    )
+
+    await api.apiSend("/api/settings", "PUT", { bot_name: "Test" })
+    expect(capturedHeaders["authorization"]).toBe("Bearer my-jwt-token")
+  })
+
+  it("omits Authorization header when no JWT token is present", async () => {
+    const api = await import("@/lib/api")
+    // No token in localStorage
+
+    let capturedHeaders: Record<string, string> = {}
+    vi.spyOn(global, "fetch" as never).mockImplementationOnce(
+      ((_url: string, init: RequestInit) => {
+        capturedHeaders = Object.fromEntries(
+          new Headers(init.headers as HeadersInit).entries(),
+        )
+        return Promise.resolve(
+          new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        )
+      }) as never,
+    )
+
+    await api.apiSend("/api/chat", "POST", { session_id: "s1", message: "hi" })
+    expect(capturedHeaders["authorization"]).toBeUndefined()
+  })
+})
+
+describe("admin key header", () => {
+  it("includes X-Admin-Key header when admin key is set", async () => {
+    const api = await import("@/lib/api")
+    api.setAdminKey("secret-admin-key")
+
+    let capturedHeaders: Record<string, string> = {}
+    vi.spyOn(global, "fetch" as never).mockImplementationOnce(
+      ((_url: string, init: RequestInit) => {
+        capturedHeaders = Object.fromEntries(
+          new Headers(init.headers as HeadersInit).entries(),
+        )
+        return Promise.resolve(
+          new Response(JSON.stringify([]), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        )
+      }) as never,
+    )
+
+    // Admin key must be explicitly passed via adminKeyHeader()
+    await api.apiGet("/api/admin/tenants", api.adminKeyHeader())
+    expect(capturedHeaders["x-admin-key"]).toBe("secret-admin-key")
+  })
+
+  it("clears admin key via clearAdminKey()", async () => {
+    const api = await import("@/lib/api")
+    api.setAdminKey("to-be-cleared")
+    expect(api.hasAdminKey()).toBe(true)
+    api.clearAdminKey()
+    expect(api.hasAdminKey()).toBe(false)
+  })
+})
+
+describe("hasAuthToken", () => {
+  it("returns true when token is in localStorage", async () => {
+    const api = await import("@/lib/api")
+    window.localStorage.setItem(api.JWT_TOKEN_STORAGE, "valid-token")
+    expect(api.hasAuthToken()).toBe(true)
+  })
+
+  it("returns false when no token is present", async () => {
+    const api = await import("@/lib/api")
+    expect(api.hasAuthToken()).toBe(false)
+  })
+
+  it("returns false when token is empty string", async () => {
+    const api = await import("@/lib/api")
+    window.localStorage.setItem(api.JWT_TOKEN_STORAGE, "")
+    expect(api.hasAuthToken()).toBe(false)
+  })
+})

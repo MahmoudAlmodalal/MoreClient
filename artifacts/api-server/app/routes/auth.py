@@ -104,11 +104,13 @@ async def demo_login(db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/me", response_model=MeResponse)
-async def me(auth: Annotated[dict, Depends(get_current_user)]):
+async def me(auth: Annotated[dict, Depends(get_current_user)], db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(AuthUser).where(AuthUser.id == auth["sub"]))
+    user = result.scalar_one_or_none()
     return MeResponse(
         user_id=auth["sub"],
-        email="",  # Would need a DB fetch; kept minimal per spec
-        name=None,
+        email=user.email if user else "",
+        name=user.name if user else None,
         role=auth["role"],
         tenant_key=auth["tk"],
     )

@@ -66,6 +66,20 @@ export default defineConfig({
     fs: {
       strict: true,
     },
+    proxy: {
+      "/auth": "http://localhost:8080",
+      "/chat": "http://localhost:8080",
+      "/files": "http://localhost:8080",
+      "/upload": "http://localhost:8080",
+      "/handoffs": "http://localhost:8080",
+      "/learn": "http://localhost:8080",
+      "/analytics": "http://localhost:8080",
+      "/settings": "http://localhost:8080",
+      "/admin": "http://localhost:8080",
+      "/telegram": "http://localhost:8080",
+      "/whatsapp": "http://localhost:8080",
+      "/ws": { target: "ws://localhost:8080", ws: true },
+    },
   },
   preview: {
     port,

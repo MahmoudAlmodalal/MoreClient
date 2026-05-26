@@ -86,23 +86,6 @@ async def login(body: LoginRequest, db: AsyncSession = Depends(get_db)):
     )
 
 
-@router.post("/demo-login", response_model=AuthResponse)
-async def demo_login(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(AuthUser).where(AuthUser.email == "demo@example.com"))
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=404, detail="Demo account not available")
-    result = await db.execute(select(Tenant).where(Tenant.id == user.tenant_id))
-    tenant = result.scalar_one_or_none()
-    if not tenant:
-        raise HTTPException(status_code=404, detail="Demo tenant not available")
-    token = sign_jwt(user.id, tenant.id, tenant.tenant_key, user.role)
-    return AuthResponse(
-        token=token, user_id=user.id, email=user.email, name=user.name,
-        role=user.role, redirect_to="/dashboard", tenant_key=tenant.tenant_key,
-    )
-
-
 @router.get("/me", response_model=MeResponse)
 async def me(auth: Annotated[dict, Depends(get_current_user)]):
     return MeResponse(

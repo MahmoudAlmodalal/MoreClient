@@ -1,4 +1,3 @@
-import uuid
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select, delete
@@ -9,7 +8,7 @@ from app.database import get_db
 from app.models import Conversation, Handoff, Message
 from app.schemas import (
     HandoffOut, HandoffMessageOut, DeliveryInfo, ReplyRequest,
-    FeedbackRequest, SimulateRequest, BulkDeleteRequest, BulkDeleteResponse,
+    FeedbackRequest, BulkDeleteRequest, BulkDeleteResponse,
 )
 from app.services.delivery import deliver_handoff_reply
 from app.services.serialize import time_ago, iso
@@ -44,7 +43,6 @@ async def _load_handoff_out(db: AsyncSession, h: Handoff) -> HandoffOut:
         time_ago=time_ago(h.created_at),
         messages=[HandoffMessageOut(id=m.id, role=m.role, content=m.content, time=iso(m.created_at)) for m in msgs],
         customer_ref=conv.customer_ref if conv else "",
-        is_test=bool(conv and conv.customer_ref.startswith("test-")),
         delivery=DeliveryInfo(
             status=h.delivery_status,
             attempts=h.delivery_attempts,
@@ -70,41 +68,6 @@ async def list_handoffs(
     result = await db.execute(q)
     handoffs = result.scalars().all()
     return [await _load_handoff_out(db, h) for h in handoffs]
-
-
-@router.post("/simulate")
-async def simulate(
-    body: SimulateRequest,
-    auth: Annotated[dict, Depends(get_current_user)],
-    db: AsyncSession = Depends(get_db),
-):
-    customer_ref = f"test-{uuid.uuid4().hex[:8]}"
-    conv = Conversation(
-        tenant_id=auth["tid"],
-        customer_ref=customer_ref,
-        channel=body.channel,
-        language="en",
-    )
-    db.add(conv)
-    await db.flush()
-
-    msg_text = body.message or "This is a simulated test message."
-    db.add(Message(conversation_id=conv.id, role="user", content=msg_text))
-
-    handoff = Handoff(
-        tenant_id=auth["tid"],
-        conversation_id=conv.id,
-        channel=body.channel,
-        reason="test",
-        question=msg_text,
-        language="en",
-    )
-    db.add(handoff)
-    await db.commit()
-    await db.refresh(handoff)
-
-    await ws_manager.broadcast_dashboard(auth["tid"], {"type": "handoff.created", "id": handoff.id})
-    return await _load_handoff_out(db, handoff)
 
 
 @router.post("/{handoff_id}/reply")

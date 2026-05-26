@@ -22,8 +22,6 @@ import {
   RefreshCw,
   CheckCircle2,
   XCircle,
-  FlaskConical,
-  X,
   Trash2,
   CheckSquare,
 } from "lucide-react";
@@ -77,12 +75,6 @@ export default function HandoffsPage() {
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
-
-  // Simulate dialog state
-  const [showSimDialog, setShowSimDialog] = useState(false);
-  const [simChannel, setSimChannel] = useState<"telegram" | "web">("telegram");
-  const [simMessage, setSimMessage] = useState("Hi, I need help with my order");
-  const [simLoading, setSimLoading] = useState(false);
 
   // Ticking clock so the SLA badge re-renders even when no data changes.
   const [, setNow] = useState(() => Date.now());
@@ -169,26 +161,6 @@ export default function HandoffsPage() {
     } finally {
       setRetryingId(null);
       setTimeout(() => setToast(null), 2500);
-    }
-  };
-
-  const handleSimulate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSimLoading(true);
-    try {
-      const newHandoff = await apiSend<HandoffOut>("/api/handoffs/simulate", "POST", {
-        channel: simChannel,
-        message: simMessage,
-      });
-      setTickets(prev => [newHandoff, ...prev]);
-      setSelectedTicketId(newHandoff.id);
-      setShowSimDialog(false);
-      setSimMessage("Hi, I need help with my order");
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to simulate message");
-    } finally {
-      setSimLoading(false);
     }
   };
 
@@ -338,16 +310,6 @@ export default function HandoffsPage() {
             {t("unrepliedOnly")}
           </label>
 
-          {/* Simulate button */}
-          <button
-            type="button"
-            onClick={() => setShowSimDialog(true)}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-500/30 bg-amber-500/10 px-3 py-1.5 text-xs font-semibold text-amber-300 hover:bg-amber-500/20 transition-colors"
-          >
-            <FlaskConical className="h-3.5 w-3.5" />
-            Send test message
-          </button>
-
           {/* Select mode toggle */}
           <button
             type="button"
@@ -378,87 +340,6 @@ export default function HandoffsPage() {
             <Trash2 className="h-3.5 w-3.5" />
             Delete selected
           </button>
-        </div>
-      )}
-
-      {/* Simulate Dialog */}
-      {showSimDialog && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-2xl border border-[#1f1f2e] bg-[#0d0d15] p-6 shadow-2xl">
-            <div className="flex items-center justify-between mb-5">
-              <div className="flex items-center gap-2">
-                <FlaskConical className="h-5 w-5 text-amber-400" />
-                <h3 className="text-sm font-bold text-white">Send test message</h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setShowSimDialog(false)}
-                className="rounded-lg p-1 text-gray-500 hover:text-gray-300 hover:bg-[#1f1f2e] transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <p className="text-xs text-gray-400 mb-5">
-              Creates a real handoff ticket so you can test the full reply and delivery flow — no live customer needed.
-            </p>
-            <form onSubmit={handleSimulate} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-2">Channel</label>
-                <div className="flex gap-2">
-                  {(["telegram", "web"] as const).map((ch) => (
-                    <button
-                      key={ch}
-                      type="button"
-                      onClick={() => setSimChannel(ch)}
-                      className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all ${
-                        simChannel === ch
-                          ? "bg-purple-600 text-white"
-                          : "bg-[#07070b] text-gray-400 border border-[#1f1f2e] hover:bg-[#1a1a26]"
-                      }`}
-                    >
-                      {ch === "telegram" ? (
-                        <SendHorizontal className="h-3.5 w-3.5" />
-                      ) : (
-                        <Globe className="h-3.5 w-3.5" />
-                      )}
-                      {ch === "telegram" ? "Telegram" : "Widget"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-300 mb-2">Customer message</label>
-                <textarea
-                  value={simMessage}
-                  onChange={(e) => setSimMessage(e.target.value)}
-                  rows={3}
-                  className="w-full rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none resize-none"
-                  placeholder="Hi, I need help with my order"
-                />
-              </div>
-              <div className="flex justify-end gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowSimDialog(false)}
-                  className="rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-2 text-xs font-semibold text-gray-300 hover:bg-[#1a1a26] transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={simLoading || !simMessage.trim()}
-                  className="inline-flex items-center gap-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 disabled:opacity-50 px-4 py-2 text-xs font-bold text-white transition-colors"
-                >
-                  {simLoading ? (
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <FlaskConical className="h-3.5 w-3.5" />
-                  )}
-                  {simLoading ? "Creating…" : "Create ticket"}
-                </button>
-              </div>
-            </form>
-          </div>
         </div>
       )}
 
@@ -594,22 +475,14 @@ export default function HandoffsPage() {
 
                   <div className="mt-3 flex items-center justify-between gap-2 border-t border-[#1f1f2e]/50 pt-2.5">
                     <div className="flex items-center gap-1.5">
-                      {ticket.metadata.isTest && (
-                        <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-400 ring-1 ring-inset ring-amber-500/30">
-                          <FlaskConical className="h-3 w-3" />
-                          Test
-                        </span>
-                      )}
                       <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-medium ${
                         ticket.reason === "low_confidence"
                           ? "bg-amber-500/10 text-amber-400 ring-1 ring-inset ring-amber-500/20"
                           : ticket.reason === "keyword_triggered"
                           ? "bg-red-500/10 text-red-400 ring-1 ring-inset ring-red-500/20"
-                          : ticket.reason === "test"
-                          ? "bg-amber-500/10 text-amber-400 ring-1 ring-inset ring-amber-500/20"
                           : "bg-purple-500/10 text-purple-400 ring-1 ring-inset ring-purple-500/20"
                       }`}>
-                        {ticket.reason === "test" ? "Simulated" : reasonText(ticket.reason)}
+                        {reasonText(ticket.reason)}
                       </span>
                     </div>
 
@@ -664,16 +537,10 @@ export default function HandoffsPage() {
                 <div>
                   <h3 className="text-sm font-bold text-white flex items-center gap-2">
                     {t("activeChat", { name: activeTicket.user })}
-                    {activeTicket.metadata.isTest && (
-                      <span className="inline-flex items-center gap-1 rounded-md bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-bold text-amber-400 ring-1 ring-inset ring-amber-500/30">
-                        <FlaskConical className="h-3 w-3" />
-                        Test
-                      </span>
-                    )}
                   </h3>
                   <p className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1.5">
                     <ShieldAlert className="h-3.5 w-3.5 text-purple-400" />
-                    {t("reason")}: {activeTicket.reason === "test" ? "Simulated message" : reasonText(activeTicket.reason)}
+                    {t("reason")}: {reasonText(activeTicket.reason)}
                   </p>
                 </div>
 

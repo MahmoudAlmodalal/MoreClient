@@ -92,19 +92,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorDetail"
 
-  /auth/demo-login:
-    post:
-      operationId: authDemoLogin
-      tags: [auth]
-      summary: Obtain a demo JWT bound to the sandbox tenant
-      responses:
-        "200":
-          description: Demo session
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AuthSession"
-
   /auth/me:
     get:
       operationId: authMe

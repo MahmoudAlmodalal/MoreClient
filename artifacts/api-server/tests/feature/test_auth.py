@@ -82,26 +82,3 @@ class TestRefreshAndLogout:
         resp = await client.post("/auth/logout")
         assert resp.status_code == 200
         assert resp.json() == {"ok": True}
-
-
-class TestDemoLogin:
-    async def test_returns_404_when_demo_user_missing(self, client):
-        resp = await client.post("/auth/demo-login")
-        assert resp.status_code == 404
-
-    async def test_returns_404_when_demo_user_has_orphaned_tenant(self, client, db_session):
-        # Pin bug #1: demo-login used to crash with AttributeError when the
-        # demo user's tenant_id pointed at a non-existent row.
-        from app.models import AuthUser
-        from app.auth import hash_password
-        db_session.add(AuthUser(
-            tenant_id=99999,  # no tenant with this id exists
-            email="demo@example.com",
-            password_hash=hash_password("anything"),
-            name="Demo",
-            role="company",
-        ))
-        await db_session.commit()
-        resp = await client.post("/auth/demo-login")
-        assert resp.status_code == 404
-        assert "tenant" in resp.json().get("detail", "").lower()

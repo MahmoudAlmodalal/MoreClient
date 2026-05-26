@@ -57,20 +57,6 @@ export const AuthLoginResponse = zod.object({
 
 
 /**
- * @summary Obtain a demo JWT bound to the sandbox tenant
- */
-export const AuthDemoLoginResponse = zod.object({
-  "token": zod.string(),
-  "userId": zod.number(),
-  "email": zod.string(),
-  "name": zod.string().nullish(),
-  "role": zod.string(),
-  "redirectTo": zod.string(),
-  "tenantKey": zod.string()
-})
-
-
-/**
  * @summary Get current user info
  */
 export const AuthMeResponse = zod.object({

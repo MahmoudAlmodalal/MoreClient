@@ -171,7 +171,6 @@ class HandoffOut(BaseModel):
     time_ago: str
     messages: list[HandoffMessageOut]
     customer_ref: str
-    is_test: bool
     delivery: DeliveryInfo
 
 
@@ -189,11 +188,6 @@ class ResolveResponse(BaseModel):
 
 class FeedbackRequest(BaseModel):
     score: int
-
-
-class SimulateRequest(BaseModel):
-    channel: str = "web"
-    message: str | None = None
 
 
 class BulkDeleteRequest(BaseModel):

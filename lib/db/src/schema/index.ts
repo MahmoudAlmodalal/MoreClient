@@ -78,6 +78,7 @@ export const settings = pgTable(
     intentLlmEnabled: boolean("intent_llm_enabled").notNull().default(true),
     intentConfidenceThreshold: real("intent_confidence_threshold").notNull().default(0.6),
     autoHandoffOnComplaint: boolean("auto_handoff_on_complaint").notNull().default(true),
+    localLlmArabicEnabled: boolean("local_llm_arabic_enabled").notNull().default(false),
     telegramLastDeliveryStatus: text("telegram_last_delivery_status"),
     telegramLastDeliveryDetail: text("telegram_last_delivery_detail"),
     telegramLastDeliveryAt: timestamp("telegram_last_delivery_at", { withTimezone: true }),
@@ -141,6 +142,7 @@ export const messages = pgTable("messages", {
   role: text("role").notNull(), // user | assistant | agent
   content: text("content").notNull(),
   confidence: real("confidence"),
+  isLocal: boolean("is_local").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

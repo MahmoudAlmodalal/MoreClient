@@ -140,7 +140,7 @@ All routes are served by the FastAPI server. No `/api` prefix.
 - **Keyless mode**: LLM + embeddings are optional. The chat endpoint works without API keys (falls back to chunk text). Embeddings are skipped; vector search falls back to lexical-only.
 - **JWT payload shape**: `{sub: user_id, tid: tenant_id, tk: tenant_key, role: "admin"|"company"}`
 - **Admin auth**: Separate `X-Admin-Key` header (not JWT). Uses `hmac.compare_digest` to prevent timing attacks.
-- **No tests**: No test suite configured yet.
+- **Tests**: Backend uses `pytest` (asyncio mode, in-memory SQLite via `artifacts/api-server/tests/conftest.py`) — run with `cd artifacts/api-server && pytest -q`. Frontend uses `vitest` + jsdom — run with `pnpm --filter @workspace/clientmore run test --run`.
 
 ## Frontend Conventions
 

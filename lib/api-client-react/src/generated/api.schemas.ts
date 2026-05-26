@@ -229,3 +229,11 @@ export type AdminKpis200 = { [key: string]: unknown };
 
 export type AdminHealth200 = { [key: string]: unknown };
 
+export type TelegramWebhookParams = {
+tenant_key: string;
+};
+
+export type WhatsappWebhookParams = {
+tenant_key: string;
+};
+

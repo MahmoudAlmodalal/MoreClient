@@ -512,3 +512,32 @@ export const AdminHealthResponse = zod.object({
 }).passthrough()
 
 
+/**
+ * Receives updates from Telegram. Validates the `X-Telegram-Bot-Api-Secret-Token`
+header against the tenant's stored secret. Always returns 200 so Telegram
+does not retry on tenant-side errors. The request body is the raw Telegram
+Update object and is not modeled here.
+
+ * @summary Inbound Telegram update (registered via setWebhook)
+ */
+export const TelegramWebhookQueryParams = zod.object({
+  "tenant_key": zod.coerce.string()
+})
+
+export const TelegramWebhookResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+/**
+ * Receives WhatsApp messages via Twilio. Validates `X-Twilio-Signature`
+against the tenant's Twilio auth token. Returns an empty TwiML
+`<Response>` document. The request body is Twilio-formatted form data.
+
+ * @summary Inbound WhatsApp message (Twilio webhook)
+ */
+export const WhatsappWebhookQueryParams = zod.object({
+  "tenant_key": zod.coerce.string()
+})
+
+

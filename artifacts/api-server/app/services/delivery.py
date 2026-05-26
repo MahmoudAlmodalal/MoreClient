@@ -16,11 +16,16 @@ async def deliver_handoff_reply(db: AsyncSession, handoff_id: int, content: str)
 
     result = await db.execute(select(Conversation).where(Conversation.id == handoff.conversation_id))
     conv = result.scalar_one_or_none()
+    if not conv:
+        handoff.delivery_status = "failed"
+        handoff.delivery_detail = "Conversation missing"
+        await db.commit()
+        return {"ok": False, "status": "error", "detail": "Conversation missing"}
 
     result = await db.execute(select(Settings).where(Settings.tenant_id == handoff.tenant_id))
     s = result.scalar_one_or_none()
 
-    customer_ref = conv.customer_ref if conv else ""
+    customer_ref = conv.customer_ref
     delays = [0, 1, 2]
 
     last_result: dict = {"ok": False, "status": "error", "detail": "No attempt made"}

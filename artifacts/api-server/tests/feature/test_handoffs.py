@@ -129,3 +129,47 @@ class TestBulkDelete:
             json={"ids": [99999]},
         )
         assert resp.status_code == 403
+
+    async def test_bulk_delete_cleans_up_orphaned_conversations(self, client, auth_headers, db_session):
+        # Create two handoffs against the same conversation, then bulk-delete one
+        # — the conversation should remain. Delete the second — conversation goes.
+        from sqlalchemy import select
+        from app.models import Conversation, Handoff
+
+        sim1 = await client.post("/handoffs/simulate", headers=auth_headers, json={"channel": "web"})
+        first_id = sim1.json()["id"]
+
+        # Look up the conversation created by the first simulate, then attach a
+        # second handoff to it directly.
+        result = await db_session.execute(select(Handoff).where(Handoff.id == first_id))
+        first_handoff = result.scalar_one()
+        conv_id = first_handoff.conversation_id
+
+        second = Handoff(
+            tenant_id=first_handoff.tenant_id,
+            conversation_id=conv_id,
+            channel="web",
+            reason="support_request",
+            question="another",
+            language="en",
+        )
+        db_session.add(second)
+        await db_session.commit()
+        second_id = second.id
+
+        # Delete only the first handoff. Conversation must still exist.
+        resp = await client.request(
+            "DELETE", "/handoffs", headers=auth_headers, json={"ids": [first_id]},
+        )
+        assert resp.status_code == 200
+        result = await db_session.execute(select(Conversation).where(Conversation.id == conv_id))
+        assert result.scalar_one_or_none() is not None, "conversation deleted while another handoff still references it"
+
+        # Delete the second handoff. Conversation should now be cleaned up.
+        resp = await client.request(
+            "DELETE", "/handoffs", headers=auth_headers, json={"ids": [second_id]},
+        )
+        assert resp.status_code == 200
+        db_session.expire_all()
+        result = await db_session.execute(select(Conversation).where(Conversation.id == conv_id))
+        assert result.scalar_one_or_none() is None, "orphaned conversation was not cleaned up"

@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     gemini_base_url: str = "https://generativelanguage.googleapis.com/v1beta"
     llm_provider: str = "auto"
+    local_llm_enabled: bool = False
+    local_llm_url: str = "http://localhost:11434/v1"
+    local_llm_model: str = "aya"
 
     public_api_url: str = ""
     embed_dim: int = 1536
@@ -35,7 +38,7 @@ class Settings(BaseSettings):
             object.__setattr__(self, "admin_api_key", secrets.token_hex(16))
 
     def has_llm(self) -> bool:
-        return bool(self.openai_api_key or self.gemini_api_key)
+        return bool(self.openai_api_key or self.gemini_api_key or self.local_llm_enabled)
 
     class Config:
         env_file = ".env"

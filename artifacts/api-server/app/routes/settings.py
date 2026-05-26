@@ -22,6 +22,7 @@ ALLOWED_KEYS = {
     "purchase_auto_forward_to_support", "purchase_confirmation_required",
     "purchase_session_minutes", "purchase_currency_label",
     "intent_llm_enabled", "intent_confidence_threshold", "auto_handoff_on_complaint",
+    "local_llm_arabic_enabled",
 }
 
 
@@ -51,6 +52,7 @@ def _settings_out(s: Settings, tenant_key: str, used_messages: int) -> SettingsO
         intent_llm_enabled=s.intent_llm_enabled,
         intent_confidence_threshold=s.intent_confidence_threshold,
         auto_handoff_on_complaint=s.auto_handoff_on_complaint,
+        local_llm_arabic_enabled=s.local_llm_arabic_enabled,
         used_messages=used_messages,
     )
 
@@ -58,7 +60,10 @@ def _settings_out(s: Settings, tenant_key: str, used_messages: int) -> SettingsO
 async def _count_used_messages(db: AsyncSession, tenant_id: int) -> int:
     conv_ids = select(Conversation.id).where(Conversation.tenant_id == tenant_id)
     result = await db.execute(
-        select(func.count(Message.id)).where(Message.conversation_id.in_(conv_ids))
+        select(func.count(Message.id)).where(
+            Message.conversation_id.in_(conv_ids),
+            Message.is_local.is_(False),
+        )
     )
     return result.scalar_one() or 0
 

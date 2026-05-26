@@ -6,7 +6,8 @@ from app.database import get_db
 from app.models import Conversation, Message, Handoff, Settings
 from app.schemas import ChatRequest, ChatResponse, AgentMessageOut
 from app.services.lang import detect_language, classify_intent
-from app.services.llm import llm_complete
+from app.config import settings
+from app.services.llm import llm_complete, llm_complete_local_first
 from app.services.retrieval import hybrid_search
 from app.services.tenant import find_tenant_by_key, ensure_settings
 from app.services.serialize import iso
@@ -48,8 +49,15 @@ async def _ingest(
         db.add(conv)
         await db.flush()
 
+    # Determine if this conversation qualifies for local LLM routing
+    use_local = (
+        conv.language == "ar"
+        and getattr(s, "local_llm_arabic_enabled", False)
+        and settings.local_llm_enabled
+    )
+
     # Store user message
-    user_msg = Message(conversation_id=conv.id, role="user", content=message_text)
+    user_msg = Message(conversation_id=conv.id, role="user", content=message_text, is_local=use_local)
     db.add(user_msg)
     await db.flush()
 
@@ -70,6 +78,7 @@ async def _ingest(
 
     answer = ""
     used_llm = False
+    answered_locally = False
     fallback = None
     handoff_out = None
 
@@ -103,7 +112,7 @@ async def _ingest(
             + "\n\n".join(c["content"] for c in chunks)
         )
         msgs = [{"role": "system", "content": system}, {"role": "user", "content": message_text}]
-        llm_answer = await llm_complete(msgs)
+        llm_answer, answered_locally = await llm_complete_local_first(msgs, prefer_local=use_local)
         if llm_answer:
             answer = llm_answer
             used_llm = True
@@ -114,6 +123,7 @@ async def _ingest(
             if answer and not answer.endswith("."):
                 answer += "."
             fallback = "llm_unavailable"
+            answered_locally = False
     else:
         answer = "I don't have enough information to answer that. Please try rephrasing."
         fallback = "no_context"
@@ -124,6 +134,7 @@ async def _ingest(
         role="assistant",
         content=answer,
         confidence=confidence,
+        is_local=answered_locally,
     )
     db.add(assistant_msg)
     await db.commit()

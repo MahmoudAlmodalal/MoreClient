@@ -10,6 +10,31 @@ async def llm_complete(messages: list[dict]) -> str | None:
     return await _call_openai(messages)
 
 
+async def llm_complete_local_first(
+    messages: list[dict], *, prefer_local: bool = False
+) -> tuple[str | None, bool]:
+    """Return (answer, is_local). Tries local LLM first if prefer_local=True."""
+    if prefer_local:
+        result = await _call_local_llm(messages)
+        if result is not None:
+            return result, True
+    return await llm_complete(messages), False
+
+
+async def _call_local_llm(messages: list[dict]) -> str | None:
+    if not settings.local_llm_enabled:
+        return None
+    url = f"{settings.local_llm_url.rstrip('/')}/chat/completions"
+    payload = {"model": settings.local_llm_model, "messages": messages, "temperature": 0.3}
+    async with httpx.AsyncClient(timeout=60) as client:
+        try:
+            resp = await client.post(url, json=payload)
+            resp.raise_for_status()
+            return resp.json()["choices"][0]["message"]["content"]
+        except Exception:
+            return None
+
+
 async def _call_openai(messages: list[dict]) -> str | None:
     if not settings.openai_api_key:
         return None

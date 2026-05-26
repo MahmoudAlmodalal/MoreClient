@@ -66,6 +66,7 @@ class SettingsOut(BaseModel):
     intent_llm_enabled: bool
     intent_confidence_threshold: float
     auto_handoff_on_complaint: bool
+    local_llm_arabic_enabled: bool = False
     used_messages: int = 0
 
 
@@ -93,6 +94,7 @@ class SettingsPatchRequest(BaseModel):
     intent_llm_enabled: bool | None = None
     intent_confidence_threshold: float | None = None
     auto_handoff_on_complaint: bool | None = None
+    local_llm_arabic_enabled: bool | None = None
 
 
 # --- Files ---

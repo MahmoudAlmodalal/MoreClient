@@ -76,6 +76,7 @@ class Settings(Base):
     intent_llm_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     intent_confidence_threshold: Mapped[float] = mapped_column(Float, default=0.6, nullable=False)
     auto_handoff_on_complaint: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    local_llm_arabic_enabled: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
 
     tenant: Mapped["Tenant"] = relationship(back_populates="settings")
 
@@ -138,6 +139,7 @@ class Message(Base):
     role: Mapped[str] = mapped_column(String(32), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
     confidence: Mapped[float | None] = mapped_column(Float)
+    is_local: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     conversation: Mapped["Conversation"] = relationship(back_populates="messages")

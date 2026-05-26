@@ -91,4 +91,4 @@ def get_admin_key(
 def verify_admin_key(key: str) -> bool:
     expected = settings.admin_api_key.encode()
     given = key.encode()
-    return hmac.compare_digest(expected, given)
+    return _hmac.compare_digest(expected, given)

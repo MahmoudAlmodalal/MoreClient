@@ -4,8 +4,8 @@ type BadgeTone = "brand" | "neutral" | "solid";
 
 const tones: Record<BadgeTone, string> = {
   brand:
-    "bg-brand-500/10 text-brand-300 border border-brand-500/25",
-  neutral: "bg-white/5 text-gray-300 border border-white/10",
+    "bg-primary/10 text-primary border border-primary/25",
+  neutral: "bg-muted text-muted-fg border border-border",
   solid: "gradient-brand text-white border border-transparent",
 };
 

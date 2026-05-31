@@ -57,14 +57,14 @@ export function Faq() {
   const items = language === "ar" ? itemsAr : itemsEn;
 
   return (
-    <section id="faq" className="relative py-20 border-t border-[#24213f]">
+    <section id="faq" className="relative py-20 border-t border-border">
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
         {/* Section Header */}
         <div className="text-center mb-14">
-          <h2 className="text-3xl font-bold text-white sm:text-4xl">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             {language === "ar" ? "الأسئلة الشائعة" : "Frequently Asked Questions"}
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-sm sm:text-base text-gray-400">
+          <p className="mx-auto mt-4 max-w-2xl text-sm sm:text-base text-muted-fg">
             {language === "ar"
               ? "إليك إجابات لأكثر الأسئلة تداولاً حول كيفية عمل المنصة وطرق الربط والاستضافة"
               : "Here are answers to the most common questions about the platform, integrations, and hosting"}
@@ -78,17 +78,17 @@ export function Faq() {
             return (
               <div
                 key={i}
-                className="overflow-hidden rounded-xl border border-white/5 bg-[#151324]/40 transition-colors duration-200 hover:border-purple-500/20"
+                className="overflow-hidden rounded-2xl border border-border bg-card transition-all duration-200 hover:border-primary/30 hover:shadow-sm"
               >
                 <button
                   onClick={() => setOpenIdx(isOpen ? null : i)}
-                  className="flex w-full items-center justify-between gap-4 px-5 py-4 text-start font-semibold text-xs sm:text-sm text-white focus:outline-none"
+                  className="flex w-full items-center justify-between gap-4 px-5 py-4 text-start font-semibold text-xs sm:text-sm text-foreground focus:outline-none"
                   aria-expanded={isOpen}
                 >
                   <span>{item.q}</span>
                   <ChevronDown
                     size={16}
-                    className={`shrink-0 text-purple-400 transition-transform duration-200 ${
+                    className={`shrink-0 text-primary transition-transform duration-200 ${
                       isOpen ? "rotate-180" : ""
                     }`}
                     aria-hidden="true"
@@ -96,7 +96,7 @@ export function Faq() {
                 </button>
                 {isOpen && (
                   <div className="px-5 pb-5 animate-slideDown">
-                    <p className="text-xs sm:text-sm leading-relaxed text-gray-400">
+                    <p className="text-xs sm:text-sm leading-relaxed text-muted-fg">
                       {item.a}
                     </p>
                   </div>

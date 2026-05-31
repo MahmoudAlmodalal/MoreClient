@@ -11,11 +11,11 @@ export function FinalCta() {
   return (
     <div className="py-20 sm:py-28">
       <Container>
-        <div className="relative overflow-hidden rounded-xl border border-brand-500/20 bg-[#0d0d15] px-6 py-16 text-center">
-          <h2 className="mx-auto max-w-2xl text-3xl font-bold tracking-tight text-white sm:text-4xl">
+        <div className="relative overflow-hidden rounded-2xl border border-primary/20 bg-card px-6 py-16 text-center shadow-sm glow-brand">
+          <h2 className="mx-auto max-w-2xl text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             {t("ctaTitle")}
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-base text-gray-400">{t("ctaSubtitle")}</p>
+          <p className="mx-auto mt-4 max-w-xl text-base text-muted-fg">{t("ctaSubtitle")}</p>
           <div className="mt-9">
             <Button href="/welcome" size="lg">
               {t("ctaButton")}

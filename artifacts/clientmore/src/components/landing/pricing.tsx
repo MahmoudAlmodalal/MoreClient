@@ -94,14 +94,14 @@ export function Pricing() {
   const plans = language === "ar" ? plansAr : plansEn;
 
   return (
-    <section id="pricing" className="relative py-20 border-t border-[#24213f]">
+    <section id="pricing" className="relative py-20 border-t border-border">
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
         {/* Section Header */}
         <div className="text-center mb-14">
-          <h2 className="text-3xl font-bold text-white sm:text-4xl">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             {language === "ar" ? "خطط الأسعار المرنة" : "Flexible Pricing Plans"}
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-sm sm:text-base text-gray-400">
+          <p className="mx-auto mt-4 max-w-2xl text-sm sm:text-base text-muted-fg">
             {language === "ar"
               ? "اختر الباقة المناسبة لحجم ونشاط عملك وابدأ أتمتة دعم عملائك اليوم"
               : "Choose the package tailored to your business scale and start automating customer support today"}
@@ -115,31 +115,31 @@ export function Pricing() {
               key={p.name}
               className={`relative rounded-2xl border p-7 sm:p-8 flex flex-col justify-between transition-all duration-300 ${
                 p.featured
-                  ? "border-purple-500/50 bg-[#151324] shadow-xl shadow-purple-950/20 lg:-mt-4 lg:mb-4"
-                  : "border-white/5 bg-[#151324]/40 hover:border-purple-500/20"
+                  ? "border-primary/50 bg-card shadow-[var(--shadow-brand)] lg:-mt-4 lg:mb-4"
+                  : "border-border bg-card hover:border-primary/30 hover:shadow-md"
               }`}
             >
               {p.featured && (
-                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-purple-600 to-indigo-600 px-3.5 py-1 text-[10px] font-bold text-white uppercase tracking-wider shadow shadow-purple-950">
+                <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full gradient-brand px-3.5 py-1 text-[10px] font-bold text-primary-foreground uppercase tracking-wider shadow-sm">
                   {language === "ar" ? "الأكثر شعبية" : "Most Popular"}
                 </div>
               )}
 
               <div>
-                <h3 className="text-lg sm:text-xl font-bold text-white">{p.name}</h3>
-                <p className="mt-2 text-xs sm:text-sm text-gray-400 min-h-[36px]">{p.desc}</p>
-                
+                <h3 className="text-lg sm:text-xl font-bold text-foreground">{p.name}</h3>
+                <p className="mt-2 text-xs sm:text-sm text-muted-fg min-h-[36px]">{p.desc}</p>
+
                 <div className="mt-6 flex items-baseline gap-1">
-                  <span className="text-3xl sm:text-4xl font-extrabold text-white">{p.price}</span>
-                  <span className="text-xs sm:text-sm text-gray-500 font-medium ml-1.5 rtl:mr-1.5 rtl:ml-0">
+                  <span className="text-3xl sm:text-4xl font-extrabold tracking-tight text-foreground">{p.price}</span>
+                  <span className="text-xs sm:text-sm text-muted-fg font-medium ms-1.5">
                     / {language === "ar" ? "شهرياً" : "month"}
                   </span>
                 </div>
 
                 <ul className="mt-8 space-y-4">
                   {p.features.map((f) => (
-                    <li key={f} className="flex items-start gap-2.5 text-xs sm:text-sm text-gray-300">
-                      <Check size={16} className="mt-0.5 shrink-0 text-purple-400" />
+                    <li key={f} className="flex items-start gap-2.5 text-xs sm:text-sm text-foreground">
+                      <Check size={16} className="mt-0.5 shrink-0 text-primary" />
                       <span>{f}</span>
                     </li>
                   ))}
@@ -149,11 +149,7 @@ export function Pricing() {
               <Button
                 href="/welcome"
                 variant={p.featured ? "primary" : "outline"}
-                className={`mt-8 w-full font-semibold ${
-                  p.featured
-                    ? "bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 border-0"
-                    : "border-white/10 hover:bg-white/5 hover:text-white"
-                }`}
+                className="mt-8 w-full font-semibold"
               >
                 {p.cta}
               </Button>

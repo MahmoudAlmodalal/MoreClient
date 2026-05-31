@@ -14,19 +14,19 @@ export function HowItWorks() {
   ];
 
   return (
-    <Section id="how" className="border-y border-white/5 bg-white/[0.015]">
+    <Section id="how" className="border-y border-border bg-muted/30">
       <SectionHeading eyebrow={t("howEyebrow")} title={t("howTitle")} />
       <div className="relative mt-14 grid gap-10 md:grid-cols-3">
         {steps.map((s) => {
           const Icon = s.icon;
           return (
-          <div key={s.n} className="relative rounded-2xl border border-white/8 bg-[#0d0d15] p-6 text-center">
-            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-lg border border-white/10 bg-white/[0.04] text-brand-300">
+          <div key={s.n} className="relative rounded-2xl border border-border bg-card p-6 text-center shadow-sm transition-shadow hover:shadow-md">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
               <Icon size={24} aria-hidden="true" />
             </div>
-            <p className="mt-5 text-xs font-semibold uppercase text-gray-500">{s.n}</p>
-            <h3 className="mt-5 text-xl font-semibold text-white">{s.title}</h3>
-            <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-gray-400">
+            <p className="mt-5 text-xs font-semibold uppercase tracking-wider text-muted-fg">{s.n}</p>
+            <h3 className="mt-5 text-xl font-semibold text-foreground">{s.title}</h3>
+            <p className="mx-auto mt-2 max-w-xs text-sm leading-relaxed text-muted-fg">
               {s.desc}
             </p>
           </div>

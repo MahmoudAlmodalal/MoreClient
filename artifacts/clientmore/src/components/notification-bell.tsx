@@ -134,12 +134,12 @@ export function NotificationBell() {
             handoffId: id,
             eventType: "handoff.created",
             title: t(
-              ({
+              (({
                 low_confidence: "handoffNotificationLowConfidence",
                 complaint: "handoffNotificationComplaint",
                 support_request: "handoffNotificationSupportRequest",
                 unsafe_or_unanswered: "handoffNotificationUnsafe",
-              } as Record<string, string>)[reason] ?? "handoffNotificationLowConfidence"
+              } as Record<string, string>)[reason] ?? "handoffNotificationLowConfidence") as Parameters<typeof t>[0]
             ),
             body: question || null,
             linkUrl: "/dashboard/handoffs",
@@ -198,7 +198,7 @@ export function NotificationBell() {
       {showPausedBanner && (
         <div
           role="status"
-          className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-2.5 py-1 text-[10px] font-semibold text-amber-300"
+          className="hidden sm:inline-flex items-center gap-1.5 rounded-full border border-warning/30 bg-warning/10 px-2.5 py-1 text-[10px] font-semibold text-warning"
           title={isRtl ? "تم إيقاف التحديثات المباشرة مؤقتاً — جاري إعادة المحاولة" : "Live updates paused — reconnecting…"}
         >
           <WifiOff className="h-3 w-3" />
@@ -209,7 +209,7 @@ export function NotificationBell() {
             type="button"
             aria-label={isRtl ? "إخفاء" : "Dismiss"}
             onClick={() => setBannerDismissed(true)}
-            className="ml-1 text-amber-300/70 hover:text-amber-100"
+            className="ml-1 text-warning/70 hover:text-warning"
           >
             ×
           </button>
@@ -219,17 +219,17 @@ export function NotificationBell() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-label={t("notifications")}
-        className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-[#1f1f2e] bg-[#0d0d15] text-gray-300 transition-colors hover:bg-[#1a1a26]"
+        className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface text-muted-fg transition-colors hover:bg-muted hover:text-foreground"
       >
         {showPausedBanner && (
           <span
             aria-hidden="true"
-            className="absolute -bottom-1 -right-1 inline-flex h-3 w-3 items-center justify-center rounded-full bg-amber-500 ring-2 ring-[#07070b]"
+            className="absolute -bottom-1 -right-1 inline-flex h-3 w-3 items-center justify-center rounded-full bg-warning ring-2 ring-background"
           />
         )}
-        <Bell className="h-4 w-4 text-purple-400" />
+        <Bell className="h-4 w-4 text-primary" />
         {unread > 0 && (
-          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-purple-600 px-1 text-[10px] font-semibold text-white">
+          <span className="absolute -right-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-semibold text-primary-foreground">
             {unread > 99 ? "99+" : unread}
           </span>
         )}
@@ -237,17 +237,17 @@ export function NotificationBell() {
 
       {open && (
         <div
-          className={`absolute top-11 z-50 w-80 overflow-hidden rounded-xl border border-[#1f1f2e] bg-[#0a0a12] shadow-xl ${
+          className={`absolute top-11 z-50 w-80 overflow-hidden rounded-xl border border-border bg-popover shadow-xl ${
             isRtl ? "left-0" : "right-0"
           }`}
         >
-          <div className="flex items-center justify-between border-b border-[#1f1f2e] px-4 py-3">
-            <span className="text-sm font-semibold text-white">{t("notifications")}</span>
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <span className="text-sm font-semibold text-foreground">{t("notifications")}</span>
             {unread > 0 && (
               <button
                 type="button"
                 onClick={markAllRead}
-                className="text-xs font-medium text-purple-400 hover:text-purple-300"
+                className="text-xs font-medium text-primary hover:text-primary-hover"
               >
                 {t("markAllRead")}
               </button>
@@ -256,23 +256,23 @@ export function NotificationBell() {
 
           <div className="max-h-96 overflow-y-auto">
             {items.length === 0 ? (
-              <p className="px-4 py-8 text-center text-sm text-gray-500">{t("noNotifications")}</p>
+              <p className="px-4 py-8 text-center text-sm text-muted-fg">{t("noNotifications")}</p>
             ) : (
               items.map((n) => {
                 const inner = (
                   <>
                     <div className="flex items-start gap-2">
-                      {!n.readAt && <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-purple-500" />}
+                      {!n.readAt && <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />}
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-gray-100">{n.title}</p>
-                        {n.body && <p className="mt-0.5 line-clamp-2 text-xs text-gray-400">{n.body}</p>}
-                        <p className="mt-1 text-[10px] text-gray-600">{relativeTime(n.createdAt)}</p>
+                        <p className="truncate text-sm font-medium text-foreground">{n.title}</p>
+                        {n.body && <p className="mt-0.5 line-clamp-2 text-xs text-muted-fg">{n.body}</p>}
+                        <p className="mt-1 text-[10px] text-muted-fg">{relativeTime(n.createdAt)}</p>
                       </div>
                     </div>
                   </>
                 );
-                const cls = `block border-b border-[#15151f] px-4 py-3 transition-colors hover:bg-[#10101a] ${
-                  n.readAt ? "" : "bg-purple-500/5"
+                const cls = `block border-b border-border px-4 py-3 transition-colors hover:bg-muted ${
+                  n.readAt ? "" : "bg-primary/5"
                 }`;
                 return n.linkUrl ? (
                   <a key={n.id} href={n.linkUrl} className={cls}>

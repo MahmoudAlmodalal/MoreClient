@@ -285,33 +285,33 @@ export default function SettingsPage() {
     <div className="space-y-8 pb-12">
       {/* Toast Notification */}
       {successToast && (
-        <div className={`fixed top-4 ${language === "ar" ? "left-4" : "right-4"} z-50 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg animate-in fade-in slide-in-from-top-4 duration-200`}>
+        <div className={`fixed top-4 ${language === "ar" ? "left-4" : "right-4"} z-50 rounded-xl bg-success px-4 py-2.5 text-sm font-semibold text-foreground shadow-lg animate-in fade-in slide-in-from-top-4 duration-200`}>
           {t("saved")}
         </div>
       )}
       {errorToast && (
-        <div className={`fixed top-4 ${language === "ar" ? "left-4" : "right-4"} z-50 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg animate-in fade-in slide-in-from-top-4 duration-200`}>
+        <div className={`fixed top-4 ${language === "ar" ? "left-4" : "right-4"} z-50 rounded-xl bg-danger px-4 py-2.5 text-sm font-semibold text-foreground shadow-lg animate-in fade-in slide-in-from-top-4 duration-200`}>
           {language === "ar" ? "فشل حفظ الإعدادات. حاول مرة أخرى." : "Failed to save settings. Please try again."}
         </div>
       )}
 
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-white">{t("settingsTitle")}</h2>
-        <p className="mt-1 text-sm text-gray-400">{t("settingsSub")}</p>
+        <h2 className="text-2xl font-bold tracking-tight text-foreground">{t("settingsTitle")}</h2>
+        <p className="mt-1 text-sm text-muted-fg">{t("settingsSub")}</p>
       </div>
 
       <form onSubmit={handleSave} className="space-y-6">
         {/* Profile Card */}
-        <div className="rounded-xl border border-[#1f1f2e] bg-[#0d0d15] p-6">
-          <h3 className="text-base font-bold text-white flex items-center gap-2 mb-6">
-            <Bot className="h-5 w-5 text-purple-400" />
+        <div className="rounded-xl border border-border bg-card p-6">
+          <h3 className="text-base font-bold text-foreground flex items-center gap-2 mb-6">
+            <Bot className="h-5 w-5 text-primary" />
             {t("tenantSection")}
           </h3>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-2">
+              <label className="block text-xs font-semibold text-muted-fg uppercase mb-2">
                 {t("companyName")}
               </label>
               <input
@@ -319,12 +319,12 @@ export default function SettingsPage() {
                 type="text"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
-                className="w-full rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-fg focus:border-primary focus:outline-none"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-2">
+              <label className="block text-xs font-semibold text-muted-fg uppercase mb-2">
                 {t("botName")}
               </label>
               <input
@@ -332,13 +332,13 @@ export default function SettingsPage() {
                 type="text"
                 value={botName}
                 onChange={(e) => setBotName(e.target.value)}
-                className="w-full rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-fg focus:border-primary focus:outline-none"
               />
             </div>
 
             <div className="md:col-span-2 space-y-3">
               <div className="flex justify-between items-center">
-                <label className="block text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                <label className="block text-xs font-semibold text-muted-fg uppercase tracking-wider">
                   {t("companyLogo")}
                 </label>
                 <button
@@ -347,7 +347,7 @@ export default function SettingsPage() {
                     setUploadMode(!uploadMode);
                     setUploadError(null);
                   }}
-                  className="text-xs font-semibold text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors cursor-pointer"
+                  className="text-xs font-semibold text-primary hover:text-primary flex items-center gap-1 transition-colors cursor-pointer"
                 >
                   {uploadMode ? (
                     <>
@@ -366,22 +366,22 @@ export default function SettingsPage() {
               {uploadMode ? (
                 <div>
                   {logoInput ? (
-                    <div className="flex items-center justify-between rounded-xl border border-[#1f1f2e] bg-[#07070b] p-4">
+                    <div className="flex items-center justify-between rounded-xl border border-border bg-background p-4">
                       <div className="flex items-center gap-4">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={logoInput}
                           alt="Logo Preview"
-                          className="h-16 w-16 rounded-xl object-cover border border-purple-500/20 shadow-md"
+                          className="h-16 w-16 rounded-xl object-cover border border-primary/20 shadow-md"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80";
                           }}
                         />
                         <div>
-                          <p className="text-sm font-bold text-white">
+                          <p className="text-sm font-bold text-foreground">
                             {language === "ar" ? "شعار الشركة المفعل" : "Active Company Logo"}
                           </p>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-muted-fg mt-1">
                             {logoInput.startsWith("data:")
                               ? (language === "ar" ? "شعار مرفوع (صيغة Base64)" : "Uploaded Image (Base64 Format)")
                               : (language === "ar" ? "شعار من رابط خارجي" : "External URL Image")}
@@ -391,7 +391,7 @@ export default function SettingsPage() {
                       <button
                         type="button"
                         onClick={handleRemoveLogo}
-                        className="flex items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs font-semibold text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"
+                        className="flex items-center gap-1.5 rounded-lg border border-danger/20 bg-danger/5 px-3 py-2 text-xs font-semibold text-danger hover:bg-danger/10 transition-all cursor-pointer"
                       >
                         <Trash2 className="h-4 w-4" />
                         <span className="hidden sm:inline">{t("removeLogo")}</span>
@@ -406,8 +406,8 @@ export default function SettingsPage() {
                       onClick={() => document.getElementById("logo-file-input")?.click()}
                       className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center cursor-pointer transition-all duration-200 ${
                         dragActive
-                          ? "border-purple-500 bg-purple-500/5 scale-[0.99]"
-                          : "border-[#1f1f2e] bg-[#0d0d15] hover:border-[#2e2e42]"
+                          ? "border-primary bg-primary/5 scale-[0.99]"
+                          : "border-border bg-card hover:border-border"
                       }`}
                     >
                       <input
@@ -417,20 +417,20 @@ export default function SettingsPage() {
                         className="hidden"
                         onChange={handleFileChange}
                       />
-                      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400 hover:scale-110 transition-transform">
+                      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary hover:scale-110 transition-transform">
                         <Upload className="h-5 w-5" />
                       </div>
-                      <p className="mt-3 text-sm font-bold text-white">
+                      <p className="mt-3 text-sm font-bold text-foreground">
                         {t("dragDropOrClick")}
                       </p>
-                      <p className="mt-1 text-xs text-gray-500">
+                      <p className="mt-1 text-xs text-muted-fg">
                         {t("fileRequirements")}
                       </p>
                     </div>
                   )}
 
                   {uploadError && (
-                    <p className="mt-2 text-xs font-semibold text-red-400 flex items-center gap-1 animate-in fade-in duration-200">
+                    <p className="mt-2 text-xs font-semibold text-danger flex items-center gap-1 animate-in fade-in duration-200">
                       <span>⚠️</span>
                       <span>{uploadError}</span>
                     </p>
@@ -446,13 +446,13 @@ export default function SettingsPage() {
                       setUploadError(null);
                     }}
                     placeholder="https://example.com/logo.png"
-                    className="flex-1 rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                    className="flex-1 rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground placeholder:text-muted-fg focus:border-primary focus:outline-none"
                   />
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={logoInput}
                     alt="Preview"
-                    className="h-10 w-10 rounded-xl object-cover border border-[#1f1f2e]"
+                    className="h-10 w-10 rounded-xl object-cover border border-border"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80";
                     }}
@@ -462,13 +462,13 @@ export default function SettingsPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-2">
+              <label className="block text-xs font-semibold text-muted-fg uppercase mb-2">
                 {t("botTone")}
               </label>
               <select
                 value={botTone}
                 onChange={(e) => setBotTone(e.target.value)}
-                className="w-full rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none"
+                className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none"
               >
                 <option value="friendly">{t("toneFriendly")}</option>
                 <option value="professional">{t("toneProfessional")}</option>
@@ -477,7 +477,7 @@ export default function SettingsPage() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-xs font-semibold text-gray-400 uppercase mb-2">
+              <label className="block text-xs font-semibold text-muted-fg uppercase mb-2">
                 {t("systemPromptExtra")}
               </label>
               <textarea
@@ -485,24 +485,24 @@ export default function SettingsPage() {
                 value={systemPromptExtra}
                 onChange={(e) => setSystemPromptExtra(e.target.value)}
                 placeholder={t("systemPromptExtraPlaceholder")}
-                className="w-full rounded-xl border border-[#1f1f2e] bg-[#07070b] p-3 text-sm text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                className="w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground placeholder:text-muted-fg focus:border-primary focus:outline-none"
               />
             </div>
           </div>
         </div>
 
         {/* Channels Integration Credentials Setup */}
-        <div className="rounded-xl border border-[#1f1f2e] bg-[#0d0d15] p-6 space-y-6">
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <Activity className="h-5 w-5 text-emerald-400" />
+        <div className="rounded-xl border border-border bg-card p-6 space-y-6">
+          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+            <Activity className="h-5 w-5 text-success" />
             {t("integrationsTitle")}
           </h3>
 
           {/* Telegram Settings */}
-          <div className="rounded-xl border border-[#1f1f2e]/60 bg-[#07070b] p-5 space-y-4">
+          <div className="rounded-xl border border-border/60 bg-background p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                <SendHorizontal className="h-4 w-4 text-blue-400" />
+              <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                <SendHorizontal className="h-4 w-4 text-info" />
                 {t("telegramConfig")}
               </h4>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -512,14 +512,14 @@ export default function SettingsPage() {
                   onChange={(e) => setIsTelegramActive(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-9 h-5 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                <div className="w-9 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
 
             {isTelegramActive && (
               <div className="space-y-4">
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase mb-2">
+                  <label className="block text-[11px] font-bold text-muted-fg uppercase mb-2">
                     {t("telegramToken")}
                   </label>
                   <input
@@ -527,7 +527,7 @@ export default function SettingsPage() {
                     type="password"
                     value={telegramToken}
                     onChange={(e) => setTelegramToken(e.target.value)}
-                    className="w-full rounded-xl border border-[#1f1f2e] bg-[#0d0d15] px-4 py-2.5 text-xs text-white focus:border-purple-500 focus:outline-none"
+                    className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-xs text-foreground focus:border-primary focus:outline-none"
                   />
                 </div>
 
@@ -537,7 +537,7 @@ export default function SettingsPage() {
                   return (
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <label className="block text-[11px] font-bold text-gray-500 uppercase">
+                        <label className="block text-[11px] font-bold text-muted-fg uppercase">
                           {language === "ar" ? "رابط الويب هوك" : "Webhook URL"}
                         </label>
                         <button
@@ -547,12 +547,12 @@ export default function SettingsPage() {
                             setCopiedWebhook(true);
                             setTimeout(() => setCopiedWebhook(false), 2000);
                           }}
-                          className="flex items-center gap-1.5 rounded-lg border border-[#1f1f2e] bg-[#07070b] px-3 py-1.5 text-xs text-purple-400 hover:text-white transition-colors"
+                          className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-primary hover:text-foreground transition-colors"
                         >
                           {copiedWebhook ? (
                             <>
-                              <Check className="h-3.5 w-3.5 text-emerald-400 animate-in zoom-in duration-200" />
-                              <span className="text-emerald-400">{t("copied")}</span>
+                              <Check className="h-3.5 w-3.5 text-success animate-in zoom-in duration-200" />
+                              <span className="text-success">{t("copied")}</span>
                             </>
                           ) : (
                             <>
@@ -562,10 +562,10 @@ export default function SettingsPage() {
                           )}
                         </button>
                       </div>
-                      <div className="rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-2.5">
-                        <code className="text-[11px] text-purple-300 break-all">{webhookUrl}</code>
+                      <div className="rounded-xl border border-border bg-background px-4 py-2.5">
+                        <code className="text-[11px] text-primary break-all">{webhookUrl}</code>
                       </div>
-                      <p className="mt-1.5 text-[11px] text-gray-500">
+                      <p className="mt-1.5 text-[11px] text-muted-fg">
                         {language === "ar"
                           ? "الصق هذا الرابط في BotFather ← /setwebhook"
                           : "Paste this URL into BotFather → /setwebhook"}
@@ -576,30 +576,30 @@ export default function SettingsPage() {
 
                 {/* Last auto-reply delivery status */}
                 {tgDeliveryStatus && (
-                  <div className="rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-3 space-y-1.5">
-                    <p className="text-[11px] font-bold text-gray-500 uppercase">
+                  <div className="rounded-xl border border-border bg-background px-4 py-3 space-y-1.5">
+                    <p className="text-[11px] font-bold text-muted-fg uppercase">
                       {language === "ar" ? "آخر حالة إرسال تلقائي" : "Last Auto-Reply Status"}
                     </p>
                     <div className="flex items-center gap-2">
                       {tgDeliveryStatus === "delivered" ? (
-                        <span className="flex items-center gap-1.5 text-xs font-semibold text-emerald-400">
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-success">
                           <Check className="h-3.5 w-3.5" />
                           {language === "ar" ? "تم التسليم بنجاح" : "Delivered"}
                         </span>
                       ) : (
-                        <span className="flex items-center gap-1.5 text-xs font-semibold text-red-400">
+                        <span className="flex items-center gap-1.5 text-xs font-semibold text-danger">
                           <span className="text-sm leading-none">✗</span>
                           {language === "ar" ? "فشل الإرسال" : "Failed"}
                         </span>
                       )}
                       {tgDeliveryAt && (
-                        <span className="text-[11px] text-gray-600">
+                        <span className="text-[11px] text-muted-fg">
                           · {new Date(tgDeliveryAt).toLocaleString()}
                         </span>
                       )}
                     </div>
                     {tgDeliveryStatus === "failed" && tgDeliveryDetail && (
-                      <p className="text-[11px] text-red-400/80 break-all font-mono">
+                      <p className="text-[11px] text-danger/80 break-all font-mono">
                         {tgDeliveryDetail}
                       </p>
                     )}
@@ -610,10 +610,10 @@ export default function SettingsPage() {
           </div>
 
           {/* WhatsApp Settings */}
-          <div className="rounded-xl border border-[#1f1f2e]/60 bg-[#07070b] p-5 space-y-4">
+          <div className="rounded-xl border border-border/60 bg-background p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                <Smartphone className="h-4 w-4 text-emerald-400" />
+              <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                <Smartphone className="h-4 w-4 text-success" />
                 {t("whatsappConfig")}
               </h4>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -623,14 +623,14 @@ export default function SettingsPage() {
                   onChange={(e) => setIsWhatsappActive(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-9 h-5 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                <div className="w-9 h-5 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-primary"></div>
               </label>
             </div>
 
             {isWhatsappActive && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase mb-2">
+                  <label className="block text-[11px] font-bold text-muted-fg uppercase mb-2">
                     {t("twilioSid")}
                   </label>
                   <input
@@ -638,11 +638,11 @@ export default function SettingsPage() {
                     type="text"
                     value={twilioSid}
                     onChange={(e) => setTwilioSid(e.target.value)}
-                    className="w-full rounded-xl border border-[#1f1f2e] bg-[#0d0d15] px-4 py-2.5 text-xs text-white focus:border-purple-500 focus:outline-none"
+                    className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-xs text-foreground focus:border-primary focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase mb-2">
+                  <label className="block text-[11px] font-bold text-muted-fg uppercase mb-2">
                     {t("twilioToken")}
                   </label>
                   <input
@@ -650,11 +650,11 @@ export default function SettingsPage() {
                     type="password"
                     value={twilioToken}
                     onChange={(e) => setTwilioToken(e.target.value)}
-                    className="w-full rounded-xl border border-[#1f1f2e] bg-[#0d0d15] px-4 py-2.5 text-xs text-white focus:border-purple-500 focus:outline-none"
+                    className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-xs text-foreground focus:border-primary focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-gray-500 uppercase mb-2">
+                  <label className="block text-[11px] font-bold text-muted-fg uppercase mb-2">
                     {t("twilioNumber")}
                   </label>
                   <input
@@ -662,7 +662,7 @@ export default function SettingsPage() {
                     type="text"
                     value={twilioNumber}
                     onChange={(e) => setTwilioNumber(e.target.value)}
-                    className="w-full rounded-xl border border-[#1f1f2e] bg-[#0d0d15] px-4 py-2.5 text-xs text-white focus:border-purple-500 focus:outline-none"
+                    className="w-full rounded-xl border border-border bg-card px-4 py-2.5 text-xs text-foreground focus:border-primary focus:outline-none"
                   />
                 </div>
               </div>
@@ -671,13 +671,13 @@ export default function SettingsPage() {
         </div>
 
         {/* Purchase Flow Automation */}
-        <div className="rounded-xl border border-[#1f1f2e] bg-[#0d0d15] p-6 space-y-6">
+        <div className="rounded-xl border border-border bg-card p-6 space-y-6">
           <div>
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5 text-emerald-400" />
+            <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5 text-success" />
               {t("purchaseFlowTitle")}
             </h3>
-            <p className="mt-1 text-xs text-gray-400">{t("purchaseFlowSub")}</p>
+            <p className="mt-1 text-xs text-muted-fg">{t("purchaseFlowSub")}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -692,14 +692,14 @@ export default function SettingsPage() {
             ].map(([label, checked, setter]) => (
               <label
                 key={String(label)}
-                className="flex items-center justify-between gap-4 rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-3"
+                className="flex items-center justify-between gap-4 rounded-xl border border-border bg-background px-4 py-3"
               >
-                <span className="text-sm font-semibold text-gray-200">{String(label)}</span>
+                <span className="text-sm font-semibold text-foreground">{String(label)}</span>
                 <input
                   type="checkbox"
                   checked={Boolean(checked)}
                   onChange={(e) => (setter as (val: boolean) => void)(e.target.checked)}
-                  className="h-4 w-4 rounded border-[#1f1f2e] bg-[#0d0d15] text-purple-600 focus:ring-purple-500"
+                  className="h-4 w-4 rounded border-border bg-card text-primary focus:ring-ring"
                 />
               </label>
             ))}
@@ -707,7 +707,7 @@ export default function SettingsPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-[11px] font-bold text-gray-500 uppercase mb-2">
+              <label className="block text-[11px] font-bold text-muted-fg uppercase mb-2">
                 {t("purchaseSessionMinutes")}
               </label>
               <input
@@ -716,22 +716,22 @@ export default function SettingsPage() {
                 max={240}
                 value={purchaseSessionMinutes}
                 onChange={(e) => setPurchaseSessionMinutes(Number(e.target.value))}
-                className="w-full rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none"
+                className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-bold text-gray-500 uppercase mb-2">
+              <label className="block text-[11px] font-bold text-muted-fg uppercase mb-2">
                 {t("purchaseCurrencyLabel")}
               </label>
               <input
                 type="text"
                 value={purchaseCurrencyLabel}
                 onChange={(e) => setPurchaseCurrencyLabel(e.target.value)}
-                className="w-full rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none"
+                className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-[11px] font-bold text-gray-500 uppercase mb-2">
+              <label className="block text-[11px] font-bold text-muted-fg uppercase mb-2">
                 {t("intentConfidenceThreshold")}
               </label>
               <input
@@ -741,20 +741,20 @@ export default function SettingsPage() {
                 step={0.05}
                 value={intentConfidenceThreshold}
                 onChange={(e) => setIntentConfidenceThreshold(Number(e.target.value))}
-                className="w-full rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none"
+                className="w-full rounded-xl border border-border bg-background px-4 py-2.5 text-sm text-foreground focus:border-primary focus:outline-none"
               />
             </div>
           </div>
         </div>
 
         {/* Web Widget Integration Card */}
-        <div className="rounded-xl border border-[#1f1f2e] bg-[#0d0d15] p-6 space-y-6">
+        <div className="rounded-xl border border-border bg-card p-6 space-y-6">
           <div>
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <Globe className="h-5 w-5 text-purple-400" />
+            <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+              <Globe className="h-5 w-5 text-primary" />
               {t("widgetIntegrationTitle")}
             </h3>
-            <p className="mt-1 text-xs text-gray-400">
+            <p className="mt-1 text-xs text-muted-fg">
               {t("widgetIntegrationSub")}
             </p>
           </div>
@@ -762,18 +762,18 @@ export default function SettingsPage() {
           {/* Script Snippet Block */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-400 uppercase">
+              <span className="text-xs font-semibold text-muted-fg uppercase">
                 {t("widgetScriptLabel")}
               </span>
               <button
                 type="button"
                 onClick={() => copyToClipboard(widgetScriptSnippet, "script")}
-                className="flex items-center gap-1.5 rounded-lg border border-[#1f1f2e] bg-[#07070b] px-3 py-1.5 text-xs text-purple-400 hover:text-white transition-colors"
+                className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-primary hover:text-foreground transition-colors"
               >
                 {copiedScript ? (
                   <>
-                    <Check className="h-3.5 w-3.5 text-emerald-400 animate-in zoom-in duration-200" />
-                    <span className="text-emerald-400">{t("copied")}</span>
+                    <Check className="h-3.5 w-3.5 text-success animate-in zoom-in duration-200" />
+                    <span className="text-success">{t("copied")}</span>
                   </>
                 ) : (
                   <>
@@ -784,11 +784,11 @@ export default function SettingsPage() {
               </button>
             </div>
             <div className="relative">
-              <pre className="overflow-x-auto rounded-xl border border-[#1f1f2e] bg-[#07070b] p-4 text-xs font-mono text-purple-300">
+              <pre className="overflow-x-auto rounded-xl border border-border bg-background p-4 text-xs font-mono text-primary">
                 <code>{widgetScriptSnippet}</code>
               </pre>
             </div>
-            <p className="text-[11px] text-gray-500 leading-relaxed">
+            <p className="text-[11px] text-muted-fg leading-relaxed">
               {t("widgetIntegrationInstructions")}
             </p>
           </div>
@@ -796,18 +796,18 @@ export default function SettingsPage() {
           {/* Iframe Snippet Block */}
           <div className="space-y-3 pt-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-400 uppercase">
+              <span className="text-xs font-semibold text-muted-fg uppercase">
                 {t("widgetIframeLabel")}
               </span>
               <button
                 type="button"
                 onClick={() => copyToClipboard(widgetIframeSnippet, "iframe")}
-                className="flex items-center gap-1.5 rounded-lg border border-[#1f1f2e] bg-[#07070b] px-3 py-1.5 text-xs text-purple-400 hover:text-white transition-colors"
+                className="flex items-center gap-1.5 rounded-lg border border-border bg-background px-3 py-1.5 text-xs text-primary hover:text-foreground transition-colors"
               >
                 {copiedIframe ? (
                   <>
-                    <Check className="h-3.5 w-3.5 text-emerald-400 animate-in zoom-in duration-200" />
-                    <span className="text-emerald-400">{t("copied")}</span>
+                    <Check className="h-3.5 w-3.5 text-success animate-in zoom-in duration-200" />
+                    <span className="text-success">{t("copied")}</span>
                   </>
                 ) : (
                   <>
@@ -818,7 +818,7 @@ export default function SettingsPage() {
               </button>
             </div>
             <div className="relative">
-              <pre className="overflow-x-auto rounded-xl border border-[#1f1f2e] bg-[#07070b] p-4 text-xs font-mono text-purple-300">
+              <pre className="overflow-x-auto rounded-xl border border-border bg-background p-4 text-xs font-mono text-primary">
                 <code>{widgetIframeSnippet}</code>
               </pre>
             </div>
@@ -832,7 +832,7 @@ export default function SettingsPage() {
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-purple-600/10 disabled:opacity-55 transition-colors cursor-pointer"
+            className="flex items-center gap-2 rounded-xl bg-primary hover:bg-primary-hover px-6 py-3 text-sm font-bold text-foreground shadow-lg shadow-primary/20 disabled:opacity-55 transition-colors cursor-pointer"
           >
             <Save className="h-4.5 w-4.5" />
             <span>{saving ? t("saving") : t("save")}</span>

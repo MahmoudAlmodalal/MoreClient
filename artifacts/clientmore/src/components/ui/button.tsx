@@ -1,20 +1,22 @@
 import React from "react";
 import Link from "@/lib/next-shim/link";
 
-type ButtonVariant = "primary" | "secondary" | "outline" | "ghost";
+type ButtonVariant = "primary" | "secondary" | "outline" | "ghost" | "destructive";
 type ButtonSize = "sm" | "md" | "lg";
 
 const base =
-  "inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/60 disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap";
+  "inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap";
 
 const variants: Record<ButtonVariant, string> = {
   primary:
     "gradient-brand text-white shadow-[var(--shadow-brand)] hover:brightness-110 hover:-translate-y-0.5",
   secondary:
-    "bg-white text-brand-700 hover:bg-brand-50 border border-transparent",
+    "bg-surface text-primary border border-border hover:bg-muted",
   outline:
-    "border border-white/15 text-white hover:bg-white/5 hover:border-white/25",
-  ghost: "text-current hover:bg-current/5",
+    "border border-border text-foreground hover:bg-muted hover:border-primary/40",
+  ghost: "text-current hover:bg-current/10",
+  destructive:
+    "bg-danger text-white shadow-sm hover:brightness-110 hover:-translate-y-0.5",
 };
 
 const sizes: Record<ButtonSize, string> = {

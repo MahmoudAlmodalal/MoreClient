@@ -276,27 +276,24 @@ export default function WidgetPage() {
   };
 
   return (
-    <div className="flex h-screen flex-col bg-[#050508] text-white">
+    <div className="flex h-screen flex-col bg-background text-foreground">
       {/* Widget Header */}
-      <div
-        className="flex items-center justify-between border-b border-purple-500/20 backdrop-blur-md px-4 py-3.5 shadow-lg relative"
-        style={{ background: "linear-gradient(90deg, rgba(88, 28, 135, 0.85) 0%, rgba(49, 46, 129, 0.85) 50%, rgba(7, 7, 11, 0.9) 100%)" }}
-      >
-        {/* Subtle neon glowing lightbar directly below header */}
-        <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-60" />
+      <div className="gradient-brand flex items-center justify-between border-b border-border px-4 py-3.5 shadow-md relative">
+        {/* Subtle glowing lightbar directly below header */}
+        <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-white/50 to-transparent opacity-60" />
         <div className="flex items-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={companyLogo}
             alt="Logo"
-            className="h-8 w-8 rounded-lg object-cover border border-purple-500/20 shadow-md"
+            className="h-8 w-8 rounded-lg object-cover border border-white/20 shadow-md"
           />
           <div>
             <h2 className="text-xs font-bold text-white tracking-tight flex items-center gap-1.5">
               {botName}
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="h-1.5 w-1.5 rounded-full bg-success animate-pulse" />
             </h2>
-            <span className="text-[9px] text-gray-500 font-medium">Bilingual Support Agent</span>
+            <span className="text-[9px] text-white/70 font-medium">Bilingual Support Agent</span>
           </div>
         </div>
 
@@ -305,16 +302,16 @@ export default function WidgetPage() {
           <button
             onClick={handleLanguageToggle}
             aria-label={language === "en" ? "التبديل إلى العربية" : "Switch to English"}
-            className="flex items-center gap-1 rounded-md border border-[#1f1f2e] bg-[#0d0d15] px-2 py-1 text-[10px] text-gray-400 hover:text-white transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60"
+            className="flex items-center gap-1 rounded-md border border-white/20 bg-white/10 px-2 py-1 text-[10px] text-white/90 hover:bg-white/20 hover:text-white transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
           >
-            <Globe className="h-3.5 w-3.5 text-purple-400" aria-hidden="true" />
+            <Globe className="h-3.5 w-3.5 text-white" aria-hidden="true" />
             <span>{language === "en" ? "AR" : "EN"}</span>
           </button>
 
           {/* Close Widget Button */}
           <button
             onClick={() => window.parent.postMessage("clientmore-close-widget", "*")}
-            className="rounded-md p-1 text-gray-400 hover:bg-[#1f1f2e] hover:text-white transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60"
+            className="rounded-md p-1 text-white/90 hover:bg-white/20 hover:text-white transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
             aria-label={language === "ar" ? "إغلاق المحادثة" : "Close chat"}
             title={language === "ar" ? "إغلاق المحادثة" : "Close chat"}
           >
@@ -342,30 +339,29 @@ export default function WidgetPage() {
             >
               {/* Bot/Agent Avatar */}
               {!isUser && (
-                <div className="h-7 w-7 rounded-xl flex items-center justify-center shrink-0 border border-purple-500/20 bg-[#0d0d15] shadow-inner mt-1">
+                <div className="h-7 w-7 rounded-xl flex items-center justify-center shrink-0 border border-border bg-muted shadow-sm mt-1">
                   {msg.sender === "human" ? (
-                    <User className="h-3.5 w-3.5 text-indigo-400 animate-pulse" />
+                    <User className="h-3.5 w-3.5 text-primary animate-pulse" />
                   ) : (
-                    <Bot className="h-3.5 w-3.5 text-purple-400" />
+                    <Bot className="h-3.5 w-3.5 text-primary" />
                   )}
                 </div>
               )}
 
               <div className={`flex flex-col ${isUser ? "items-end" : "items-start"}`}>
                 <div
-                  className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed ${
+                  className={`rounded-2xl px-4 py-2.5 text-xs leading-relaxed shadow-sm ${
                     isUser
-                      ? "text-white rounded-tr-none shadow-lg shadow-purple-500/10"
+                      ? "bg-primary text-primary-foreground rounded-tr-none"
                       : msg.sender === "human"
-                      ? "bg-[#0d0d15] border border-indigo-500/25 text-indigo-100 rounded-tl-none shadow-inner"
-                      : "bg-[#0d0d15] text-purple-200 border border-[#1f1f2e] rounded-tl-none shadow-inner"
+                      ? "bg-primary/10 border border-primary/20 text-foreground rounded-tl-none"
+                      : "bg-muted text-foreground border border-border rounded-tl-none"
                   }`}
-                  style={isUser ? { background: "linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)" } : undefined}
                 >
                   <p className="text-left rtl:text-right whitespace-pre-line leading-relaxed">{msg.text}</p>
-                  
+
                   {/* Time & Sender Badge */}
-                  <div className="mt-1.5 flex items-center gap-1.5 text-[8px] text-gray-500 justify-between">
+                  <div className={`mt-1.5 flex items-center gap-1.5 text-[8px] justify-between ${isUser ? "text-primary-foreground/70" : "text-muted-fg"}`}>
                     <span className="font-semibold uppercase tracking-wider">
                       {isUser
                         ? (language === "ar" ? "أنت" : "You")
@@ -391,7 +387,7 @@ export default function WidgetPage() {
                 key={idx}
                 type="button"
                 onClick={() => handleSuggestionClick(chip)}
-                className="rounded-full border border-purple-500/20 bg-purple-950/20 hover:bg-purple-900/40 px-3 py-1.5 text-[10px] font-semibold text-purple-300 hover:text-white transition-all cursor-pointer shadow-sm hover:scale-[1.03]"
+                className="rounded-full border border-primary/20 bg-primary/10 hover:bg-primary/20 px-3 py-1.5 text-[10px] font-semibold text-primary transition-all cursor-pointer shadow-sm hover:scale-[1.03]"
               >
                 {chip}
               </button>
@@ -401,16 +397,16 @@ export default function WidgetPage() {
 
         {/* Typing Loading State */}
         {loading && (
-          <div role="status" className="flex items-center gap-2 text-xs text-gray-500 italic max-w-xs mr-auto ml-1.5">
-            <div className="h-2 w-2 rounded-full bg-purple-500 animate-ping" />
+          <div role="status" className="flex items-center gap-2 text-xs text-muted-fg italic max-w-xs mr-auto ml-1.5">
+            <div className="h-2 w-2 rounded-full bg-muted-fg animate-ping" />
             <span>{language === "ar" ? t("aiSearchingAr") : t("aiSearching")}</span>
           </div>
         )}
 
         {/* Escalation banner — shown once the backend hands off to a human */}
         {isEscalated && (
-          <div className="flex items-center gap-2 rounded-xl border border-indigo-500/25 bg-indigo-950/20 px-3.5 py-2 text-[10px] font-semibold text-indigo-200 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <User className="h-3.5 w-3.5 text-indigo-400 animate-pulse shrink-0" />
+          <div className="flex items-center gap-2 rounded-xl border border-warning/20 bg-warning/10 px-3.5 py-2 text-[10px] font-semibold text-warning animate-in fade-in slide-in-from-bottom-2 duration-300">
+            <User className="h-3.5 w-3.5 text-warning animate-pulse shrink-0" />
             <span className="text-left rtl:text-right">
               {language === "ar" ? t("widgetEscalatedAr") : t("widgetEscalated")}
             </span>
@@ -421,7 +417,7 @@ export default function WidgetPage() {
       </div>
 
       {/* Footer Chat Form */}
-      <form onSubmit={handleSend} className="border-t border-[#1f1f2e] bg-gradient-to-t from-[#07070b] to-[#0a0a10] p-3 flex gap-2">
+      <form onSubmit={handleSend} className="border-t border-border bg-card p-3 flex gap-2">
         <input
           required
           type="text"
@@ -429,13 +425,13 @@ export default function WidgetPage() {
           onChange={(e) => setInputVal(e.target.value)}
           aria-label={language === "ar" ? t("widgetInputPlaceholderAr") : t("widgetPlaceholder")}
           placeholder={language === "ar" ? t("widgetInputPlaceholderAr") : t("widgetPlaceholder")}
-          className="flex-1 rounded-xl border border-[#1f1f2e] bg-[#0d0d15] px-3.5 py-2.5 text-xs text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/40 transition-colors"
+          className="flex-1 rounded-xl border border-input bg-background px-3.5 py-2.5 text-xs text-foreground placeholder:text-muted-fg outline-none transition-all focus:border-primary focus:ring-2 focus:ring-ring/30"
         />
         <button
           type="submit"
           disabled={!inputVal.trim() || loading}
           aria-label={language === "ar" ? "إرسال" : "Send message"}
-          className="rounded-xl bg-gradient-to-br from-purple-600 to-indigo-600 p-2.5 text-white hover:brightness-110 active:scale-95 transition-all shadow-md shadow-purple-600/10 shrink-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-400/60 disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
+          className="rounded-xl bg-primary p-2.5 text-primary-foreground hover:bg-primary-hover active:scale-95 transition-all shadow-sm shadow-primary/20 shrink-0 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100"
         >
           <Send className="h-4.5 w-4.5" aria-hidden="true" />
         </button>

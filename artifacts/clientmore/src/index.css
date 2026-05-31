@@ -1,37 +1,90 @@
 @import "tailwindcss";
 
 /* ─────────────────────────────────────────────────────────────────────────
-   clientMORE design tokens — single source of truth for the UI.
-   See DESIGN-SYSTEM.md for the full reference.
+   clientMORE design system — single source of truth.
+
+   Two-tier tokens:
+     • Tier 1  primitive ramps (raw hex, theme-independent) — the paint.
+     • Tier 2  semantic roles (--background, --surface, --primary, …) — flip
+               between light (:root) and dark (.dark).
+
+   Light is the product default; `.dark` on <html> switches the theme.
    ───────────────────────────────────────────────────────────────────────── */
+
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
-  /* Core semantic surfaces (dark theme is the product default) */
-  --background: #050508;
-  --foreground: #f3f4f6;
-  --primary: #8b5cf6;
-  --primary-hover: #7c3aed;
-  --border: #1f1f2e;
-  --card-bg: #0d0d15;
-  --sidebar-bg: #07070b;
+  color-scheme: light;
 
-  /* Brand purple scale */
-  --brand-50: #f5f3ff;
-  --brand-100: #ede9fe;
-  --brand-200: #ddd6fe;
-  --brand-300: #c4b5fd;
-  --brand-400: #a78bfa;
-  --brand-500: #8b5cf6;
-  --brand-600: #7c3aed;
-  --brand-700: #6d28d9;
-  --brand-800: #5b21b6;
-  --brand-900: #4c1d95;
+  /* ── Semantic roles — LIGHT ─────────────────────────────────────────── */
+  --background:           #f7f8fa;
+  --surface:              #ffffff;
+  --elevated:             #ffffff;
+  --foreground:           #161a22;
+  --foreground-muted:     #5b6472;
+  --muted:                #eef0f4;
+  --muted-foreground:     #5b6472;
+  --border:               #e2e5ec;
+  --input:                #e2e5ec;
+  --ring:                 #5b63f5;
 
-  /* Light surfaces (welcome right panel, sign-in fallback, etc.) */
-  --surface-light: #ffffff;
-  --surface-muted: #f5f3ff;
-  --foreground-light: #1f1430;
-  --foreground-light-muted: #6b7280;
-  --border-light: #e9e5f5;
+  --card:                 #ffffff;
+  --card-foreground:      #161a22;
+  --popover:              #ffffff;
+  --popover-foreground:   #161a22;
+
+  --primary:              #5b63f5;
+  --primary-hover:        #4a4fe0;
+  --primary-foreground:   #ffffff;
+  --secondary:            #eef0f4;
+  --secondary-foreground: #343a46;
+  --accent:               #eef0f4;   /* shadcn neutral hover (NOT the teal accent) */
+  --accent-foreground:    #161a22;
+  --destructive:          #dc2626;
+  --destructive-foreground:#ffffff;
+
+  --success:              #16a34a;
+  --warning:              #d97706;
+  --danger:               #dc2626;
+  --info:                 #2563eb;
+
+  --sidebar:                    #ffffff;
+  --sidebar-foreground:         #161a22;
+  --sidebar-primary:            #5b63f5;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent:             #eef0f4;
+  --sidebar-accent-foreground:  #161a22;
+  --sidebar-border:             #e2e5ec;
+  --sidebar-ring:               #5b63f5;
+
+  /* Brand-flavoured effects (recomputed in dark) */
+  --gradient-brand: linear-gradient(135deg, #5b63f5 0%, #32338f 100%);
+  --glow-brand:     0 0 40px -5px rgba(91, 99, 245, 0.25);
+  --shadow-brand:   0 18px 50px -12px rgba(74, 79, 224, 0.25);
+
+  /* ── Legacy aliases (kept until every page is migrated off them) ──────── */
+  --card-bg:    var(--surface);
+  --sidebar-bg: var(--sidebar);
+
+  /* Light-surface tokens still referenced by the un-migrated auth panel */
+  --surface-light:          #ffffff;
+  --surface-muted:          #f4f5f8;
+  --foreground-light:       #161a22;
+  --foreground-light-muted: #5b6472;
+  --border-light:           #e2e5ec;
+
+  /* Brand ramp (Iris / Cobalt — the new signature primary) */
+  --brand-50:  #eef2ff;
+  --brand-100: #e0e7ff;
+  --brand-200: #c6d2ff;
+  --brand-300: #a5b4ff;
+  --brand-400: #818cf8;
+  --brand-500: #5b63f5;
+  --brand-600: #4a4fe0;
+  --brand-700: #3d40c4;
+  --brand-800: #32338f;
+  --brand-900: #2a2a6e;
+  --brand-950: #1c1b45;
 
   /* Radii */
   --radius-sm: 0.5rem;
@@ -40,26 +93,111 @@
   --radius-xl: 1.5rem;
   --radius-2xl: 2rem;
 
-  /* Brand gradient + glow */
-  --gradient-brand: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%);
-  --shadow-brand: 0 18px 50px -12px rgba(124, 58, 237, 0.45);
-  --glow-brand: 0 0 40px -5px rgba(139, 92, 246, 0.35);
-
   --font-inter: "Inter", sans-serif;
   --font-cairo: "Cairo", sans-serif;
 }
 
-@theme {
-  /* Semantic surfaces */
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card-bg);
-  --color-sidebar: var(--sidebar-bg);
-  --color-accent: var(--primary);
-  --color-border-custom: var(--border);
+.dark {
+  color-scheme: dark;
 
-  /* Brand scale (usable as bg-brand-500, text-brand-300, …) */
-  --color-brand-50: var(--brand-50);
+  /* ── Semantic roles — DARK ──────────────────────────────────────────── */
+  --background:           #090b10;
+  --surface:              #12161e;
+  --elevated:             #161a22;
+  --foreground:           #f3f5f8;
+  --foreground-muted:     #9aa1b1;
+  --muted:                #1b2029;
+  --muted-foreground:     #9aa1b1;
+  --border:               #232a36;
+  --input:                #232a36;
+  --ring:                 #818cf8;
+
+  --card:                 #12161e;
+  --card-foreground:      #f3f5f8;
+  --popover:              #161a22;
+  --popover-foreground:   #f3f5f8;
+
+  --primary:              #6b72f7;
+  --primary-hover:        #818cf8;
+  --primary-foreground:   #ffffff;
+  --secondary:            #1b2029;
+  --secondary-foreground: #e2e5ec;
+  --accent:               #1b2029;
+  --accent-foreground:    #f3f5f8;
+  --destructive:          #f87171;
+  --destructive-foreground:#0b0b0b;
+
+  --success:              #22c55e;
+  --warning:              #f59e0b;
+  --danger:               #f87171;
+  --info:                 #60a5fa;
+
+  --sidebar:                    #0c0f15;
+  --sidebar-foreground:         #f3f5f8;
+  --sidebar-primary:            #6b72f7;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent:             #1b2029;
+  --sidebar-accent-foreground:  #f3f5f8;
+  --sidebar-border:             #232a36;
+  --sidebar-ring:               #818cf8;
+
+  --gradient-brand: linear-gradient(135deg, #4a4fe0 0%, #2a2a6e 100%);
+  --glow-brand:     0 0 40px -5px rgba(107, 114, 247, 0.30);
+  --shadow-brand:   0 18px 50px -12px rgba(74, 79, 224, 0.45);
+
+  /* Legacy light-surface aliases follow the dark theme so un-migrated
+     fragments don't punch a white hole in a dark screen. */
+  --surface-light:          #12161e;
+  --surface-muted:          #1b2029;
+  --foreground-light:       #f3f5f8;
+  --foreground-light-muted: #9aa1b1;
+  --border-light:           #232a36;
+}
+
+@theme inline {
+  /* Semantic roles → utilities (resolve at runtime so `.dark` propagates) */
+  --color-background:            var(--background);
+  --color-foreground:            var(--foreground);
+  --color-surface:               var(--surface);
+  --color-elevated:              var(--elevated);
+  --color-muted:                 var(--muted);
+  --color-muted-fg:              var(--foreground-muted);
+  --color-muted-foreground:      var(--muted-foreground);
+  --color-border:                var(--border);
+  --color-input:                 var(--input);
+  --color-ring:                  var(--ring);
+
+  --color-card:                  var(--card);
+  --color-card-foreground:       var(--card-foreground);
+  --color-popover:               var(--popover);
+  --color-popover-foreground:    var(--popover-foreground);
+
+  --color-primary:               var(--primary);
+  --color-primary-hover:         var(--primary-hover);
+  --color-primary-foreground:    var(--primary-foreground);
+  --color-secondary:             var(--secondary);
+  --color-secondary-foreground:  var(--secondary-foreground);
+  --color-accent:                var(--accent);
+  --color-accent-foreground:     var(--accent-foreground);
+  --color-destructive:           var(--destructive);
+  --color-destructive-foreground:var(--destructive-foreground);
+
+  --color-success:               var(--success);
+  --color-warning:               var(--warning);
+  --color-danger:                var(--danger);
+  --color-info:                  var(--info);
+
+  --color-sidebar:                     var(--sidebar);
+  --color-sidebar-foreground:          var(--sidebar-foreground);
+  --color-sidebar-primary:             var(--sidebar-primary);
+  --color-sidebar-primary-foreground:  var(--sidebar-primary-foreground);
+  --color-sidebar-accent:              var(--sidebar-accent);
+  --color-sidebar-accent-foreground:   var(--sidebar-accent-foreground);
+  --color-sidebar-border:              var(--sidebar-border);
+  --color-sidebar-ring:                var(--sidebar-ring);
+
+  /* Brand ramp (Iris / Cobalt) — bg-brand-500, text-brand-300, … */
+  --color-brand-50:  var(--brand-50);
   --color-brand-100: var(--brand-100);
   --color-brand-200: var(--brand-200);
   --color-brand-300: var(--brand-300);
@@ -69,18 +207,40 @@
   --color-brand-700: var(--brand-700);
   --color-brand-800: var(--brand-800);
   --color-brand-900: var(--brand-900);
+  --color-brand-950: var(--brand-950);
 
-  /* Light surfaces */
-  --color-surface-light: var(--surface-light);
-  --color-surface-muted: var(--surface-muted);
-  --color-foreground-light: var(--foreground-light);
-  --color-border-light: var(--border-light);
+  /* Teal accent ramp (secondary actions, positive data-viz) — bg-teal-500 */
+  --color-teal-400: #2dd4bf;
+  --color-teal-500: #14b8a6;
+  --color-teal-600: #0d9488;
+
+  /* Cool-neutral ramp — bg-neutral-100, text-neutral-500, … */
+  --color-neutral-0:   #ffffff;
+  --color-neutral-50:  #f7f8fa;
+  --color-neutral-100: #eef0f4;
+  --color-neutral-200: #e2e5ec;
+  --color-neutral-300: #cdd2dc;
+  --color-neutral-400: #9aa1b1;
+  --color-neutral-500: #6b7280;
+  --color-neutral-600: #4b5563;
+  --color-neutral-700: #343a46;
+  --color-neutral-800: #1f242e;
+  --color-neutral-850: #161a22;
+  --color-neutral-900: #0f1218;
+  --color-neutral-950: #090b10;
+
+  /* Data-viz palette (recharts reads these via var(--color-chart-N)) */
+  --color-chart-1: var(--brand-500);
+  --color-chart-2: #14b8a6;
+  --color-chart-3: var(--info);
+  --color-chart-4: var(--warning);
+  --color-chart-5: #a855f7;
 
   /* Radii */
-  --radius-sm: var(--radius-sm);
-  --radius-md: var(--radius-md);
-  --radius-lg: var(--radius-lg);
-  --radius-xl: var(--radius-xl);
+  --radius-sm:  var(--radius-sm);
+  --radius-md:  var(--radius-md);
+  --radius-lg:  var(--radius-lg);
+  --radius-xl:  var(--radius-xl);
   --radius-2xl: var(--radius-2xl);
 }
 
@@ -95,35 +255,40 @@ html[dir="rtl"] body {
   font-family: var(--font-cairo), sans-serif;
 }
 
-/* Custom Scrollbar for Sleek Dark Theme */
+/* Custom scrollbar — follows the active theme */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #07070b;
+  background: var(--background);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e1e2f;
+  background: var(--border);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #2e2e42;
+  background: var(--neutral-400, #9aa1b1);
 }
 
 /* ─── Helper classes ──────────────────────────────────────────────────────── */
 
 .glass {
-  background: rgba(13, 13, 21, 0.7);
+  background: rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
 }
 
+.dark .glass {
+  background: rgba(18, 22, 30, 0.72);
+}
+
+.glow-brand,
 .glow-purple {
-  box-shadow: 0 0 40px -5px rgba(139, 92, 246, 0.15);
+  box-shadow: var(--glow-brand);
 }
 
 .gradient-brand {
@@ -131,7 +296,7 @@ html[dir="rtl"] body {
 }
 
 .text-gradient-brand {
-  background-image: linear-gradient(135deg, #a78bfa 0%, #7c3aed 60%, #5b21b6 100%);
+  background-image: linear-gradient(135deg, #818cf8 0%, #5b63f5 55%, #32338f 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -140,7 +305,7 @@ html[dir="rtl"] body {
 .skeleton {
   position: relative;
   overflow: hidden;
-  background-color: #15151f;
+  background-color: var(--muted);
 }
 
 .skeleton::after {
@@ -150,10 +315,10 @@ html[dir="rtl"] body {
   transform: translateX(-100%);
   background-image: linear-gradient(
     90deg,
-    rgba(255, 255, 255, 0) 0,
-    rgba(255, 255, 255, 0.04) 20%,
-    rgba(139, 92, 246, 0.08) 60%,
-    rgba(255, 255, 255, 0)
+    transparent 0,
+    color-mix(in srgb, var(--foreground) 6%, transparent) 40%,
+    color-mix(in srgb, var(--primary) 16%, transparent) 60%,
+    transparent
   );
   animation: skeleton-shimmer 1.6s ease-in-out infinite;
 }

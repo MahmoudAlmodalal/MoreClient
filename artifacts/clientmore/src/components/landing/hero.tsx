@@ -117,19 +117,19 @@ export function Hero() {
     <section id="hero" className="relative overflow-hidden pt-14 pb-20 sm:pt-20 sm:pb-28">
       {/* Background glow effects */}
       <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(139,92,246,0.12),rgba(9,8,15,0)_60%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(139,92,246,0.1),transparent_40%)]" />
-        <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-purple-500/20 to-transparent" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,color-mix(in_srgb,var(--primary)_10%,transparent),transparent_60%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,color-mix(in_srgb,var(--primary)_9%,transparent),transparent_40%)]" />
+        <div className="absolute inset-x-0 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent" />
       </div>
 
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
         <div className="grid gap-12 lg:grid-cols-12 lg:items-center">
           {/* Hero text information */}
           <div className="flex flex-col text-start lg:col-span-7">
-            <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl md:text-6xl leading-[1.15] text-gradient-brand">
+            <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl leading-[1.15] text-gradient-brand">
               {language === "ar" ? "أتمتة خدمة العملاء لعملك بذكاء اصطناعي خارق" : "Automate Customer Support for Your Business with Superpower AI"}
             </h1>
-            <p className="mt-6 text-base sm:text-lg leading-relaxed text-gray-300 max-w-2xl">
+            <p className="mt-6 text-base sm:text-lg leading-relaxed text-muted-fg max-w-2xl">
               {language === "ar"
                 ? "مور ريبونس (More Response) هي لوحة التحكم السحابية الموحدة للرد التلقائي وإدارة المحادثات. اربط قنوات الواتساب والرسائل النصية والبريد الإلكتروني وأتمت خدمة عملائك بذكاء متكامل لمختلف التخصصات والشركات."
                 : "More Response is a unified cloud control panel for automated replies and conversation management. Connect WhatsApp, SMS, and Email to automate your customer service with integrated intelligence for various industries and businesses."}
@@ -138,16 +138,14 @@ export function Hero() {
               <Button
                 href="/welcome"
                 size="lg"
-                className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 border-0 shadow-lg shadow-purple-950/40"
               >
                 {language === "ar" ? "ابدأ تجربتك المجانية" : "Start Your Free Trial"}
-                <ArrowRight size={18} className="ml-1.5 rtl:mr-1.5 rtl:ml-0" aria-hidden="true" />
+                <ArrowRight size={18} className="ms-1.5" aria-hidden="true" />
               </Button>
               <Button
                 href="#showcase"
                 variant="outline"
                 size="lg"
-                className="border-white/10 text-gray-300 hover:bg-white/5 hover:text-white"
               >
                 {language === "ar" ? "شاهد لوحة التحكم" : "Explore Dashboard"}
               </Button>
@@ -156,24 +154,24 @@ export function Hero() {
 
           {/* Interactive Chat Simulator */}
           <div className="lg:col-span-5 flex justify-center">
-            <div className="relative w-full max-w-[430px] rounded-2xl border border-[#24213f] bg-[#151324] shadow-2xl overflow-hidden flex flex-col">
+            <div className="relative w-full max-w-[430px] rounded-2xl border border-border bg-card shadow-xl overflow-hidden flex flex-col">
               {/* Simulator Header */}
-              <div className="flex items-center justify-between border-b border-[#24213f] bg-black/10 px-5 py-3.5">
+              <div className="flex items-center justify-between border-b border-border bg-muted/40 px-5 py-3.5">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-400 font-bold text-xs">
+                  <div className="w-8 h-8 rounded-full bg-success/10 ring-1 ring-inset ring-success/20 flex items-center justify-center text-success font-bold text-xs">
                     AI
                   </div>
                   <div className="text-start">
-                    <div className="text-sm font-semibold text-white">
+                    <div className="text-sm font-semibold text-foreground">
                       {language === "ar" ? "المساعد الذكي (MoreBot)" : "Smart Assistant (MoreBot)"}
                     </div>
-                    <div className="flex items-center gap-1.5 text-[11px] text-emerald-400 font-medium">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <div className="flex items-center gap-1.5 text-[11px] text-success font-medium">
+                      <span className="w-1.5 h-1.5 rounded-full bg-success animate-pulse" />
                       {language === "ar" ? "نشط الآن" : "Active now"}
                     </div>
                   </div>
                 </div>
-                <MessageSquare size={18} className="text-gray-500" />
+                <MessageSquare size={18} className="text-muted-fg" />
               </div>
 
               {/* Simulator Messages */}
@@ -186,8 +184,8 @@ export function Hero() {
                     key={i}
                     className={`max-w-[85%] px-3.5 py-2.5 rounded-xl leading-relaxed ${
                       msg.sender === "customer"
-                        ? "bg-[#24213f] text-gray-100 self-start rounded-br-none"
-                        : "bg-purple-950/20 border border-purple-500/20 text-purple-300 self-end rounded-bl-none"
+                        ? "bg-muted text-foreground self-start rounded-br-none"
+                        : "bg-primary/10 border border-primary/20 text-foreground self-end rounded-bl-none"
                     }`}
                   >
                     {msg.text}
@@ -195,26 +193,26 @@ export function Hero() {
                 ))}
 
                 {isTyping && (
-                  <div className="bg-purple-950/20 border border-purple-500/20 text-purple-300 self-end rounded-xl rounded-bl-none px-4 py-3 flex gap-1 items-center">
-                    <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-                    <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-                    <span className="w-1.5 h-1.5 bg-purple-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                  <div className="bg-primary/10 border border-primary/20 self-end rounded-xl rounded-bl-none px-4 py-3 flex gap-1 items-center">
+                    <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                    <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                    <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
                   </div>
                 )}
               </div>
 
               {/* Simulator Input Bar */}
-              <div className="border-t border-[#24213f] bg-black/20 p-4 flex gap-3 items-center">
-                <div className="flex-1 bg-[#09080f]/50 border border-[#24213f] rounded-lg px-3 py-2 text-start text-xs text-gray-400 h-9 line-clamp-1 flex items-center select-none overflow-hidden">
+              <div className="border-t border-border bg-muted/40 p-4 flex gap-3 items-center">
+                <div className="flex-1 bg-background border border-input rounded-lg px-3 py-2 text-start text-xs text-muted-fg h-9 line-clamp-1 flex items-center select-none overflow-hidden">
                   {nextInputPreview}
                 </div>
                 <button
                   onClick={handleSendSim}
                   disabled={isTyping}
-                  className={`w-9 h-9 rounded-lg flex items-center justify-center text-white transition-all select-none ${
+                  className={`w-9 h-9 rounded-lg flex items-center justify-center text-primary-foreground transition-all select-none ${
                     isTyping
-                      ? "bg-purple-500/20 text-purple-400/50 cursor-not-allowed"
-                      : "bg-purple-600 hover:bg-purple-500 cursor-pointer shadow-md shadow-purple-950/30"
+                      ? "bg-primary/30 cursor-not-allowed"
+                      : "bg-primary hover:bg-primary-hover cursor-pointer shadow-sm"
                   }`}
                   aria-label="Send message"
                 >

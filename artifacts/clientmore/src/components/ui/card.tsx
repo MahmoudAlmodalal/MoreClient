@@ -3,9 +3,9 @@ import React from "react";
 type CardTone = "dark" | "glass" | "light";
 
 const tones: Record<CardTone, string> = {
-  dark: "bg-[var(--card-bg)] border border-[var(--border)]",
+  dark: "bg-card border border-border text-card-foreground",
   glass: "glass",
-  light: "bg-white border border-[var(--border-light)] text-[var(--foreground-light)]",
+  light: "bg-surface border border-border text-foreground",
 };
 
 export function Card({

@@ -1,4 +1,5 @@
 import { Switch, Route, Router as WouterRouter } from "wouter";
+import { ThemeProvider } from "next-themes";
 import { LanguageProvider } from "@/components/language-provider";
 
 import HomePage from "@/app/page";
@@ -32,8 +33,15 @@ function Admin({ children }: { children: React.ReactNode }) {
 
 function App() {
   return (
-    <LanguageProvider>
-      <WouterRouter base={base}>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="light"
+      enableSystem={false}
+      storageKey="clientmore-theme"
+      disableTransitionOnChange
+    >
+      <LanguageProvider>
+        <WouterRouter base={base}>
         <Switch>
           <Route path="/" component={HomePage} />
           <Route path="/welcome" component={WelcomePage} />
@@ -73,10 +81,11 @@ function App() {
               <AdminPage />
             </Admin>
           </Route>
-          <Route component={NotFoundPage} />
-        </Switch>
-      </WouterRouter>
-    </LanguageProvider>
+            <Route component={NotFoundPage} />
+          </Switch>
+        </WouterRouter>
+      </LanguageProvider>
+    </ThemeProvider>
   );
 }
 

@@ -16,8 +16,19 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Cairo:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+      // Apply the persisted theme before first paint to avoid a flash.
+      // Mirrors next-themes (attribute="class", storageKey="clientmore-theme",
+      // defaultTheme="light").
+      (function () {
+        try {
+          var t = localStorage.getItem("clientmore-theme");
+          if (t === "dark") document.documentElement.classList.add("dark");
+        } catch (e) {}
+      })();
+    </script>
   </head>
-  <body class="min-h-full flex flex-col bg-[#050508] text-gray-100 font-sans">
+  <body class="min-h-full flex flex-col bg-background text-foreground font-sans">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

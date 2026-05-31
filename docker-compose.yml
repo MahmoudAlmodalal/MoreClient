@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./artifacts/api-server
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      DATABASE_URL: sqlite+aiosqlite:///./test.db
+      PORT: 8080
+      NODE_ENV: development
+      LOG_LEVEL: info
+      OPENAI_API_KEY: your_openai_api_key_here
+      JWT_SECRET: any_random_string_for_security
+      ADMIN_API_KEY: admin_secret_key
+    volumes:
+      - ./artifacts/api-server/test.db:/app/test.db
+    command: bash -c "python init_db.py && uvicorn main:app --host 0.0.0.0 --port 8080"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: artifacts/clientmore/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      BASE_PATH: /
+    depends_on:
+      - backend
+    command: pnpm --filter clientmore run dev

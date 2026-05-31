@@ -51,7 +51,7 @@ export default function PricingPage() {
   ];
 
   return (
-    <main id="top" className="min-h-screen bg-[#050508]">
+    <main id="top" className="min-h-screen bg-background">
       <LandingNav />
 
       <Section id="pricing">
@@ -65,10 +65,10 @@ export default function PricingPage() {
           {plans.map((p) => (
             <div
               key={p.name}
-                className={`relative rounded-xl border p-7 ${
+                className={`relative rounded-2xl border p-7 transition-shadow duration-300 ${
                   p.featured
-                    ? "border-brand-500/40 bg-[#0d0d15] shadow-[var(--shadow-brand)] lg:-mt-4 lg:mb-4"
-                    : "border-[var(--border)] bg-[var(--card-bg)]"
+                    ? "border-primary/40 bg-card shadow-[var(--shadow-brand)] lg:-mt-4 lg:mb-4"
+                    : "border-border bg-card hover:shadow-md hover:border-primary/30"
               }`}
             >
               {p.featured ? (
@@ -76,15 +76,15 @@ export default function PricingPage() {
                   <Badge tone="solid">{t("pricingMostPopular")}</Badge>
                 </div>
               ) : null}
-              <h3 className="text-lg font-semibold text-white">{p.name}</h3>
-              <p className="mt-1 text-sm text-gray-400">{p.desc}</p>
+              <h3 className="text-lg font-semibold text-foreground">{p.name}</h3>
+              <p className="mt-1 text-sm text-muted-fg">{p.desc}</p>
               <div className="mt-5">
-                <span className="text-4xl font-bold text-white">{p.price}</span>
+                <span className="text-4xl font-bold tracking-tight text-foreground">{p.price}</span>
               </div>
               <ul className="mt-6 space-y-3">
                 {p.features.map((f) => (
-                  <li key={f} className="flex gap-2 text-sm text-gray-300">
-                    <Check size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-brand-400" />
+                  <li key={f} className="flex gap-2 text-sm text-foreground">
+                    <Check size={18} aria-hidden="true" className="mt-0.5 shrink-0 text-primary" />
                     {f}
                   </li>
                 ))}
@@ -100,7 +100,7 @@ export default function PricingPage() {
           ))}
         </div>
 
-        <p className="mt-10 text-center text-sm text-gray-500">{t("pricingFooterNote")}</p>
+        <p className="mt-10 text-center text-sm text-muted-fg">{t("pricingFooterNote")}</p>
       </Section>
 
       <LandingFooter />

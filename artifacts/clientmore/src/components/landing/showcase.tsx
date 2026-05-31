@@ -9,14 +9,14 @@ export function Showcase() {
   const [activeTab, setActiveTab] = useState<"overview" | "clients" | "analytics">("overview");
 
   return (
-    <section id="showcase" className="relative py-20 border-t border-[#24213f]">
+    <section id="showcase" className="relative py-20 border-t border-border">
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
         {/* Section Header */}
         <div className="text-center mb-14">
-          <h2 className="text-3xl font-bold text-white sm:text-4xl">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             {t("showcaseTitle")}
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-sm sm:text-base text-gray-400">
+          <p className="mx-auto mt-4 max-w-2xl text-sm sm:text-base text-muted-fg">
             {t("showcaseSubtitle")}
           </p>
         </div>
@@ -27,8 +27,8 @@ export function Showcase() {
             onClick={() => setActiveTab("overview")}
             className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
               activeTab === "overview"
-                ? "bg-purple-600 text-white shadow-lg shadow-purple-950/40"
-                : "bg-[#151324] border border-white/5 text-gray-400 hover:text-white"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-card border border-border text-muted-fg hover:text-foreground hover:border-primary/30"
             }`}
           >
             {t("showcaseOverviewTab")}
@@ -37,8 +37,8 @@ export function Showcase() {
             onClick={() => setActiveTab("clients")}
             className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
               activeTab === "clients"
-                ? "bg-purple-600 text-white shadow-lg shadow-purple-950/40"
-                : "bg-[#151324] border border-white/5 text-gray-400 hover:text-white"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-card border border-border text-muted-fg hover:text-foreground hover:border-primary/30"
             }`}
           >
             {t("showcaseClientsTab")}
@@ -47,8 +47,8 @@ export function Showcase() {
             onClick={() => setActiveTab("analytics")}
             className={`px-5 py-2.5 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer ${
               activeTab === "analytics"
-                ? "bg-purple-600 text-white shadow-lg shadow-purple-950/40"
-                : "bg-[#151324] border border-white/5 text-gray-400 hover:text-white"
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-card border border-border text-muted-fg hover:text-foreground hover:border-primary/30"
             }`}
           >
             {t("showcaseAnalyticsTab")}
@@ -56,13 +56,13 @@ export function Showcase() {
         </div>
 
         {/* Mock Window Container */}
-        <div className="w-full rounded-2xl border border-[#24213f] bg-[#151324] shadow-2xl overflow-hidden text-start">
+        <div className="w-full rounded-2xl border border-border bg-card shadow-md overflow-hidden text-start">
           {/* OS Style Window Top Bar */}
-          <div className="flex items-center gap-1.5 border-b border-[#24213f] bg-black/10 px-5 py-3.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-500" />
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-            <span className="text-[10px] sm:text-xs font-semibold text-gray-500 ml-4 rtl:mr-4 rtl:ml-0">
+          <div className="flex items-center gap-1.5 border-b border-border bg-muted/40 px-5 py-3.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-danger" />
+            <span className="w-2.5 h-2.5 rounded-full bg-warning" />
+            <span className="w-2.5 h-2.5 rounded-full bg-success" />
+            <span className="text-[10px] sm:text-xs font-semibold text-muted-fg ms-4">
               {activeTab === "overview" && (language === "ar" ? "لوحة التحكم - النظرة العامة" : "Dashboard - Overview")}
               {activeTab === "clients" && (language === "ar" ? "لوحة التحكم - دليل العملاء" : "Dashboard - Clients")}
               {activeTab === "analytics" && (language === "ar" ? "لوحة التحكم - الإحصائيات الفنية" : "Dashboard - Analytics")}
@@ -76,27 +76,27 @@ export function Showcase() {
               <div className="space-y-6 animate-fadeIn">
                 {/* 4 KPI Cards */}
                 <div className="grid gap-4 grid-cols-2 lg:grid-cols-4">
-                  <div className="rounded-xl border border-[#24213f] bg-black/10 p-4">
-                    <div className="text-[10px] sm:text-xs text-gray-500">{t("showcaseKpiClients")}</div>
-                    <div className="mt-1.5 text-lg sm:text-2xl font-bold text-white">128</div>
+                  <div className="rounded-xl border border-border bg-muted/40 p-4">
+                    <div className="text-[10px] sm:text-xs text-muted-fg">{t("showcaseKpiClients")}</div>
+                    <div className="mt-1.5 text-lg sm:text-2xl font-bold text-foreground">128</div>
                   </div>
-                  <div className="rounded-xl border border-[#24213f] bg-black/10 p-4">
-                    <div className="text-[10px] sm:text-xs text-gray-500">{t("showcaseKpiMRR")}</div>
-                    <div className="mt-1.5 text-lg sm:text-2xl font-bold text-emerald-400">$14,250</div>
+                  <div className="rounded-xl border border-border bg-muted/40 p-4">
+                    <div className="text-[10px] sm:text-xs text-muted-fg">{t("showcaseKpiMRR")}</div>
+                    <div className="mt-1.5 text-lg sm:text-2xl font-bold text-success">$14,250</div>
                   </div>
-                  <div className="rounded-xl border border-[#24213f] bg-black/10 p-4">
-                    <div className="text-[10px] sm:text-xs text-gray-500">{t("showcaseKpiMsgs")}</div>
-                    <div className="mt-1.5 text-lg sm:text-2xl font-bold text-purple-400">342.8K</div>
+                  <div className="rounded-xl border border-border bg-muted/40 p-4">
+                    <div className="text-[10px] sm:text-xs text-muted-fg">{t("showcaseKpiMsgs")}</div>
+                    <div className="mt-1.5 text-lg sm:text-2xl font-bold text-primary">342.8K</div>
                   </div>
-                  <div className="rounded-xl border border-[#24213f] bg-black/10 p-4">
-                    <div className="text-[10px] sm:text-xs text-gray-500">{t("showcaseKpiStability")}</div>
-                    <div className="mt-1.5 text-lg sm:text-2xl font-bold text-sky-400">99.98%</div>
+                  <div className="rounded-xl border border-border bg-muted/40 p-4">
+                    <div className="text-[10px] sm:text-xs text-muted-fg">{t("showcaseKpiStability")}</div>
+                    <div className="mt-1.5 text-lg sm:text-2xl font-bold text-info">99.98%</div>
                   </div>
                 </div>
 
                 {/* Recent Subscriptions Table */}
-                <div className="rounded-xl border border-[#24213f] bg-black/5 overflow-hidden">
-                  <div className="flex items-center justify-between border-b border-[#24213f] bg-black/10 px-4 py-3">
+                <div className="rounded-xl border border-border bg-muted/20 overflow-hidden">
+                  <div className="flex items-center justify-between border-b border-border bg-muted/40 px-4 py-3">
                     <span className="text-xs sm:text-sm font-bold text-white">{t("showcaseRecentSubscribers")}</span>
                     <span className="flex items-center gap-1.5 text-[10px] text-purple-400 font-medium">
                       <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-ping" />
@@ -166,7 +166,7 @@ export function Showcase() {
                 </div>
 
                 {/* Live Client Grid Table */}
-                <div className="rounded-xl border border-[#24213f] bg-black/5 overflow-hidden">
+                <div className="rounded-xl border border-border bg-muted/20 overflow-hidden">
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-gray-300 text-left rtl:text-right">
                       <thead className="bg-[#1c1a32]/20 text-[10px] text-gray-500 uppercase tracking-wider border-b border-[#24213f]">
@@ -231,16 +231,16 @@ export function Showcase() {
               <div className="space-y-6 animate-fadeIn">
                 {/* 3 Analytics KPIs */}
                 <div className="grid gap-4 grid-cols-3">
-                  <div className="rounded-xl border border-[#24213f] bg-black/10 p-4 text-center">
-                    <div className="text-[10px] sm:text-xs text-gray-500">{t("showcaseKpiAvgResponse")}</div>
+                  <div className="rounded-xl border border-border bg-muted/40 p-4 text-center">
+                    <div className="text-[10px] sm:text-xs text-muted-fg">{t("showcaseKpiAvgResponse")}</div>
                     <div className="mt-1.5 text-base sm:text-2xl font-bold text-sky-400">124 ms</div>
                   </div>
-                  <div className="rounded-xl border border-[#24213f] bg-black/10 p-4 text-center">
-                    <div className="text-[10px] sm:text-xs text-gray-500">{t("showcaseKpiFailureRate")}</div>
+                  <div className="rounded-xl border border-border bg-muted/40 p-4 text-center">
+                    <div className="text-[10px] sm:text-xs text-muted-fg">{t("showcaseKpiFailureRate")}</div>
                     <div className="mt-1.5 text-base sm:text-2xl font-bold text-emerald-400">0.04%</div>
                   </div>
-                  <div className="rounded-xl border border-[#24213f] bg-black/10 p-4 text-center">
-                    <div className="text-[10px] sm:text-xs text-gray-500">{t("showcaseKpiPeakVolume")}</div>
+                  <div className="rounded-xl border border-border bg-muted/40 p-4 text-center">
+                    <div className="text-[10px] sm:text-xs text-muted-fg">{t("showcaseKpiPeakVolume")}</div>
                     <div className="mt-1.5 text-base sm:text-2xl font-bold text-purple-400">
                       {language === "ar" ? "1.8K/دقيقة" : "1.8K/min"}
                     </div>

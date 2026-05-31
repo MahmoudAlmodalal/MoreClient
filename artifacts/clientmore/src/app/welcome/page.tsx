@@ -78,12 +78,12 @@ export default function WelcomePage() {
         </div>
       </div>
 
-      {/* Right — actions panel (light) */}
-      <div className="flex flex-col bg-[var(--surface-light)] text-[var(--foreground-light)]">
+      {/* Right — actions panel */}
+      <div className="flex flex-col bg-surface text-foreground">
         <div className="flex justify-end p-5">
           <button
             onClick={() => setLanguage(language === "ar" ? "en" : "ar")}
-            className="rounded-lg border border-[var(--border-light)] px-3 py-1.5 text-xs font-medium text-gray-600 transition-colors hover:bg-[var(--surface-muted)]"
+            className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-fg transition-colors hover:bg-muted hover:text-foreground"
           >
             {language === "ar" ? "English" : "العربية"}
           </button>

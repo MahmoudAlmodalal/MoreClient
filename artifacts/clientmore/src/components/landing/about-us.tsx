@@ -7,14 +7,14 @@ export function AboutUs() {
   const { t, language } = useLanguage();
 
   return (
-    <section id="about" className="relative py-20 border-t border-[#24213f]">
+    <section id="about" className="relative py-20 border-t border-border">
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
         {/* Section Header */}
         <div className="text-center mb-14">
-          <h2 className="text-3xl font-bold text-white sm:text-4xl">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             {t("aboutTitle")}
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-sm sm:text-base text-gray-400">
+          <p className="mx-auto mt-4 max-w-2xl text-sm sm:text-base text-muted-fg">
             {t("aboutSubtitle")}
           </p>
         </div>
@@ -22,7 +22,7 @@ export function AboutUs() {
         {/* Grid Content */}
         <div className="grid gap-8 md:grid-cols-12 md:items-stretch">
           {/* About Text */}
-          <div className="md:col-span-7 flex flex-col justify-center text-start space-y-5 text-sm sm:text-base leading-relaxed text-gray-300">
+          <div className="md:col-span-7 flex flex-col justify-center text-start space-y-5 text-sm sm:text-base leading-relaxed text-muted-fg [&_strong]:text-foreground">
             <p>
               {language === "ar" ? (
                 <>
@@ -49,12 +49,12 @@ export function AboutUs() {
 
           {/* Infrastructure Card */}
           <div className="md:col-span-5 flex items-center">
-            <div className="w-full rounded-2xl border border-purple-500/20 bg-purple-950/5 p-6 sm:p-8 text-start shadow-xl shadow-purple-950/5 flex flex-col justify-center">
-              <ShieldCheck className="w-12 h-12 text-brand-400 mb-5" />
-              <h3 className="text-lg sm:text-xl font-bold text-white mb-3">
+            <div className="w-full rounded-2xl border border-primary/20 bg-primary/[0.04] p-6 sm:p-8 text-start shadow-sm flex flex-col justify-center">
+              <ShieldCheck className="w-12 h-12 text-primary mb-5" />
+              <h3 className="text-lg sm:text-xl font-bold text-foreground mb-3">
                 {t("aboutCardTitle")}
               </h3>
-              <p className="text-xs sm:text-sm leading-relaxed text-gray-400">
+              <p className="text-xs sm:text-sm leading-relaxed text-muted-fg">
                 {t("aboutCardDesc")}
               </p>
             </div>

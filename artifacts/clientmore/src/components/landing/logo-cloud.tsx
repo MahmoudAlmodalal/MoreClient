@@ -16,14 +16,14 @@ export function LogoCloud() {
   return (
     <div className="py-14">
       <Container>
-        <p className="text-center text-sm text-gray-500">{t("heroTrustedBy")}</p>
+        <p className="text-center text-sm text-muted-fg">{t("heroTrustedBy")}</p>
         <div className="mt-7 flex flex-wrap items-center justify-center gap-x-10 gap-y-5">
           {channels.map((channel) => {
             const Icon = channel.icon;
             return (
             <span
               key={channel.label}
-              className="inline-flex items-center gap-2 text-sm font-semibold tracking-tight text-gray-500 transition-colors hover:text-gray-300"
+              className="inline-flex items-center gap-2 text-sm font-semibold tracking-tight text-muted-fg transition-colors hover:text-foreground"
             >
               <Icon size={18} aria-hidden="true" />
               {channel.label}

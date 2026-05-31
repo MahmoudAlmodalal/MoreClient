@@ -40,7 +40,7 @@ export function LoginCarousel() {
         {/* Logo Container */}
         <div className="bg-white rounded-xl px-8 py-5 flex flex-col items-center justify-center shadow-xl w-48 mx-auto mb-10 select-none transform hover:scale-105 transition-transform duration-300">
           <span className="text-gray-800 font-medium text-xs tracking-[0.25em] leading-none uppercase">client</span>
-          <span className="text-[#5b21b6] font-black text-2xl tracking-[0.08em] leading-none mt-1.5 uppercase">MORE</span>
+          <span className="text-brand-700 font-black text-2xl tracking-[0.08em] leading-none mt-1.5 uppercase">MORE</span>
         </div>
 
         {/* Carousel Content */}

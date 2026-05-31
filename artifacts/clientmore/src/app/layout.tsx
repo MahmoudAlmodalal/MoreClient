@@ -29,7 +29,7 @@ export default function RootLayout({
       className={`${inter.variable} ${cairo.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col bg-[#050508] text-gray-100 font-sans">
+      <body className="min-h-full flex flex-col bg-background text-foreground font-sans">
         <LanguageProvider>{children}</LanguageProvider>
       </body>
     </html>

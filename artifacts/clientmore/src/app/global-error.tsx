@@ -47,7 +47,7 @@ export default function GlobalError({
               marginTop: "2rem",
               padding: "0.625rem 1.25rem",
               borderRadius: "0.75rem",
-              backgroundImage: "linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%)",
+              backgroundImage: "linear-gradient(135deg, #5b63f5 0%, #32338f 100%)",
               color: "#fff",
               fontSize: "0.875rem",
               fontWeight: 600,

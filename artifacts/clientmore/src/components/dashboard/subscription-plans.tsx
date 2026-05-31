@@ -44,21 +44,21 @@ export function SubscriptionPlans() {
   };
 
   return (
-    <div className="rounded-xl border border-[#1f1f2e] bg-[#0d0d15] p-6 space-y-6">
+    <div className="rounded-xl border border-border bg-card p-6 space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <CreditCard className="h-5 w-5 text-purple-400" />
+          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-primary" />
             {t("billingTitle")}
           </h3>
-          <p className="mt-1 text-xs text-gray-400">{t("billingSub")}</p>
+          <p className="mt-1 text-xs text-muted-fg">{t("billingSub")}</p>
         </div>
         {notice && (
           <div
             className={`rounded-lg px-3 py-2 text-xs font-semibold ${
               notice.type === "success"
-                ? "bg-emerald-500/10 text-emerald-300 ring-1 ring-emerald-500/20"
-                : "bg-red-500/10 text-red-300 ring-1 ring-red-500/20"
+                ? "bg-success/10 text-success ring-1 ring-success/20"
+                : "bg-danger/10 text-danger ring-1 ring-danger/20"
             }`}
             role="status"
           >
@@ -68,20 +68,20 @@ export function SubscriptionPlans() {
       </div>
 
       {/* Usage Status Bar */}
-      <div className="rounded-xl bg-[#07070b] p-4 border border-[#1f1f2e]/60 space-y-3">
+      <div className="rounded-xl bg-background p-4 border border-border space-y-3">
         <div>
-          <p className="text-sm font-bold text-white">{t("currentPlanTitle")}</p>
-          <p className="mt-1 text-xs text-gray-500">{t("currentPlanSub")}</p>
+          <p className="text-sm font-bold text-foreground">{t("currentPlanTitle")}</p>
+          <p className="mt-1 text-xs text-muted-fg">{t("currentPlanSub")}</p>
         </div>
-        <div className="flex items-center justify-between text-xs text-gray-400">
-          <span className="font-semibold text-purple-400">
+        <div className="flex items-center justify-between text-xs text-muted-fg">
+          <span className="font-semibold text-primary">
             {t("usageRatio", { used: usedMessages, limit })}
           </span>
-          <span className="font-mono font-bold text-white uppercase">{subscriptionPlan}</span>
+          <span className="font-mono font-bold text-foreground uppercase">{subscriptionPlan}</span>
         </div>
-        <div className="h-2 w-full overflow-hidden rounded-full bg-[#0d0d15]">
+        <div className="h-2 w-full overflow-hidden rounded-full bg-card">
           <div
-            className="h-full bg-purple-600 transition-all duration-300"
+            className="h-full bg-primary transition-all duration-300"
             style={{ width: `${usagePercentage}%` }}
           />
         </div>
@@ -91,30 +91,30 @@ export function SubscriptionPlans() {
         {/* Pro Plan Box */}
         <div
           className={`rounded-xl border p-5 flex flex-col justify-between ${
-            subscriptionPlan === "pro" ? "border-purple-500 bg-purple-500/5" : "border-[#1f1f2e]"
+            subscriptionPlan === "pro" ? "border-primary bg-primary/5" : "border-border"
           }`}
         >
           <div>
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-bold text-white">{t("planPro")}</h4>
+              <h4 className="text-sm font-bold text-foreground">{t("planPro")}</h4>
               {subscriptionPlan === "pro" && (
-                <span className="inline-flex items-center rounded-md bg-purple-500/10 px-2 py-0.5 text-xs font-bold text-purple-400 ring-1 ring-inset ring-purple-500/20">
+                <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary ring-1 ring-inset ring-primary/20">
                   {t("activePlan")}
                 </span>
               )}
             </div>
-            <p className="text-xl font-extrabold text-white mt-2">{t("proPrice")}</p>
-            <ul className="text-xs text-gray-400 mt-4 space-y-2">
+            <p className="text-xl font-extrabold text-foreground mt-2">{t("proPrice")}</p>
+            <ul className="text-xs text-muted-fg mt-4 space-y-2">
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-purple-400" />
+                <CheckCircle2 className="h-4 w-4 text-primary" />
                 {t("proLimit")}
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-purple-400" />
+                <CheckCircle2 className="h-4 w-4 text-primary" />
                 {t("featBilingualRag")}
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-purple-400" />
+                <CheckCircle2 className="h-4 w-4 text-primary" />
                 {t("featChromaVector")}
               </li>
             </ul>
@@ -125,7 +125,7 @@ export function SubscriptionPlans() {
               type="button"
               disabled={Boolean(savingPlan)}
               onClick={() => handlePlanChange("pro")}
-              className="w-full mt-6 rounded-xl border border-[#1f1f2e] bg-[#07070b] py-2 text-xs font-bold text-gray-300 transition-colors hover:bg-[#1a1a26] disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full mt-6 rounded-xl border border-border bg-background py-2 text-xs font-bold text-muted-fg transition-colors hover:bg-muted disabled:cursor-not-allowed disabled:opacity-60"
             >
               {savingPlan === "pro" ? t("saving") : t("proPlanCta")}
             </button>
@@ -136,34 +136,34 @@ export function SubscriptionPlans() {
         <div
           className={`rounded-xl border p-5 flex flex-col justify-between ${
             subscriptionPlan === "ultra"
-              ? "border-purple-500 bg-purple-500/5 glow-purple"
-              : "border-[#1f1f2e] hover:border-purple-500/25"
+              ? "border-primary bg-primary/5 "
+              : "border-border hover:border-primary/40"
           }`}
         >
           <div>
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-bold text-white flex items-center gap-1.5">
+              <h4 className="text-sm font-bold text-foreground flex items-center gap-1.5">
                 {t("planUltra")}
-                <Sparkles className="h-4 w-4 text-yellow-400" />
+                <Sparkles className="h-4 w-4 text-warning" />
               </h4>
               {subscriptionPlan === "ultra" && (
-                <span className="inline-flex items-center rounded-md bg-purple-500/10 px-2 py-0.5 text-xs font-bold text-purple-400 ring-1 ring-inset ring-purple-500/20">
+                <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-0.5 text-xs font-bold text-primary ring-1 ring-inset ring-primary/20">
                   {t("activePlan")}
                 </span>
               )}
             </div>
-            <p className="text-xl font-extrabold text-white mt-2">{t("ultraPrice")}</p>
-            <ul className="text-xs text-gray-400 mt-4 space-y-2">
+            <p className="text-xl font-extrabold text-foreground mt-2">{t("ultraPrice")}</p>
+            <ul className="text-xs text-muted-fg mt-4 space-y-2">
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-purple-400" />
+                <CheckCircle2 className="h-4 w-4 text-primary" />
                 {t("ultraLimit")}
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-purple-400" />
+                <CheckCircle2 className="h-4 w-4 text-primary" />
                 {t("featAllProBenefits")} + {t("featSlaGuarantee")}
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-purple-400" />
+                <CheckCircle2 className="h-4 w-4 text-primary" />
                 {t("featPriorityHandoff")}
               </li>
             </ul>
@@ -174,7 +174,7 @@ export function SubscriptionPlans() {
               type="button"
               disabled={Boolean(savingPlan)}
               onClick={() => handlePlanChange("ultra")}
-              className="w-full mt-6 rounded-xl bg-purple-600 py-2 text-xs font-bold text-white transition-colors hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full mt-6 rounded-xl bg-primary py-2 text-xs font-bold text-foreground transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-60"
             >
               {savingPlan === "ultra" ? t("saving") : t("upgradeToUltra")}
             </button>

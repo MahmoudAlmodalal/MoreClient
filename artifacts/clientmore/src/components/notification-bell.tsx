@@ -134,12 +134,12 @@ export function NotificationBell() {
             handoffId: id,
             eventType: "handoff.created",
             title: t(
-              ({
+              (({
                 low_confidence: "handoffNotificationLowConfidence",
                 complaint: "handoffNotificationComplaint",
                 support_request: "handoffNotificationSupportRequest",
                 unsafe_or_unanswered: "handoffNotificationUnsafe",
-              } as Record<string, string>)[reason] ?? "handoffNotificationLowConfidence"
+              } as Record<string, string>)[reason] ?? "handoffNotificationLowConfidence") as Parameters<typeof t>[0]
             ),
             body: question || null,
             linkUrl: "/dashboard/handoffs",

@@ -6,7 +6,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   apiGet,
   apiSend,
-  createWebSocketUrl,
   createAuthenticatedWebSocketUrl,
   type AnalyticsResponse,
   type AnalyticsSocketMessage

@@ -33,7 +33,7 @@ function NavLogo() {
 }
 
 export function LandingNav() {
-  const { t, language, setLanguage, isRtl } = useLanguage();
+  const { t, language, setLanguage } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);

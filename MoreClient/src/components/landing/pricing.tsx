@@ -5,7 +5,7 @@ import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 
 export function Pricing() {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
 
   const plansAr = [
     {

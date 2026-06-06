@@ -11,7 +11,7 @@ interface Message {
 }
 
 export function Hero() {
-  const { t, language, isRtl } = useLanguage();
+  const { language } = useLanguage();
   const chatBodyRef = useRef<HTMLDivElement>(null);
 
   // Initial messages

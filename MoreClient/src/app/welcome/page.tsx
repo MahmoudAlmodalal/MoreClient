@@ -33,8 +33,8 @@ export default function WelcomePage() {
     try {
       const session = await login(email, password);
       router.push(session.redirectTo);
-    } catch (err: any) {
-      setError(err.message || "Login failed");
+    } catch (err) {
+      setError((err as Error).message || "Login failed");
       setLoading(false);
     }
   };
@@ -45,8 +45,8 @@ export default function WelcomePage() {
     try {
       const res = await startSocialAuth(provider, "login");
       window.location.href = res.authUrl;
-    } catch (err: any) {
-      setError(err?.message || "Failed to start social login");
+    } catch (err) {
+      setError((err as Error)?.message || "Failed to start social login");
       setLoading(false);
     }
   };

@@ -176,7 +176,7 @@ export default function SuperAdminPage() {
     setCurrentTenant(tenant);
     setEditTenantName(tenant.name);
     setEditTenantEmail(tenant.email);
-    setEditTenantPlan(tenant.plan as any);
+    setEditTenantPlan(tenant.plan as "pro" | "ultra" | "custom");
     setEditTenantLimit(tenant.limitMessages);
     setIsEditModalOpen(true);
   };
@@ -526,7 +526,7 @@ export default function SuperAdminPage() {
                   <label className="text-xs font-bold text-text-muted uppercase tracking-wider">{t("tenantPlanCol")}</label>
                   <select
                     value={newTenantPlan}
-                    onChange={e => setNewTenantPlan(e.target.value as any)}
+                    onChange={e => setNewTenantPlan(e.target.value as "pro" | "ultra" | "custom")}
                     className="w-full rounded-xl border border-border-custom bg-background p-2.5 text-sm text-foreground focus:border-brand-500 focus:outline-none"
                   >
                     <option value="pro">Pro Tier ($500)</option>
@@ -588,7 +588,7 @@ export default function SuperAdminPage() {
                     <label className="text-xs font-bold text-text-muted uppercase tracking-wider">{t("tenantPlanCol")}</label>
                     <select
                       value={editTenantPlan}
-                      onChange={e => setEditTenantPlan(e.target.value as any)}
+                      onChange={e => setEditTenantPlan(e.target.value as "pro" | "ultra" | "custom")}
                       className="w-full rounded-xl border border-border-custom bg-background p-2.5 text-sm text-foreground focus:border-brand-500 focus:outline-none"
                     >
                       <option value="pro">Pro Tier ($500)</option>

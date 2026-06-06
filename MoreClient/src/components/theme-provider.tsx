@@ -20,9 +20,15 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     const savedTheme = localStorage.getItem("theme") as Theme | null;
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     const initialTheme = savedTheme || (prefersDark ? "dark" : "light");
-    setThemeState(initialTheme);
+    
+    // Defer state updates to avoid React synchronous state update warnings
+    const timer = setTimeout(() => {
+      setThemeState(initialTheme);
+      setMounted(true);
+    }, 0);
+    
     document.documentElement.classList.toggle("dark", initialTheme === "dark");
-    setMounted(true);
+    return () => clearTimeout(timer);
   }, []);
 
   const setTheme = (newTheme: Theme) => {

@@ -5,7 +5,7 @@ import { ChevronDown } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 
 export function Faq() {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const [openIdx, setOpenIdx] = useState<number | null>(0);
 
   const itemsAr = [

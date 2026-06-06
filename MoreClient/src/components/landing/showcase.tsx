@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Sliders, MessageSquare, Plus, Search, Filter } from "lucide-react";
+import { Sliders, Plus, Search, Filter } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 
 export function Showcase() {

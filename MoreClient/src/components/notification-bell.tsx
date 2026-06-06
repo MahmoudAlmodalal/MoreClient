@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
-import { apiGet, createWebSocketUrl, createAuthenticatedWebSocketUrl, type HandoffOut, type DashboardSocketMessage } from "@/lib/api";
+import { apiGet, createAuthenticatedWebSocketUrl, type HandoffOut, type DashboardSocketMessage } from "@/lib/api";
 import { useAsyncOnMount } from "@/lib/use-async-effect";
 
 interface NotificationItem {
@@ -31,7 +31,7 @@ function setLastSeenId(id: number): void {
 
 function handoffToNotification(
   h: HandoffOut,
-  t: any,
+  t: ReturnType<typeof useLanguage>["t"],
 ): NotificationItem {
   const reasonKey: Record<string, string> = {
     low_confidence: "handoffNotificationLowConfidence",
@@ -45,7 +45,7 @@ function handoffToNotification(
     id: `handoff-${h.id}`,
     handoffId: h.id,
     eventType: "handoff.created",
-    title: t(titleKey),
+    title: t(titleKey as Parameters<ReturnType<typeof useLanguage>["t"]>[0]),
     body: h.messages.find((m) => m.role === "user")?.content ?? null,
     linkUrl: "/dashboard/handoffs",
     readAt: h.id <= lastSeenId ? new Date().toISOString() : null,
@@ -106,12 +106,12 @@ export function NotificationBell() {
             handoffId: id,
             eventType: "handoff.created",
             title: t(
-              (({
+              ((({
                 low_confidence: "handoffNotificationLowConfidence",
                 complaint: "handoffNotificationComplaint",
                 support_request: "handoffNotificationSupportRequest",
                 unsafe_or_unanswered: "handoffNotificationUnsafe",
-              } as Record<string, string>)[reason] ?? "handoffNotificationLowConfidence") as any
+              } as Record<string, string>)[reason] ?? "handoffNotificationLowConfidence") as Parameters<ReturnType<typeof useLanguage>["t"]>[0])
             ),
             body: question || null,
             linkUrl: "/dashboard/handoffs",

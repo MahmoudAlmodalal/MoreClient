@@ -14,8 +14,10 @@ function AuthCallbackContent() {
     const state = searchParams.get("state");
 
     if (!code || !state) {
-      setError("Missing code or state parameters from authentication redirect.");
-      return;
+      const timer = setTimeout(() => {
+        setError("Missing code or state parameters from authentication redirect.");
+      }, 0);
+      return () => clearTimeout(timer);
     }
 
     const codeStr = code;
@@ -29,9 +31,9 @@ function AuthCallbackContent() {
         if (isMounted) {
           router.push(session.redirectTo || "/dashboard");
         }
-      } catch (err: any) {
+      } catch (err) {
         if (isMounted) {
-          setError(err?.message || "Failed to complete authentication.");
+          setError((err as Error)?.message || "Failed to complete authentication.");
         }
       }
     }

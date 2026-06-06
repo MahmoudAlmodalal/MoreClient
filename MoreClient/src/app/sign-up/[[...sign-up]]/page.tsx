@@ -37,8 +37,8 @@ export default function SignUpPage() {
     try {
       const session = await register(name, email, password, name);
       router.push(session.redirectTo);
-    } catch (err: any) {
-      setError(err.message || "Registration failed");
+    } catch (err) {
+      setError((err as Error).message || "Registration failed");
       setLoading(false);
     }
   };
@@ -49,8 +49,8 @@ export default function SignUpPage() {
     try {
       const res = await startSocialAuth(provider, "signup");
       window.location.href = res.authUrl;
-    } catch (err: any) {
-      setError(err?.message || "Failed to start social signup");
+    } catch (err) {
+      setError((err as Error)?.message || "Failed to start social signup");
       setLoading(false);
     }
   };

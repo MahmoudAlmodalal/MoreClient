@@ -9,10 +9,6 @@ const sizeMap: Record<LogoSize, { text: string; mark: number; gap: string }> = {
   lg: { text: "text-4xl", mark: 34, gap: "gap-2" },
 };
 
-/**
- * The smiley face that replaces the "O" in MORE — the clientMORE brand mark.
- * Uses currentColor so it inherits the surrounding text color.
- */
 function SmileyMark({ size }: { size: number }) {
   return (
     <svg
@@ -36,12 +32,6 @@ function SmileyMark({ size }: { size: number }) {
   );
 }
 
-/**
- * clientMORE wordmark. The single source of truth for the brand mark.
- * - `dark`  — for dark backgrounds (light "client", gradient "MORE")
- * - `light` — for light backgrounds (dark "client", brand-purple "MORE")
- * - `mark`  — the smiley icon only
- */
 export function Logo({
   variant = "dark",
   size = "md",
@@ -55,14 +45,14 @@ export function Logo({
 
   if (variant === "mark") {
     return (
-      <span className={`text-brand-500 ${className}`}>
+      <span className={`text-brand-600 dark:text-brand-400 ${className}`}>
         <SmileyMark size={s.mark} />
       </span>
     );
   }
 
-  const clientColor = variant === "light" ? "text-gray-900" : "text-white";
-  const moreColor = variant === "light" ? "text-brand-700" : "text-gradient-brand";
+  const clientColor = "text-foreground";
+  const moreColor = "text-brand-600 dark:text-brand-400";
 
   return (
     <span

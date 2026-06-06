@@ -4,6 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
+import { useTheme } from "@/components/theme-provider";
 import { useSessionRole } from "@/lib/use-session-role";
 import { logout } from "@/lib/api";
 import { NotificationBell } from "@/components/notification-bell";
@@ -18,7 +19,9 @@ import {
   X,
   Languages,
   Activity,
-  ShieldAlert
+  ShieldAlert,
+  Sun,
+  Moon
 } from "lucide-react";
 
 export default function DashboardLayout({
@@ -27,6 +30,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { language, setLanguage, t, isRtl, companyName, companyLogo } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
@@ -41,8 +45,6 @@ export default function DashboardLayout({
     ...(isAdmin ? [{ name: t("superAdminTitle"), href: "/admin", icon: ShieldAlert }] : []),
   ];
 
-  // While the mobile drawer is open, close it on Escape and lock background
-  // scroll so the page behind the overlay doesn't move under the user's finger.
   useEffect(() => {
     if (!mobileMenuOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -67,15 +69,15 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#050508]">
+    <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-200">
       {/* Top Header */}
-      <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-[#1f1f2e] bg-[#07070b]/80 px-4 backdrop-blur-md md:px-6">
+      <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-border-custom bg-card/80 px-4 backdrop-blur-md md:px-6">
         <div className="flex items-center gap-3">
           <button
             type="button"
             aria-label={isRtl ? "فتح القائمة" : "Open menu"}
             aria-expanded={mobileMenuOpen}
-            className="text-gray-400 hover:text-gray-100 md:hidden"
+            className="text-text-muted hover:text-foreground md:hidden"
             onClick={() => setMobileMenuOpen(true)}
           >
             <Menu className="h-6 w-6" aria-hidden="true" />
@@ -86,38 +88,48 @@ export default function DashboardLayout({
             <img
               src={companyLogo}
               alt="Logo"
-              className="h-9 w-9 rounded-xl object-cover border border-purple-500/30"
+              className="h-9 w-9 rounded-xl object-cover border border-brand-500/30"
             />
             <div>
-              <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-1.5">
+              <h1 className="text-lg font-bold tracking-tight text-foreground flex items-center gap-1.5">
                 {companyName}
-                <span className="inline-flex items-center rounded-md bg-purple-500/10 px-1.5 py-0.5 text-xs font-medium text-purple-400 ring-1 ring-inset ring-purple-500/20">
+                <span className="inline-flex items-center rounded-md bg-brand-500/10 px-1.5 py-0.5 text-[10px] sm:text-xs font-semibold text-brand-600 dark:text-brand-400 border border-brand-500/20">
                   {t("adminPanel")}
                 </span>
               </h1>
-              <p className="text-[10px] text-gray-500 hidden sm:block">
+              <p className="text-[10px] text-text-muted hidden sm:block">
                 {t("builtInGaza")}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2.5 sm:gap-4">
+          {/* Theme switcher */}
+          <button
+            onClick={toggleTheme}
+            className="flex items-center justify-center h-9 w-9 rounded-lg border border-border-custom bg-card text-foreground/80 hover:bg-foreground/5 transition-all"
+            aria-label="Toggle theme"
+          >
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </button>
+
           {/* Language Switcher */}
           <button
             onClick={handleLanguageToggle}
-            className="flex items-center gap-2 rounded-lg border border-[#1f1f2e] bg-[#0d0d15] px-3 py-1.5 text-xs font-medium text-gray-300 hover:bg-[#1a1a26] transition-colors"
+            className="flex items-center gap-2 rounded-lg border border-border-custom bg-card px-3 py-1.5 text-xs font-medium text-foreground/80 hover:bg-foreground/5 transition-colors"
           >
-            <Languages className="h-4 w-4 text-purple-400" />
-            <span>{language === "en" ? "العربية (AR)" : "English (EN)"}</span>
+            <Languages className="h-4 w-4 text-brand-600 dark:text-brand-400" />
+            <span className="hidden sm:inline">{language === "en" ? "العربية (AR)" : "English (EN)"}</span>
+            <span className="sm:hidden">{language === "en" ? "AR" : "EN"}</span>
           </button>
 
           {/* Notification Bell */}
           <NotificationBell />
 
           {/* Quick Status Light */}
-          <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-400 ring-1 ring-inset ring-emerald-500/20">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+          <div className="flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
             <span className="hidden xs:inline">{t("connected")}</span>
           </div>
         </div>
@@ -126,7 +138,7 @@ export default function DashboardLayout({
       {/* Main Body */}
       <div className="flex flex-1">
         {/* Desktop Sidebar */}
-        <aside className="hidden w-64 flex-col border-r border-[#1f1f2e] bg-[#07070b] p-4 md:flex">
+        <aside className="hidden w-64 flex-col border-r border-border-custom bg-card p-4 md:flex">
           <nav className="flex-1 space-y-1.5">
             {navigation.map((item) => {
               const isActive = pathname === item.href;
@@ -135,10 +147,10 @@ export default function DashboardLayout({
                 <Link
                   key={item.name}
                   href={item.href}
-                  className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 ${
+                  className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-all duration-200 active:scale-98 ${
                     isActive
-                      ? "bg-purple-600 text-white shadow-lg shadow-purple-600/15"
-                      : "text-gray-400 hover:bg-[#0d0d15] hover:text-white"
+                      ? "bg-accent text-white shadow-sm"
+                      : "text-text-muted hover:bg-foreground/5 hover:text-foreground"
                   }`}
                 >
                   <Icon className="h-5 w-5 shrink-0" />
@@ -149,16 +161,16 @@ export default function DashboardLayout({
           </nav>
 
           {/* Logout & Footer */}
-          <div className="mt-auto border-t border-[#1f1f2e] pt-4 space-y-4">
+          <div className="mt-auto border-t border-border-custom pt-4 space-y-4">
             <button
               onClick={handleLogout}
-              className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-all duration-200"
+              className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-red-500 hover:bg-red-500/10 hover:text-red-600 transition-all duration-200 active:scale-98"
             >
               <LogOut className="h-5 w-5 shrink-0" />
               <span>{t("logout")}</span>
             </button>
-            <div className="flex items-center gap-2 px-2 text-xs text-gray-500">
-              <Activity className="h-4 w-4 text-purple-500 animate-pulse" />
+            <div className="flex items-center gap-2 px-2 text-xs text-text-muted">
+              <Activity className="h-4 w-4 text-brand-600 dark:text-brand-400 animate-pulse" />
               <span>clientMORE v1.0.0</span>
             </div>
           </div>
@@ -170,21 +182,21 @@ export default function DashboardLayout({
             <button
               type="button"
               aria-label={isRtl ? "إغلاق القائمة" : "Close menu"}
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+              className="fixed inset-0 bg-black/40 backdrop-blur-xs"
               onClick={() => setMobileMenuOpen(false)}
             />
             <div
               role="dialog"
               aria-modal="true"
               aria-label={t("adminPanel")}
-              className={`fixed inset-y-0 ${isRtl ? "right-0" : "left-0"} z-50 w-full max-w-xs bg-[#07070b] p-6 shadow-xl`}
+              className={`fixed inset-y-0 ${isRtl ? "right-0" : "left-0"} z-50 w-full max-w-xs bg-card p-6 border-r border-border-custom shadow-lg`}
             >
               <div className="flex items-center justify-between mb-8">
-                <h2 className="text-lg font-bold text-white">{t("adminPanel")}</h2>
+                <h2 className="text-lg font-bold text-foreground">{t("adminPanel")}</h2>
                 <button
                   type="button"
                   aria-label={isRtl ? "إغلاق القائمة" : "Close menu"}
-                  className="rounded-md p-1.5 text-gray-400 hover:bg-[#1a1a26] hover:text-white"
+                  className="rounded-md p-1.5 text-text-muted hover:bg-foreground/5 hover:text-foreground"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   <X className="h-6 w-6" aria-hidden="true" />
@@ -200,10 +212,10 @@ export default function DashboardLayout({
                       key={item.name}
                       href={item.href}
                       onClick={() => setMobileMenuOpen(false)}
-                      className={`flex items-center gap-3 rounded-xl px-4 py-3 text-base font-medium transition-all ${
+                      className={`flex items-center gap-3 rounded-xl px-4 py-3 text-base font-medium transition-all active:scale-98 ${
                         isActive
-                          ? "bg-purple-600 text-white"
-                          : "text-gray-400 hover:bg-[#0d0d15]"
+                          ? "bg-accent text-white"
+                          : "text-text-muted hover:bg-foreground/5"
                       }`}
                     >
                       <Icon className="h-5 w-5 shrink-0" />
@@ -216,7 +228,7 @@ export default function DashboardLayout({
               <div className="absolute bottom-6 left-6 right-6">
                 <button
                   onClick={handleLogout}
-                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 py-3 text-sm font-semibold text-red-400 hover:bg-red-500/10"
+                  className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 py-3 text-sm font-semibold text-red-500 hover:bg-red-500/10 active:scale-98"
                 >
                   <LogOut className="h-4 w-4" />
                   <span>{t("logout")}</span>

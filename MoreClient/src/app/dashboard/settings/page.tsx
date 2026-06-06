@@ -276,9 +276,9 @@ export default function SettingsPage() {
 
       <form onSubmit={handleSave} className="space-y-6">
         {/* Profile Card */}
-        <div className="rounded-xl border border-[#1f1f2e] bg-[#0d0d15] p-6">
-          <h3 className="text-base font-bold text-white flex items-center gap-2 mb-6">
-            <Bot className="h-5 w-5 text-purple-400" />
+        <div className="rounded-xl border border-border-custom bg-card p-6">
+          <h3 className="text-base font-bold text-foreground flex items-center gap-2 mb-6">
+            <Bot className="h-5 w-5 text-brand-600 dark:text-brand-400" />
             {t("tenantSection")}
           </h3>
 
@@ -292,7 +292,7 @@ export default function SettingsPage() {
                 type="text"
                 value={companyName}
                 onChange={(e) => setCompanyName(e.target.value)}
-                className="w-full rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                className="w-full rounded-xl border border-border-custom bg-background px-4 py-2.5 text-sm text-foreground placeholder-text-muted/50 focus:border-brand-500 focus:outline-none"
               />
             </div>
 
@@ -305,7 +305,7 @@ export default function SettingsPage() {
                 type="text"
                 value={botName}
                 onChange={(e) => setBotName(e.target.value)}
-                className="w-full rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                className="w-full rounded-xl border border-border-custom bg-background px-4 py-2.5 text-sm text-foreground placeholder-text-muted/50 focus:border-brand-500 focus:outline-none"
               />
             </div>
 
@@ -320,7 +320,7 @@ export default function SettingsPage() {
                     setUploadMode(!uploadMode);
                     setUploadError(null);
                   }}
-                  className="text-xs font-semibold text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors cursor-pointer"
+                  className="text-xs font-semibold text-brand-600 dark:text-brand-400 hover:text-brand-500 flex items-center gap-1 transition-colors cursor-pointer"
                 >
                   {uploadMode ? (
                     <>
@@ -339,22 +339,22 @@ export default function SettingsPage() {
               {uploadMode ? (
                 <div>
                   {logoInput ? (
-                    <div className="flex items-center justify-between rounded-xl border border-[#1f1f2e] bg-[#07070b] p-4">
+                    <div className="flex items-center justify-between rounded-xl border border-border-custom bg-background p-4">
                       <div className="flex items-center gap-4">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={logoInput}
                           alt="Logo Preview"
-                          className="h-16 w-16 rounded-xl object-cover border border-purple-500/20 shadow-md"
+                          className="h-16 w-16 rounded-xl object-cover border border-brand-500/20 shadow-md"
                           onError={(e) => {
                             (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80";
                           }}
                         />
                         <div>
-                          <p className="text-sm font-bold text-white">
+                          <p className="text-sm font-bold text-foreground">
                             {language === "ar" ? "شعار الشركة المفعل" : "Active Company Logo"}
                           </p>
-                          <p className="text-xs text-gray-500 mt-1">
+                          <p className="text-xs text-text-muted mt-1">
                             {logoInput.startsWith("data:")
                               ? (language === "ar" ? "شعار مرفوع (صيغة Base64)" : "Uploaded Image (Base64 Format)")
                               : (language === "ar" ? "شعار من رابط خارجي" : "External URL Image")}
@@ -364,7 +364,7 @@ export default function SettingsPage() {
                       <button
                         type="button"
                         onClick={handleRemoveLogo}
-                        className="flex items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs font-semibold text-red-400 hover:bg-red-500/10 transition-all cursor-pointer"
+                        className="flex items-center gap-1.5 rounded-lg border border-red-500/20 bg-red-500/5 px-3 py-2 text-xs font-semibold text-red-500 hover:bg-red-500/10 transition-all cursor-pointer"
                       >
                         <Trash2 className="h-4 w-4" />
                         <span className="hidden sm:inline">{t("removeLogo")}</span>
@@ -379,8 +379,8 @@ export default function SettingsPage() {
                       onClick={() => document.getElementById("logo-file-input")?.click()}
                       className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-6 text-center cursor-pointer transition-all duration-200 ${
                         dragActive
-                          ? "border-purple-500 bg-purple-500/5 scale-[0.99]"
-                          : "border-[#1f1f2e] bg-[#0d0d15] hover:border-[#2e2e42]"
+                          ? "border-accent bg-accent/5 scale-[0.99]"
+                          : "border-border-custom bg-card hover:border-accent/50"
                       }`}
                     >
                       <input
@@ -390,13 +390,13 @@ export default function SettingsPage() {
                         className="hidden"
                         onChange={handleFileChange}
                       />
-                      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400 hover:scale-110 transition-transform">
+                      <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 group-hover:scale-105 transition-transform animate-pulse">
                         <Upload className="h-5 w-5" />
                       </div>
-                      <p className="mt-3 text-sm font-bold text-white">
+                      <p className="mt-3 text-sm font-bold text-foreground">
                         {t("dragDropOrClick")}
                       </p>
-                      <p className="mt-1 text-xs text-gray-500">
+                      <p className="mt-1 text-xs text-text-muted">
                         {t("fileRequirements")}
                       </p>
                     </div>
@@ -419,13 +419,13 @@ export default function SettingsPage() {
                       setUploadError(null);
                     }}
                     placeholder="https://example.com/logo.png"
-                    className="flex-1 rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                    className="flex-1 rounded-xl border border-border-custom bg-background px-4 py-2.5 text-sm text-foreground placeholder-text-muted/50 focus:border-brand-500 focus:outline-none"
                   />
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={logoInput}
                     alt="Preview"
-                    className="h-10 w-10 rounded-xl object-cover border border-[#1f1f2e]"
+                    className="h-10 w-10 rounded-xl object-cover border border-border-custom"
                     onError={(e) => {
                       (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=100&auto=format&fit=crop&q=80";
                     }}
@@ -441,7 +441,7 @@ export default function SettingsPage() {
               <select
                 value={botTone}
                 onChange={(e) => setBotTone(e.target.value)}
-                className="w-full rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none"
+                className="w-full rounded-xl border border-border-custom bg-background px-4 py-2.5 text-sm text-foreground focus:border-brand-500 focus:outline-none"
               >
                 <option value="friendly">{t("toneFriendly")}</option>
                 <option value="professional">{t("toneProfessional")}</option>
@@ -458,24 +458,24 @@ export default function SettingsPage() {
                 value={systemPromptExtra}
                 onChange={(e) => setSystemPromptExtra(e.target.value)}
                 placeholder={t("systemPromptExtraPlaceholder")}
-                className="w-full rounded-xl border border-[#1f1f2e] bg-[#07070b] p-3 text-sm text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                className="w-full rounded-xl border border-border-custom bg-background p-3 text-sm text-foreground placeholder-text-muted/50 focus:border-brand-500 focus:outline-none"
               />
             </div>
           </div>
         </div>
 
         {/* Channels Integration Credentials Setup */}
-        <div className="rounded-xl border border-[#1f1f2e] bg-[#0d0d15] p-6 space-y-6">
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <Activity className="h-5 w-5 text-emerald-400" />
+        <div className="rounded-xl border border-border-custom bg-card p-6 space-y-6">
+          <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+            <Activity className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
             {t("integrationsTitle")}
           </h3>
 
           {/* Telegram Settings */}
-          <div className="rounded-xl border border-[#1f1f2e]/60 bg-[#07070b] p-5 space-y-4">
+          <div className="rounded-xl border border-border-custom/60 bg-background p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                <SendHorizontal className="h-4 w-4 text-blue-400" />
+              <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                <SendHorizontal className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                 {t("telegramConfig")}
               </h4>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -485,7 +485,7 @@ export default function SettingsPage() {
                   onChange={(e) => setIsTelegramActive(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-9 h-5 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                <div className="w-9 h-5 bg-foreground/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-600"></div>
               </label>
             </div>
 
@@ -499,17 +499,17 @@ export default function SettingsPage() {
                   type="password"
                   value={telegramToken}
                   onChange={(e) => setTelegramToken(e.target.value)}
-                  className="w-full rounded-xl border border-[#1f1f2e] bg-[#0d0d15] px-4 py-2.5 text-xs text-white focus:border-purple-500 focus:outline-none"
+                  className="w-full rounded-xl border border-border-custom bg-background px-4 py-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
                 />
               </div>
             )}
           </div>
 
           {/* WhatsApp Settings */}
-          <div className="rounded-xl border border-[#1f1f2e]/60 bg-[#07070b] p-5 space-y-4">
+          <div className="rounded-xl border border-border-custom/60 bg-background p-5 space-y-4">
             <div className="flex items-center justify-between">
-              <h4 className="text-sm font-bold text-white flex items-center gap-2">
-                <Smartphone className="h-4 w-4 text-emerald-400" />
+              <h4 className="text-sm font-bold text-foreground flex items-center gap-2">
+                <Smartphone className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 {t("whatsappConfig")}
               </h4>
               <label className="relative inline-flex items-center cursor-pointer">
@@ -519,7 +519,7 @@ export default function SettingsPage() {
                   onChange={(e) => setIsWhatsappActive(e.target.checked)}
                   className="sr-only peer"
                 />
-                <div className="w-9 h-5 bg-gray-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                <div className="w-9 h-5 bg-foreground/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-brand-600"></div>
               </label>
             </div>
 
@@ -534,7 +534,7 @@ export default function SettingsPage() {
                     type="text"
                     value={twilioSid}
                     onChange={(e) => setTwilioSid(e.target.value)}
-                    className="w-full rounded-xl border border-[#1f1f2e] bg-[#0d0d15] px-4 py-2.5 text-xs text-white focus:border-purple-500 focus:outline-none"
+                    className="w-full rounded-xl border border-border-custom bg-card px-4 py-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
                   />
                 </div>
                 <div>
@@ -546,7 +546,7 @@ export default function SettingsPage() {
                     type="password"
                     value={twilioToken}
                     onChange={(e) => setTwilioToken(e.target.value)}
-                    className="w-full rounded-xl border border-[#1f1f2e] bg-[#0d0d15] px-4 py-2.5 text-xs text-white focus:border-purple-500 focus:outline-none"
+                    className="w-full rounded-xl border border-border-custom bg-card px-4 py-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
                   />
                 </div>
                 <div>
@@ -558,7 +558,7 @@ export default function SettingsPage() {
                     type="text"
                     value={twilioNumber}
                     onChange={(e) => setTwilioNumber(e.target.value)}
-                    className="w-full rounded-xl border border-[#1f1f2e] bg-[#0d0d15] px-4 py-2.5 text-xs text-white focus:border-purple-500 focus:outline-none"
+                    className="w-full rounded-xl border border-border-custom bg-card px-4 py-2.5 text-xs text-foreground focus:border-brand-500 focus:outline-none"
                   />
                 </div>
               </div>
@@ -567,13 +567,13 @@ export default function SettingsPage() {
         </div>
 
         {/* Purchase Flow Automation */}
-        <div className="rounded-xl border border-[#1f1f2e] bg-[#0d0d15] p-6 space-y-6">
+        <div className="rounded-xl border border-border-custom bg-card p-6 space-y-6">
           <div>
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <ShoppingCart className="h-5 w-5 text-emerald-400" />
+            <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+              <ShoppingCart className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
               {t("purchaseFlowTitle")}
             </h3>
-            <p className="mt-1 text-xs text-gray-400">{t("purchaseFlowSub")}</p>
+            <p className="mt-1 text-xs text-text-muted">{t("purchaseFlowSub")}</p>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -588,14 +588,14 @@ export default function SettingsPage() {
             ].map(([label, checked, setter]) => (
               <label
                 key={String(label)}
-                className="flex items-center justify-between gap-4 rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-3"
+                className="flex items-center justify-between gap-4 rounded-xl border border-border-custom bg-background px-4 py-3"
               >
-                <span className="text-sm font-semibold text-gray-200">{String(label)}</span>
+                <span className="text-sm font-semibold text-foreground/80">{String(label)}</span>
                 <input
                   type="checkbox"
                   checked={Boolean(checked)}
                   onChange={(e) => (setter as (val: boolean) => void)(e.target.checked)}
-                  className="h-4 w-4 rounded border-[#1f1f2e] bg-[#0d0d15] text-purple-600 focus:ring-purple-500"
+                  className="h-4 w-4 rounded border-border-custom bg-card text-brand-600 focus:ring-brand-500"
                 />
               </label>
             ))}
@@ -612,7 +612,7 @@ export default function SettingsPage() {
                 max={240}
                 value={purchaseSessionMinutes}
                 onChange={(e) => setPurchaseSessionMinutes(Number(e.target.value))}
-                className="w-full rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none"
+                className="w-full rounded-xl border border-border-custom bg-background px-4 py-2.5 text-sm text-foreground focus:border-brand-500 focus:outline-none"
               />
             </div>
             <div>
@@ -623,7 +623,7 @@ export default function SettingsPage() {
                 type="text"
                 value={purchaseCurrencyLabel}
                 onChange={(e) => setPurchaseCurrencyLabel(e.target.value)}
-                className="w-full rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none"
+                className="w-full rounded-xl border border-border-custom bg-background px-4 py-2.5 text-sm text-foreground focus:border-brand-500 focus:outline-none"
               />
             </div>
             <div>
@@ -637,20 +637,20 @@ export default function SettingsPage() {
                 step={0.05}
                 value={intentConfidenceThreshold}
                 onChange={(e) => setIntentConfidenceThreshold(Number(e.target.value))}
-                className="w-full rounded-xl border border-[#1f1f2e] bg-[#07070b] px-4 py-2.5 text-sm text-white focus:border-purple-500 focus:outline-none"
+                className="w-full rounded-xl border border-border-custom bg-background px-4 py-2.5 text-sm text-foreground focus:border-brand-500 focus:outline-none"
               />
             </div>
           </div>
         </div>
 
         {/* Web Widget Integration Card */}
-        <div className="rounded-xl border border-[#1f1f2e] bg-[#0d0d15] p-6 space-y-6">
+        <div className="rounded-xl border border-border-custom bg-card p-6 space-y-6">
           <div>
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
-              <Globe className="h-5 w-5 text-purple-400" />
+            <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+              <Globe className="h-5 w-5 text-brand-600 dark:text-brand-400" />
               {t("widgetIntegrationTitle")}
             </h3>
-            <p className="mt-1 text-xs text-gray-400">
+            <p className="mt-1 text-xs text-text-muted">
               {t("widgetIntegrationSub")}
             </p>
           </div>
@@ -658,18 +658,18 @@ export default function SettingsPage() {
           {/* Script Snippet Block */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-400 uppercase">
+              <span className="text-xs font-semibold text-text-muted uppercase">
                 {t("widgetScriptLabel")}
               </span>
               <button
                 type="button"
                 onClick={() => copyToClipboard(widgetScriptSnippet, "script")}
-                className="flex items-center gap-1.5 rounded-lg border border-[#1f1f2e] bg-[#07070b] px-3 py-1.5 text-xs text-purple-400 hover:text-white transition-colors"
+                className="flex items-center gap-1.5 rounded-lg border border-border-custom bg-background px-3 py-1.5 text-xs text-brand-600 dark:text-brand-400 hover:text-foreground transition-colors cursor-pointer"
               >
                 {copiedScript ? (
                   <>
-                    <Check className="h-3.5 w-3.5 text-emerald-400 animate-in zoom-in duration-200" />
-                    <span className="text-emerald-400">{t("copied")}</span>
+                    <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 animate-in zoom-in duration-200" />
+                    <span className="text-emerald-600 dark:text-emerald-400">{t("copied")}</span>
                   </>
                 ) : (
                   <>
@@ -680,11 +680,11 @@ export default function SettingsPage() {
               </button>
             </div>
             <div className="relative">
-              <pre className="overflow-x-auto rounded-xl border border-[#1f1f2e] bg-[#07070b] p-4 text-xs font-mono text-purple-300">
+              <pre className="overflow-x-auto rounded-xl border border-border-custom bg-background p-4 text-xs font-mono text-brand-700 dark:text-brand-300">
                 <code>{widgetScriptSnippet}</code>
               </pre>
             </div>
-            <p className="text-[11px] text-gray-500 leading-relaxed">
+            <p className="text-[11px] text-text-muted leading-relaxed">
               {t("widgetIntegrationInstructions")}
             </p>
           </div>
@@ -692,18 +692,18 @@ export default function SettingsPage() {
           {/* Iframe Snippet Block */}
           <div className="space-y-3 pt-2">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-400 uppercase">
+              <span className="text-xs font-semibold text-text-muted uppercase">
                 {t("widgetIframeLabel")}
               </span>
               <button
                 type="button"
                 onClick={() => copyToClipboard(widgetIframeSnippet, "iframe")}
-                className="flex items-center gap-1.5 rounded-lg border border-[#1f1f2e] bg-[#07070b] px-3 py-1.5 text-xs text-purple-400 hover:text-white transition-colors"
+                className="flex items-center gap-1.5 rounded-lg border border-border-custom bg-background px-3 py-1.5 text-xs text-brand-600 dark:text-brand-400 hover:text-foreground transition-colors cursor-pointer"
               >
                 {copiedIframe ? (
                   <>
-                    <Check className="h-3.5 w-3.5 text-emerald-400 animate-in zoom-in duration-200" />
-                    <span className="text-emerald-400">{t("copied")}</span>
+                    <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400 animate-in zoom-in duration-200" />
+                    <span className="text-emerald-600 dark:text-emerald-400">{t("copied")}</span>
                   </>
                 ) : (
                   <>
@@ -714,7 +714,7 @@ export default function SettingsPage() {
               </button>
             </div>
             <div className="relative">
-              <pre className="overflow-x-auto rounded-xl border border-[#1f1f2e] bg-[#07070b] p-4 text-xs font-mono text-purple-300">
+              <pre className="overflow-x-auto rounded-xl border border-border-custom bg-background p-4 text-xs font-mono text-brand-700 dark:text-brand-300">
                 <code>{widgetIframeSnippet}</code>
               </pre>
             </div>
@@ -728,7 +728,7 @@ export default function SettingsPage() {
           <button
             type="submit"
             disabled={saving}
-            className="flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-purple-600/10 disabled:opacity-55 transition-colors cursor-pointer"
+            className="flex items-center gap-2 rounded-xl bg-accent hover:bg-accent-hover px-6 py-3 text-sm font-bold text-white shadow-sm disabled:opacity-55 transition-colors cursor-pointer active:scale-95"
           >
             <Save className="h-4.5 w-4.5" />
             <span>{saving ? t("saving") : t("save")}</span>

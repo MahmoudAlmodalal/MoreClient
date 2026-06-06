@@ -105,8 +105,6 @@ export default function FilesPage() {
 
     setProcessingStep(steps[0]);
 
-    // Cosmetic progress animation while the real request is in flight.
-    // Caps at 90% so the bar finishes only once the upload resolves.
     const interval = setInterval(() => {
       setUploadProgress(prev => {
         const nextProgress = Math.min(prev + 10, 90);
@@ -139,42 +137,40 @@ export default function FilesPage() {
 
   const handleDeleteFile = async (id: number) => {
     const prev = files;
-    // Optimistic removal.
     setFiles(prevFiles => prevFiles.filter(f => f.id !== id));
     try {
       await apiSend("/api/files/" + id, "DELETE");
     } catch (err) {
-      // Restore on failure.
       setFiles(prev);
       setError(err instanceof Error ? err.message : "Could not delete file");
     }
   };
 
   return (
-    <div className="space-y-8 pb-12">
+    <div className="space-y-8 pb-12 text-foreground">
       {/* Page Header */}
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-white">{t("filesTitle")}</h2>
-        <p className="mt-1 text-sm text-gray-400">{t("filesSub")}</p>
+        <h2 className="text-2xl font-bold tracking-tight text-foreground">{t("filesTitle")}</h2>
+        <p className="mt-1 text-sm text-text-muted">{t("filesSub")}</p>
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-400">
+        <div className="flex items-center gap-2 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-600 dark:text-red-400">
           <AlertCircle className="h-4 w-4 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
-      {/* RAG Pipeline visual info banner */}
-      <div className="rounded-xl border border-purple-500/10 bg-[#0d0d15] p-5 flex flex-col md:flex-row items-center gap-4">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400">
+      {/* RAG Pipeline info banner */}
+      <div className="rounded-xl border border-border-custom bg-card p-5 flex flex-col md:flex-row items-center gap-4">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20">
           <Database className="h-5 w-5" />
         </div>
-        <div className="flex-1 text-sm text-gray-300">
-          <span className="font-bold text-white">Demo Vector Pipeline: </span>
+        <div className="flex-1 text-sm text-foreground/80">
+          <span className="font-bold text-foreground">Demo Vector Pipeline: </span>
           Uploaded docs are parsed into markdown text, split into chunks, and converted into local demo vectors for the frontend preview.
         </div>
-        <div className="flex items-center gap-1.5 text-xs text-purple-400 font-semibold bg-purple-500/5 px-3 py-1.5 rounded-lg border border-purple-500/10">
+        <div className="flex items-center gap-1.5 text-xs text-brand-600 dark:text-brand-400 font-semibold bg-brand-500/10 px-3 py-1.5 rounded-lg border border-brand-500/20">
           <Sparkles className="h-3.5 w-3.5" />
           Zero External Hallucination
         </div>
@@ -188,8 +184,8 @@ export default function FilesPage() {
         onDrop={handleDrop}
         className={`relative flex flex-col items-center justify-center rounded-2xl border-2 border-dashed p-10 text-center transition-all duration-200 ${
           dragActive
-            ? "border-purple-500 bg-purple-500/5 scale-[0.99]"
-            : "border-[#1f1f2e] bg-[#0d0d15] hover:border-[#2e2e42]"
+            ? "border-accent bg-accent/5 scale-[0.99]"
+            : "border-border-custom bg-card hover:border-accent/50"
         }`}
       >
         <input
@@ -203,29 +199,29 @@ export default function FilesPage() {
         
         {uploading ? (
           <div className="w-full max-w-md space-y-4">
-            <div className="flex items-center justify-between text-xs text-gray-400">
-              <span className="font-semibold text-purple-400">{processingStep}</span>
+            <div className="flex items-center justify-between text-xs text-text-muted">
+              <span className="font-semibold text-brand-600 dark:text-brand-400">{processingStep}</span>
               <span className="font-mono">{uploadProgress}%</span>
             </div>
-            <div className="h-2 w-full overflow-hidden rounded-full bg-[#07070b]">
+            <div className="h-2 w-full overflow-hidden rounded-full bg-background border border-border-custom">
               <div
-                className="h-full bg-purple-600 transition-all duration-300"
+                className="h-full bg-accent transition-all duration-300"
                 style={{ width: `${uploadProgress}%` }}
               />
             </div>
-            <p className="text-[11px] text-gray-500 animate-pulse">
+            <p className="text-[11px] text-text-muted animate-pulse">
               The file is saved first; indexing can finish in the background.
             </p>
           </div>
         ) : (
           <label htmlFor="file-upload" className="cursor-pointer group flex flex-col items-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500/10 text-purple-400 group-hover:scale-110 transition-transform">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-xl bg-brand-500/10 text-brand-600 dark:text-brand-400 border border-brand-500/20 group-hover:scale-105 transition-transform">
               <UploadCloud className="h-6 w-6" />
             </div>
-            <h3 className="mt-4 text-sm font-semibold text-white">
+            <h3 className="mt-4 text-sm font-semibold text-foreground">
               {t("dropzoneTitle")}
             </h3>
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-text-muted">
               {t("dropzoneSub")}
             </p>
           </label>
@@ -233,26 +229,26 @@ export default function FilesPage() {
       </div>
 
       {/* Parsed Documents List */}
-      <div className="rounded-xl border border-[#1f1f2e] bg-[#0d0d15] p-6">
+      <div className="rounded-xl border border-border-custom bg-card p-6">
         <div>
-          <h3 className="text-base font-bold text-white">{t("fileListTitle")}</h3>
-          <p className="text-xs text-gray-500 mt-0.5">{t("fileListSub")}</p>
+          <h3 className="text-base font-bold text-foreground">{t("fileListTitle")}</h3>
+          <p className="text-xs text-text-muted mt-0.5">{t("fileListSub")}</p>
         </div>
 
         {loading ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center text-gray-500">
-            <Database className="h-8 w-8 mb-2 animate-pulse" />
+          <div className="flex flex-col items-center justify-center py-12 text-center text-text-muted">
+            <Database className="h-8 w-8 mb-2 animate-pulse text-brand-600 dark:text-brand-400" />
             <p className="text-sm">Loading knowledge bases...</p>
           </div>
         ) : files.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-center text-gray-500">
+          <div className="flex flex-col items-center justify-center py-12 text-center text-text-muted">
             <AlertCircle className="h-8 w-8 mb-2" />
             <p className="text-sm">No knowledge bases ingested yet. Upload files to get started.</p>
           </div>
         ) : (
           <div className="mt-6 overflow-x-auto">
-            <table className="w-full text-left text-sm text-gray-300">
-              <thead className="border-b border-[#1f1f2e] bg-[#07070b] text-xs font-semibold uppercase text-gray-400">
+            <table className="w-full text-left text-sm text-foreground/80">
+              <thead className="border-b border-border-custom bg-background text-xs font-semibold uppercase text-text-muted">
                 <tr>
                   <th scope="col" className="px-4 py-3">{t("fileName")}</th>
                   <th scope="col" className="px-4 py-3">{t("fileSize")}</th>
@@ -262,28 +258,28 @@ export default function FilesPage() {
                   <th scope="col" className="px-4 py-3 text-center">{t("action")}</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#1f1f2e]">
+              <tbody className="divide-y divide-border-custom">
                 {files.map((file) => (
-                  <tr key={file.id} className="hover:bg-[#1a1a26]/20 transition-colors">
-                    <td className="px-4 py-4 flex items-center gap-3 font-medium text-white">
+                  <tr key={file.id} className="hover:bg-foreground/5 transition-colors">
+                    <td className="px-4 py-4 flex items-center gap-3 font-semibold text-foreground">
                       {/\.xlsx?$/i.test(file.name) ? (
-                        <FileSpreadsheet className="h-4 w-4 text-emerald-400 shrink-0" />
+                        <FileSpreadsheet className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
                       ) : (
-                        <File className="h-4 w-4 text-purple-400 shrink-0" />
+                        <File className="h-4 w-4 text-brand-600 dark:text-brand-400 shrink-0" />
                       )}
                       <span className="truncate max-w-xs">{file.name}</span>
                     </td>
                     <td className="px-4 py-4">{file.size}</td>
-                    <td className="px-4 py-4 font-mono font-semibold text-purple-400">{file.chunks}</td>
-                    <td className="px-4 py-4 text-gray-500">{file.date}</td>
+                    <td className="px-4 py-4 font-mono font-bold text-brand-600 dark:text-brand-400">{file.chunks}</td>
+                    <td className="px-4 py-4 text-text-muted">{file.date}</td>
                     <td className="px-4 py-4">
                       <span
-                        className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset ${
+                        className={`inline-flex items-center rounded-md px-2.5 py-0.5 text-xs font-bold border ${
                           file.status === "Failed"
-                            ? "bg-red-500/10 text-red-400 ring-red-500/20"
+                            ? "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20"
                             : file.status === "Processing"
-                            ? "bg-amber-500/10 text-amber-400 ring-amber-500/20"
-                            : "bg-emerald-500/10 text-emerald-400 ring-emerald-500/20"
+                            ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+                            : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
                         }`}
                       >
                         {file.status === "Failed"
@@ -296,7 +292,7 @@ export default function FilesPage() {
                     <td className="px-4 py-4 text-center">
                       <button
                         onClick={() => handleDeleteFile(file.id)}
-                        className="rounded-lg p-1.5 text-gray-500 hover:bg-red-500/10 hover:text-red-400 transition-colors"
+                        className="rounded-lg p-1.5 text-text-muted hover:bg-red-500/10 hover:text-red-600 dark:hover:text-red-400 transition-colors active:scale-90"
                         title={t("deleteFile")}
                       >
                         <Trash2 className="h-4.5 w-4.5" />

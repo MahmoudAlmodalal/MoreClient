@@ -5,22 +5,22 @@ type ButtonVariant = "primary" | "secondary" | "outline" | "ghost";
 type ButtonSize = "sm" | "md" | "lg";
 
 const base =
-  "inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-400/60 disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap";
+  "inline-flex items-center justify-center gap-2 font-semibold rounded-xl transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/50 disabled:opacity-50 disabled:pointer-events-none whitespace-nowrap active:scale-[0.98]";
 
 const variants: Record<ButtonVariant, string> = {
   primary:
-    "gradient-brand text-white shadow-[var(--shadow-brand)] hover:brightness-110 hover:-translate-y-0.5",
+    "bg-accent text-white shadow-sm hover:bg-accent-hover hover:shadow-md",
   secondary:
-    "bg-white text-brand-700 hover:bg-brand-50 border border-transparent",
+    "bg-brand-500/10 text-brand-600 dark:text-brand-300 hover:bg-brand-500/20 border border-transparent",
   outline:
-    "border border-white/15 text-white hover:bg-white/5 hover:border-white/25",
-  ghost: "text-current hover:bg-current/5",
+    "border border-border-custom text-foreground bg-card hover:bg-background hover:text-foreground",
+  ghost: "text-current hover:bg-foreground/5",
 };
 
 const sizes: Record<ButtonSize, string> = {
-  sm: "px-3.5 py-2 text-sm",
-  md: "px-5 py-2.5 text-sm",
-  lg: "px-6 py-3.5 text-base",
+  sm: "px-3.5 py-1.5 text-xs sm:text-sm",
+  md: "px-4.5 py-2 text-sm sm:text-base",
+  lg: "px-6 py-3 text-base",
 };
 
 type CommonProps = {

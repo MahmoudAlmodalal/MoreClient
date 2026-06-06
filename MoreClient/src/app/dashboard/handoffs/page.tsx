@@ -20,9 +20,6 @@ import {
   MapPin
 } from "lucide-react";
 
-// The backend HandoffOut shape (from @/lib/api) is the source of truth for a
-// ticket. `id` is a number, `channel` is the raw conversation channel
-// (e.g. "whatsapp" | "telegram" | "web"), and `metadata` is a free-form dict.
 type HandoffTicket = HandoffOut;
 
 type DeliveryMetadata = {
@@ -30,8 +27,6 @@ type DeliveryMetadata = {
   detail?: string;
 };
 
-// Channel filter chips use display-cased names; map a raw backend channel to
-// one of those buckets so filtering and the channel icon keep working.
 function channelKey(channel: string): "Telegram" | "WhatsApp" | "Widget" {
   const c = (channel || "").toLowerCase();
   if (c.includes("whatsapp")) return "WhatsApp";
@@ -111,14 +106,10 @@ export default function HandoffsPage() {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send reply");
-      // Restore the unsent text so the agent can retry.
       setReplyText(content);
     }
   };
 
-  // Teach the bot from this handoff: take the customer's last question and the
-  // agent's last reply and persist+embed them via /api/learn (with the handoff id
-  // as provenance). Next time the same question is asked, RAG retrieves this Q&A.
   const handleAddToKb = async (ticket: HandoffTicket) => {
     const question = [...ticket.messages].reverse().find(m => m.role === "user")?.content;
     const answer = [...ticket.messages].reverse().find(m => m.role === "agent")?.content;
@@ -152,24 +143,24 @@ export default function HandoffsPage() {
   };
 
   return (
-    <div className="space-y-6 pb-12">
+    <div className="space-y-6 pb-12 text-foreground">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold tracking-tight text-white">{t("handoffsTitle")}</h2>
-        <p className="mt-1 text-sm text-gray-400">{t("handoffsSub")}</p>
+        <h2 className="text-2xl font-bold tracking-tight text-foreground">{t("handoffsTitle")}</h2>
+        <p className="mt-1 text-sm text-text-muted">{t("handoffsSub")}</p>
       </div>
 
       {/* Control Tabs */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#1f1f2e] pb-4">
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border-custom pb-4">
         <div className="flex items-center gap-2">
           {(["all", "WhatsApp", "Telegram", "Widget"] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${
+              className={`rounded-xl px-4 py-2 text-xs font-bold transition-all active:scale-95 border ${
                 activeTab === tab
-                  ? "bg-purple-600 text-white"
-                  : "bg-[#0d0d15] text-gray-400 border border-[#1f1f2e] hover:bg-[#1a1a26]"
+                  ? "bg-accent text-white border-transparent shadow-sm"
+                  : "bg-card text-text-muted border-border-custom hover:bg-foreground/5"
               }`}
             >
               {tab === "all" ? t("all") : t(tab === "WhatsApp" ? "channelWhatsapp" : tab === "Telegram" ? "channelTelegram" : "channelWidget")}
@@ -178,41 +169,41 @@ export default function HandoffsPage() {
         </div>
 
         {/* Filter Unreplied */}
-        <label className="flex items-center gap-2 text-xs font-semibold text-gray-300 cursor-pointer">
+        <label className="flex items-center gap-2 text-xs font-semibold text-foreground/80 cursor-pointer">
           <input
             type="checkbox"
             checked={unrepliedOnly}
             onChange={(e) => setUnrepliedOnly(e.target.checked)}
-            className="rounded border-[#1f1f2e] bg-[#07070b] text-purple-600 focus:ring-purple-500"
+            className="rounded border-border-custom bg-card text-brand-600 focus:ring-brand-500"
           />
           {t("unrepliedOnly")}
         </label>
       </div>
 
-      {/* Inline error banner (non-blocking) */}
+      {/* Inline error banner */}
       {error && (
-        <div className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-xs font-semibold text-red-400">
+        <div className="rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-xs font-semibold text-red-600 dark:text-red-400">
           {error}
         </div>
       )}
 
-      {/* Success toast (e.g. "added to knowledge base") */}
+      {/* Success toast */}
       {toast && (
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-xs font-semibold text-emerald-400">
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
           {toast}
         </div>
       )}
 
-      {/* Conversation Workspace Grid */}
+      {/* Workspace Grid */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl border border-[#1f1f2e] bg-[#0d0d15]">
-          <MessageSquare className="h-12 w-12 text-gray-500 mb-2 animate-pulse" />
-          <p className="text-sm font-semibold text-gray-400">{t("loading")}</p>
+        <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl border border-border-custom bg-card text-text-muted">
+          <MessageSquare className="h-12 w-12 mb-2 animate-pulse text-brand-600 dark:text-brand-400" />
+          <p className="text-sm font-semibold">{t("loading")}</p>
         </div>
       ) : filteredTickets.length === 0 ? (
-        <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl border border-[#1f1f2e] bg-[#0d0d15]">
-          <MessageSquare className="h-12 w-12 text-gray-500 mb-2" />
-          <p className="text-sm font-semibold text-gray-400">{t("noHandoffs")}</p>
+        <div className="flex flex-col items-center justify-center py-20 text-center rounded-2xl border border-border-custom bg-card text-text-muted">
+          <MessageSquare className="h-12 w-12 mb-2" />
+          <p className="text-sm font-semibold">{t("noHandoffs")}</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -224,33 +215,33 @@ export default function HandoffsPage() {
                 <div
                   key={ticket.id}
                   onClick={() => setSelectedTicketId(ticket.id)}
-                  className={`cursor-pointer rounded-xl border p-4 transition-all ${
+                  className={`cursor-pointer rounded-xl border p-4 transition-all duration-200 ${
                     selectedTicketId === ticket.id
-                      ? "border-purple-500 bg-purple-500/5 glow-purple"
-                      : "border-[#1f1f2e] bg-[#0d0d15] hover:bg-[#151520]"
+                      ? "border-brand-500 bg-brand-500/5 shadow-sm"
+                      : "border-border-custom bg-card hover:bg-foreground/5"
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-white flex items-center gap-2">
-                      {channelKey(ticket.channel) === "WhatsApp" && <Smartphone className="h-4 w-4 text-emerald-400" />}
-                      {channelKey(ticket.channel) === "Telegram" && <SendHorizontal className="h-4 w-4 text-blue-400" />}
-                      {channelKey(ticket.channel) === "Widget" && <Globe className="h-4 w-4 text-purple-400" />}
+                    <span className="text-sm font-bold text-foreground flex items-center gap-2">
+                      {channelKey(ticket.channel) === "WhatsApp" && <Smartphone className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />}
+                      {channelKey(ticket.channel) === "Telegram" && <SendHorizontal className="h-4 w-4 text-blue-600 dark:text-blue-400" />}
+                      {channelKey(ticket.channel) === "Widget" && <Globe className="h-4 w-4 text-brand-600 dark:text-brand-400" />}
                       {ticket.user}
                     </span>
-                    <span className="text-[10px] text-gray-500">{ticket.timeAgo}</span>
+                    <span className="text-[10px] text-text-muted">{ticket.timeAgo}</span>
                   </div>
 
-                  <p className="mt-2 text-xs text-gray-400 truncate max-w-full text-right rtl:text-right">
+                  <p className="mt-2 text-xs text-text-muted truncate max-w-full text-right rtl:text-right">
                     {lastMsg ? lastMsg.content : "No messages."}
                   </p>
 
-                  <div className="mt-3 flex items-center justify-between border-t border-[#1f1f2e]/50 pt-2.5">
-                    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-medium ${
+                  <div className="mt-3 flex items-center justify-between border-t border-border-custom/50 pt-2.5">
+                    <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold border ${
                       ticket.reason === "low_confidence"
-                        ? "bg-amber-500/10 text-amber-400 ring-1 ring-inset ring-amber-500/20"
+                        ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
                         : ticket.reason === "keyword_triggered"
-                        ? "bg-red-500/10 text-red-400 ring-1 ring-inset ring-red-500/20"
-                        : "bg-purple-500/10 text-purple-400 ring-1 ring-inset ring-purple-500/20"
+                        ? "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20"
+                        : "bg-brand-500/10 text-brand-600 dark:text-brand-300 border-brand-500/20"
                     }`}>
                       {reasonText(ticket.reason)}
                     </span>
@@ -266,15 +257,15 @@ export default function HandoffsPage() {
 
           {/* Right panel: Active chat window */}
           {activeTicket ? (
-            <div className="lg:col-span-2 flex flex-col rounded-xl border border-[#1f1f2e] bg-[#0d0d15] overflow-hidden min-h-[500px]">
+            <div className="lg:col-span-2 flex flex-col rounded-xl border border-border-custom bg-card overflow-hidden min-h-[500px]">
               {/* Active Ticket Header */}
-              <div className="border-b border-[#1f1f2e] bg-[#07070b] px-6 py-4 flex items-center justify-between">
+              <div className="border-b border-border-custom bg-background px-6 py-4 flex items-center justify-between">
                 <div>
-                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <h3 className="text-sm font-bold text-foreground flex items-center gap-2">
                     {t("activeChat", { name: activeTicket.user })}
                   </h3>
-                  <p className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1.5">
-                    <ShieldAlert className="h-3.5 w-3.5 text-purple-400" />
+                  <p className="text-[11px] text-text-muted mt-0.5 flex items-center gap-1.5 font-medium">
+                    <ShieldAlert className="h-3.5 w-3.5 text-brand-600 dark:text-brand-400" />
                     {t("reason")}: {reasonText(activeTicket.reason)}
                   </p>
                 </div>
@@ -287,7 +278,7 @@ export default function HandoffsPage() {
                         onClick={() => handleAddToKb(activeTicket)}
                         disabled={!hasAgentReply}
                         title={hasAgentReply ? undefined : "Reply as an agent first, then teach the bot."}
-                        className="inline-flex items-center gap-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-40 disabled:cursor-not-allowed px-3 py-1.5 text-xs font-bold text-white transition-colors"
+                        className="inline-flex items-center gap-1.5 rounded-lg bg-accent hover:bg-accent-hover disabled:opacity-40 disabled:cursor-not-allowed px-3 py-1.5 text-xs font-bold text-white transition-colors active:scale-95 cursor-pointer"
                       >
                         <BookPlus className="h-3.5 w-3.5" />
                         {t("addToKb")}
@@ -296,7 +287,7 @@ export default function HandoffsPage() {
                   })()}
                   <button
                     onClick={() => handleResolve(activeTicket.id)}
-                    className="rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 text-xs font-bold text-white transition-colors"
+                    className="rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3 py-1.5 text-xs font-bold text-white transition-colors active:scale-95 cursor-pointer"
                   >
                     {t("resolveHandoff")}
                   </button>
@@ -304,37 +295,37 @@ export default function HandoffsPage() {
               </div>
 
               {activeOrder && (
-                <div className="border-b border-[#1f1f2e] bg-emerald-500/5 px-6 py-4">
-                  <h4 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-emerald-300">
+                <div className="border-b border-border-custom bg-emerald-500/5 px-6 py-4">
+                  <h4 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wide text-emerald-600 dark:text-emerald-400">
                     <PackageCheck className="h-4 w-4" />
                     {t("purchaseDetails")}
                   </h4>
-                  <div className="grid grid-cols-1 gap-3 text-xs text-gray-300 md:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-3 text-xs text-foreground/80 md:grid-cols-2">
                     <div className="flex items-start gap-2">
-                      <PackageCheck className="mt-0.5 h-4 w-4 text-emerald-400" />
+                      <PackageCheck className="mt-0.5 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                       <span>
-                        <span className="font-bold text-gray-500">{t("productName")}: </span>
+                        <span className="font-bold text-text-muted">{t("productName")}: </span>
                         {activeOrder.productName || "-"}
                       </span>
                     </div>
                     <div className="flex items-start gap-2">
-                      <Hash className="mt-0.5 h-4 w-4 text-emerald-400" />
+                      <Hash className="mt-0.5 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                       <span>
-                        <span className="font-bold text-gray-500">{t("quantity")}: </span>
+                        <span className="font-bold text-text-muted">{t("quantity")}: </span>
                         {activeOrder.quantity ?? "-"}
                       </span>
                     </div>
                     <div className="flex items-start gap-2 md:col-span-2">
-                      <MapPin className="mt-0.5 h-4 w-4 text-emerald-400" />
+                      <MapPin className="mt-0.5 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                       <span>
-                        <span className="font-bold text-gray-500">{t("deliveryAddress")}: </span>
+                        <span className="font-bold text-text-muted">{t("deliveryAddress")}: </span>
                         {activeOrder.deliveryAddress || "-"}
                       </span>
                     </div>
                     <div className="flex items-start gap-2">
-                      <ShieldAlert className="mt-0.5 h-4 w-4 text-emerald-400" />
+                      <ShieldAlert className="mt-0.5 h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                       <span>
-                        <span className="font-bold text-gray-500">{t("orderStatus")}: </span>
+                        <span className="font-bold text-text-muted">{t("orderStatus")}: </span>
                         {activeOrder.status}
                       </span>
                     </div>
@@ -343,7 +334,7 @@ export default function HandoffsPage() {
               )}
 
               {/* Chat Messages Log */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4 max-h-[350px]">
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 max-h-[350px] bg-background/30">
                 {activeTicket.messages.map((msg) => (
                   <div
                     key={msg.id}
@@ -355,39 +346,39 @@ export default function HandoffsPage() {
                   >
                     <div className={`rounded-xl px-4 py-2.5 text-sm ${
                       msg.role === "user"
-                        ? "bg-[#1f1f2e] text-white"
+                        ? "bg-background text-foreground border border-border-custom"
                         : msg.role === "assistant"
-                        ? "bg-purple-900/40 text-purple-200 border border-purple-800/30"
-                        : "bg-purple-600 text-white"
+                        ? "bg-brand-500/10 text-brand-700 dark:text-brand-300 border border-brand-500/20"
+                        : "bg-accent text-white"
                     }`}>
-                      <div className="flex items-center gap-1.5 mb-1 text-[10px] text-gray-400 font-bold justify-between">
+                      <div className="flex items-center gap-1.5 mb-1 text-[10px] text-text-muted font-bold justify-between">
                         <span className="flex items-center gap-1">
                           {msg.role === "user" && <User className="h-3 w-3" />}
-                          {msg.role === "assistant" && <Bot className="h-3 w-3 text-purple-400" />}
+                          {msg.role === "assistant" && <Bot className="h-3 w-3 text-brand-600 dark:text-brand-400" />}
                           {msg.role === "agent" && <CheckCheck className="h-3 w-3 text-emerald-400" />}
                           {msg.role === "user" ? "Client" : msg.role === "assistant" ? t("botBadge") : t("humanBadge")}
                         </span>
                         <span>{msg.time}</span>
                       </div>
-                      <p className="leading-relaxed text-right rtl:text-right">{msg.content}</p>
+                      <p className="leading-relaxed text-right rtl:text-right font-medium">{msg.content}</p>
                     </div>
                   </div>
                 ))}
               </div>
 
               {/* Input Box Form */}
-              <form onSubmit={handleSendMessage} className="border-t border-[#1f1f2e] bg-[#07070b] p-4 flex gap-3">
+              <form onSubmit={handleSendMessage} className="border-t border-border-custom bg-background p-4 flex gap-3">
                 <input
                   required
                   type="text"
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
                   placeholder={t("replyPlaceholder")}
-                  className="flex-1 rounded-xl border border-[#1f1f2e] bg-[#0d0d15] px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:border-purple-500 focus:outline-none"
+                  className="flex-1 rounded-xl border border-border-custom bg-card px-4 py-2.5 text-sm text-foreground placeholder-text-muted/50 focus:border-brand-500 focus:outline-none"
                 />
                 <button
                   type="submit"
-                  className="rounded-xl bg-purple-600 p-2.5 text-white hover:bg-purple-500 transition-colors"
+                  className="rounded-xl bg-accent p-2.5 text-white hover:bg-accent-hover transition-colors active:scale-95 cursor-pointer"
                 >
                   <Send className="h-5 w-5" />
                 </button>

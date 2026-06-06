@@ -18,7 +18,7 @@ const translationsEn = {
   adminPanel: "clientMORE Admin",
   builtInGaza: "Built in Gaza · Deployed Globally",
   logout: "Logout",
-  cancel : "Cancel"
+  cancel: "Cancel",
 
 
   // Notifications

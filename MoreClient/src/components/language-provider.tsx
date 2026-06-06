@@ -365,6 +365,8 @@ const translationsEn = {
   allPlans: "All Plans",
   filterStatus: "Filter Status",
   searchPlaceholder: "Search tenants by name or email...",
+  createBtn: "Create",
+  saveBtn: "Save",
 
   // Auth Forms
   emailLabel: "Email Address",
@@ -798,6 +800,8 @@ cancel: "إلغاء",
   allPlans: "كل الباقات",
   filterStatus: "تصفية الحالة",
   searchPlaceholder: "البحث عن المستأجرين بالاسم أو البريد...",
+  createBtn: "إنشاء",
+  saveBtn: "حفظ",
 
   // Auth Forms
   emailLabel: "البريد الإلكتروني",

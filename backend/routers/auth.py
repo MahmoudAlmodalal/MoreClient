@@ -5,7 +5,7 @@ from datetime import datetime
 import httpx
 import jwt
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from sqlalchemy.orm import Session
 
 from backend.models.database import get_db
@@ -123,14 +123,16 @@ def get_me(user: TokenPayload = Depends(get_current_user)):
 
 
 @router.post("/api/auth/social/start", response_model=SocialAuthStartOut)
-def social_auth_start(body: SocialAuthStartIn):
+def social_auth_start(body: SocialAuthStartIn, request: Request):
     provider = body.provider
     mode = body.mode
     
     # State parameter to pass provider and mode back
     state = f"{provider}:{mode}"
     
-    redirect_uri = f"{settings.FRONTEND_URL}/auth/callback"
+    origin = request.headers.get("origin")
+    frontend_url = origin if origin else settings.FRONTEND_URL
+    redirect_uri = f"{frontend_url.rstrip('/')}/auth/callback"
     
     if provider == "google":
         if settings.GOOGLE_CLIENT_ID:
@@ -169,7 +171,7 @@ def social_auth_start(body: SocialAuthStartIn):
 
 
 @router.post("/api/auth/social/callback", response_model=AuthSessionOut)
-def social_auth_callback(body: SocialAuthCallbackIn, db: Session = Depends(get_db)):
+def social_auth_callback(body: SocialAuthCallbackIn, request: Request, db: Session = Depends(get_db)):
     code = body.code
     state = body.state
     
@@ -192,7 +194,9 @@ def social_auth_callback(body: SocialAuthCallbackIn, db: Session = Depends(get_d
         provider_subject = f"mock-{provider}-sub"
     else:
         # Real OAuth code exchange
-        redirect_uri = f"{settings.FRONTEND_URL}/auth/callback"
+        origin = request.headers.get("origin")
+        frontend_url = origin if origin else settings.FRONTEND_URL
+        redirect_uri = f"{frontend_url.rstrip('/')}/auth/callback"
         if provider == "google":
             if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
                 raise HTTPException(status_code=500, detail="Google OAuth is not configured on backend")

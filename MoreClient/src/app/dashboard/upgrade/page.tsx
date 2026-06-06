@@ -1,5 +1,6 @@
 "use client";
 
+// Force cache invalidation to resolve SSR compilation issue with useLanguage
 import Link from "next/link";
 import { Sparkles, ArrowUpRight } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";

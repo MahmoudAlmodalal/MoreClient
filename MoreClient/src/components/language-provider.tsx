@@ -452,6 +452,7 @@ const translationsAr: Partial<Translations> = {
   adminPanel: "لوحة تحكم نصيح",
   builtInGaza: "صُنع في غزة · وُزّع عالمياً",
   logout: "تسجيل الخروج",
+cancel: "إلغاء",
 
   // Notifications
   notifications: "الإشعارات",

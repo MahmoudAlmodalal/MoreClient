@@ -31,7 +31,7 @@ function setLastSeenId(id: number): void {
 
 function handoffToNotification(
   h: HandoffOut,
-  t: (key: string) => string,
+  t: any,
 ): NotificationItem {
   const reasonKey: Record<string, string> = {
     low_confidence: "handoffNotificationLowConfidence",

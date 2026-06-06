@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { Sparkles, ArrowUpRight } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";

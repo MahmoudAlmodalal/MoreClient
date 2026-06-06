@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import path from "path";
 
 // Frontend-only security headers for the demo app.
 const securityHeaders = [
@@ -21,8 +22,9 @@ const securityHeaders = [
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["*.replit.dev", "*.sisko.replit.dev"],
   experimental: {},
+  outputFileTracingRoot: path.resolve(__dirname, ".."),
   turbopack: {
-    root: __dirname,
+    root: path.resolve(__dirname, ".."),
   },
   async headers() {
     return [

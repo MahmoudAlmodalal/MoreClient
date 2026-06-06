@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Cairo } from "next/font/google";
 import "./globals.css";
-import { LanguageProvider } from "@/components/language-provider";
-import { ThemeProvider } from "@/components/theme-provider";
+import { Providers } from "@/components/providers";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -51,9 +50,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-background text-foreground font-sans">
-        <ThemeProvider>
-          <LanguageProvider>{children}</LanguageProvider>
-        </ThemeProvider>
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

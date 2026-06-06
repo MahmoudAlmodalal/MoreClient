@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { Apple } from "lucide-react";
-import { login } from "@/lib/api";
+import { login, startSocialAuth } from "@/lib/api";
 
 const SLIDES = 3;
 
@@ -37,9 +37,16 @@ export default function WelcomePage() {
     }
   };
 
-  const handleSocialLogin = () => {
-    sessionStorage.setItem("userRole", "company");
-    router.push("/dashboard");
+  const handleSocialLogin = async (provider: "google" | "apple") => {
+    setError("");
+    setLoading(true);
+    try {
+      const res = await startSocialAuth(provider, "login");
+      window.location.href = res.authUrl;
+    } catch (err: any) {
+      setError(err?.message || "Failed to start social login");
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -169,7 +176,7 @@ export default function WelcomePage() {
               <div className="grid gap-3 mt-2">
                 <button
                   type="button"
-                  onClick={handleSocialLogin}
+                  onClick={() => handleSocialLogin("google")}
                   className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[var(--border-light)] bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-[var(--surface-muted)]"
                 >
                   <span className="flex h-5 w-5 items-center justify-center rounded-full text-sm font-bold text-[#4285F4]">
@@ -180,7 +187,7 @@ export default function WelcomePage() {
 
                 <button
                   type="button"
-                  onClick={handleSocialLogin}
+                  onClick={() => handleSocialLogin("apple")}
                   className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[var(--border-light)] bg-white px-4 text-sm font-semibold text-gray-700 transition-colors hover:bg-[var(--surface-muted)]"
                 >
                   <Apple className="h-5 w-5 text-gray-900" />

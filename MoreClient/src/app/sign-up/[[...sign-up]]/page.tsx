@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Apple } from "lucide-react";
-import { register } from "@/lib/api";
+import { register, startSocialAuth } from "@/lib/api";
 
 export default function SignUpPage() {
   const { t } = useLanguage();
@@ -43,9 +43,16 @@ export default function SignUpPage() {
     }
   };
 
-  const handleSocialSignUp = () => {
-    sessionStorage.setItem("userRole", "user");
-    router.push("/dashboard");
+  const handleSocialSignUp = async (provider: "google" | "apple") => {
+    setError("");
+    setLoading(true);
+    try {
+      const res = await startSocialAuth(provider, "signup");
+      window.location.href = res.authUrl;
+    } catch (err: any) {
+      setError(err?.message || "Failed to start social signup");
+      setLoading(false);
+    }
   };
 
   return (
@@ -56,7 +63,7 @@ export default function SignUpPage() {
         <div className="mb-6 grid gap-3">
           <button
             type="button"
-            onClick={handleSocialSignUp}
+            onClick={() => handleSocialSignUp("google")}
             className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#1f1f2e] bg-white px-4 text-sm font-semibold text-gray-800 transition-colors hover:bg-gray-100"
           >
             <span className="flex h-5 w-5 items-center justify-center rounded-full text-sm font-bold text-[#4285F4]">
@@ -67,7 +74,7 @@ export default function SignUpPage() {
 
           <button
             type="button"
-            onClick={handleSocialSignUp}
+            onClick={() => handleSocialSignUp("apple")}
             className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[#1f1f2e] bg-white px-4 text-sm font-semibold text-gray-800 transition-colors hover:bg-gray-100"
           >
             <Apple className="h-5 w-5 text-gray-900" />

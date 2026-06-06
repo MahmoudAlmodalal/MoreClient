@@ -76,6 +76,34 @@ export async function register(name: string, email: string, password: string, co
   return res;
 }
 
+export type SocialAuthStartIn = {
+  provider: "google" | "apple";
+  mode: "login" | "signup";
+};
+
+export type SocialAuthStartOut = {
+  provider: "google" | "apple";
+  authUrl: string;
+};
+
+export type SocialAuthCallbackIn = {
+  code: string;
+  state: string;
+};
+
+export async function startSocialAuth(provider: "google" | "apple", mode: "login" | "signup"): Promise<SocialAuthStartOut> {
+  return apiSend<SocialAuthStartOut>("/api/auth/social/start", "POST", { provider, mode });
+}
+
+export async function completeSocialAuth(code: string, state: string): Promise<AuthSessionOut> {
+  const res = await apiSend<AuthSessionOut>("/api/auth/social/callback", "POST", { code, state });
+  if (typeof window !== "undefined") {
+    window.localStorage.setItem(JWT_TOKEN_STORAGE, res.token);
+    window.sessionStorage.setItem("userRole", res.role);
+  }
+  return res;
+}
+
 export function logout(): void {
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(JWT_TOKEN_STORAGE);

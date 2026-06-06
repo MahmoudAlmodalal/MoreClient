@@ -34,6 +34,11 @@ class SocialAuthStartOut(_CamelModel):
     auth_url: str
 
 
+class SocialAuthCallbackIn(_CamelModel):
+    code: str
+    state: str
+
+
 class AuthSessionOut(_CamelModel):
     token: str
     user_id: int

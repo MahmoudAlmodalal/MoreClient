@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ArrowRight, MessageSquare, Send, CheckCircle, RefreshCw, XCircle } from "lucide-react";
+import { ArrowRight, Send, RefreshCw } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 
@@ -144,18 +144,18 @@ export function Hero() {
   };
 
   return (
-    <section id="hero" className="relative overflow-hidden pt-20 pb-24 sm:pt-28 sm:pb-36 bg-[#101020] text-white">
+    <section id="hero" className="relative overflow-hidden pt-20 pb-24 sm:pt-28 sm:pb-36 bg-background text-foreground">
       {/* Decorative Aurora Violet Glows */}
       <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-[#7B61FF]/10 blur-[150px] pointer-events-none" />
       <div className="absolute top-1/2 -right-40 w-96 h-96 rounded-full bg-[#00FFCC]/5 blur-[150px] pointer-events-none" />
 
       {/* Grid overlay */}
       <div 
-        className="pointer-events-none absolute inset-0 -z-10 opacity-10"
+        className="pointer-events-none absolute inset-0 -z-10 opacity-5 dark:opacity-10"
         style={{
           backgroundImage: `
-            linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px)
+            linear-gradient(to right, currentColor 1px, transparent 1px),
+            linear-gradient(to bottom, currentColor 1px, transparent 1px)
           `,
           backgroundSize: "40px 40px",
           maskImage: "radial-gradient(ellipse at center, black, transparent 75%)",
@@ -167,7 +167,7 @@ export function Hero() {
         <div className="grid gap-14 lg:grid-cols-12 lg:items-center">
           {/* Hero text */}
           <div className="flex flex-col text-start lg:col-span-7 z-10">
-            <h1 className="text-4xl font-extrabold tracking-tight text-white sm:text-5xl md:text-6xl leading-[1.15]">
+            <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl md:text-6xl leading-[1.15]">
               {language === "ar" ? (
                 <>
                   أتمتة أعمالك. <br/>
@@ -180,7 +180,7 @@ export function Hero() {
                 </>
               )}
             </h1>
-            <p className="mt-6 text-base sm:text-lg leading-relaxed text-[#8e8eb2] max-w-2xl">
+            <p className="mt-6 text-base sm:text-lg leading-relaxed text-foreground/75 dark:text-[#8e8eb2] max-w-2xl">
               {language === "ar"
                 ? "منصة الأتمتة الذكية الشبيهة بالبشر للواتساب والرسائل النصية والبريد الإلكتروني. ابنِ علاقات، لا مجرد تذاكر."
                 : "The intelligent, human-like automation platform for WhatsApp, SMS, and Email. Build relationships, not just tickets."}
@@ -198,7 +198,7 @@ export function Hero() {
                 href="#features"
                 variant="outline"
                 size="lg"
-                className="bg-transparent hover:bg-white/5 text-white font-semibold rounded-full px-8 py-4 border-white/20 hover:border-white/40 transition-all hover:scale-102 active:scale-98"
+                className="bg-transparent hover:bg-foreground/5 text-foreground font-semibold rounded-full px-8 py-4 border-border-custom hover:border-foreground/45 transition-all hover:scale-102 active:scale-98"
               >
                 {language === "ar" ? "استكشف المنصة" : "Explore Platform"}
               </Button>
@@ -207,31 +207,31 @@ export function Hero() {
 
           {/* High-Fidelity Chat Simulator Mockup */}
           <div className="lg:col-span-5 flex justify-center z-10 w-full">
-            <div className="relative w-full max-w-[420px] rounded-2xl border border-white/10 bg-[#161632] shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col backdrop-blur-md">
+            <div className="relative w-full max-w-[420px] rounded-2xl border border-border-custom bg-card shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col backdrop-blur-md">
               {/* Soft Aura Violet light behind chat */}
-              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full bg-[#7B61FF]/20 blur-[60px] pointer-events-none -z-10" />
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full bg-[#7B61FF]/10 blur-[60px] pointer-events-none -z-10" />
 
               {/* Chat Header */}
-              <div className="flex items-center justify-between border-b border-white/5 bg-white/[0.02] px-5 py-4">
+              <div className="flex items-center justify-between border-b border-border-custom bg-foreground/[0.01] px-5 py-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#7B61FF] to-[#00FFCC] p-[1.5px] flex items-center justify-center shadow-[0_0_10px_rgba(123,97,255,0.3)]">
-                    <div className="w-full h-full bg-[#161632] rounded-full flex items-center justify-center text-[10px] font-bold text-white">
+                  <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-[#7B61FF] to-[#00FFCC] p-[1.5px] flex items-center justify-center shadow-[0_0_10px_rgba(123,97,255,0.2)]">
+                    <div className="w-full h-full bg-card rounded-full flex items-center justify-center text-[10px] font-bold text-foreground">
                       MB
                     </div>
                   </div>
                   <div className="text-start">
-                    <div className="text-sm font-bold text-white flex items-center gap-1.5">
+                    <div className="text-sm font-bold text-foreground flex items-center gap-1.5">
                       MoreBot
                       <span className="w-1.5 h-1.5 rounded-full bg-[#00FFCC] animate-pulse" />
                     </div>
-                    <div className="text-[10px] text-[#8e8eb2]">
+                    <div className="text-[10px] text-foreground/60 dark:text-[#8e8eb2]">
                       {language === "ar" ? "نشط الآن · محادثات ذكية" : "Active now · Intelligent Conversations"}
                     </div>
                   </div>
                 </div>
                 <button 
                   onClick={handleReset}
-                  className="p-1.5 rounded-lg hover:bg-white/5 text-[#8e8eb2] hover:text-white transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg hover:bg-foreground/5 text-foreground/60 hover:text-foreground transition-colors cursor-pointer"
                   title={language === "ar" ? "إعادة تعيين المحاكاة" : "Reset Simulation"}
                 >
                   <RefreshCw size={14} />
@@ -241,15 +241,15 @@ export function Hero() {
               {/* Chat messages */}
               <div
                 ref={chatBodyRef}
-                className="h-[310px] p-5 overflow-y-auto flex flex-col gap-4 text-xs sm:text-sm bg-[#0f0f26]/40 scroll-smooth"
+                className="h-[310px] p-5 overflow-y-auto flex flex-col gap-4 text-xs sm:text-sm bg-background/40 scroll-smooth"
               >
                 {messages.map((msg, i) => (
                   <div key={i} className="flex flex-col gap-1.5">
                     <div
                       className={`max-w-[85%] px-4 py-3 rounded-2xl leading-relaxed transition-all duration-300 ${
                         msg.sender === "customer"
-                          ? "bg-white/[0.06] text-white self-start rounded-tl-none border border-white/5"
-                          : "bg-[#7B61FF]/10 text-[#d0c6ff] border border-[#7B61FF]/20 self-end rounded-tr-none"
+                          ? "bg-foreground/[0.06] text-foreground self-start rounded-tl-none border border-border-custom/50"
+                          : "bg-[#7B61FF]/10 text-[#7B61FF] dark:text-[#d0c6ff] border border-[#7B61FF]/20 self-end rounded-tr-none"
                       }`}
                     >
                       {msg.text}
@@ -272,7 +272,7 @@ export function Hero() {
                 ))}
 
                 {isTyping && (
-                  <div className="bg-[#7B61FF]/10 text-white border border-[#7B61FF]/20 self-end rounded-2xl rounded-tr-none px-4 py-3 flex gap-1 items-center">
+                  <div className="bg-[#7B61FF]/10 text-[#7B61FF] dark:text-[#d0c6ff] border border-[#7B61FF]/20 self-end rounded-2xl rounded-tr-none px-4 py-3 flex gap-1 items-center">
                     <span className="w-1.5 h-1.5 bg-[#7B61FF] rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
                     <span className="w-1.5 h-1.5 bg-[#7B61FF] rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
                     <span className="w-1.5 h-1.5 bg-[#7B61FF] rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
@@ -281,13 +281,13 @@ export function Hero() {
               </div>
 
               {/* Chat Input simulator */}
-              <div className="border-t border-white/5 bg-white/[0.01] p-4 flex gap-3 items-center">
-                <div className="flex-1 bg-[#0f0f26]/80 border border-white/5 rounded-lg px-4 py-2.5 text-start text-xs text-[#8e8eb2] h-9 flex items-center select-none overflow-hidden">
+              <div className="border-t border-border-custom bg-foreground/[0.01] p-4 flex gap-3 items-center">
+                <div className="flex-1 bg-background border border-border-custom/50 rounded-lg px-4 py-2.5 text-start text-xs text-foreground/60 h-9 flex items-center select-none overflow-hidden">
                   {language === "ar" ? "اختر خياراً للرد..." : "Select an option to reply..."}
                 </div>
                 <button
                   disabled
-                  className="w-9 h-9 rounded-lg flex items-center justify-center bg-white/5 text-white/30 cursor-not-allowed select-none"
+                  className="w-9 h-9 rounded-lg flex items-center justify-center bg-foreground/5 text-foreground/30 cursor-not-allowed select-none"
                   aria-label="Send message"
                 >
                   <Send size={15} className="rtl:rotate-180" />

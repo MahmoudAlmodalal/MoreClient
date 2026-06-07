@@ -102,7 +102,7 @@ export function Pricing() {
   const plans = language === "ar" ? plansAr : plansEn;
 
   return (
-    <section id="pricing" className="relative py-24 bg-[#101020] border-t border-white/5">
+    <section id="pricing" className="relative py-24 bg-background border-t border-border-custom">
       {/* Glow effect */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-[#7B61FF]/5 blur-[120px] pointer-events-none" />
 
@@ -110,10 +110,10 @@ export function Pricing() {
         
         {/* Section Header */}
         <div className="text-center mb-16">
-          <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+          <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
             {language === "ar" ? "خطط الأسعار المرنة" : "Simple, Transparent Pricing"}
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-sm sm:text-base text-[#8e8eb2]">
+          <p className="mx-auto mt-4 max-w-2xl text-sm sm:text-base text-foreground/70 dark:text-[#8e8eb2]">
             {language === "ar"
               ? "اختر الباقة المناسبة لحجم ونشاط عملك وابدأ أتمتة دعم عملائك اليوم."
               : "Choose the package tailored to your business scale and start automating customer support today."}
@@ -127,8 +127,8 @@ export function Pricing() {
               key={p.id}
               className={`relative rounded-2xl p-8 flex flex-col justify-between transition-all duration-300 transform hover:-translate-y-1 ${
                 p.featured
-                  ? "bg-[#7B61FF] text-white shadow-[0_20px_40px_rgba(123,97,255,0.3)] border border-white/10 scale-102 z-10"
-                  : "bg-[#161632] text-white border border-white/5 shadow-lg hover:border-[#7B61FF]/30"
+                  ? "bg-[#7B61FF] text-white shadow-[0_20px_40px_rgba(123,97,255,0.25)] border border-white/10 scale-102 z-10"
+                  : "bg-card text-foreground border border-border-custom shadow-lg hover:border-[#7B61FF]/30"
               }`}
             >
               {p.featured && p.label && (
@@ -138,19 +138,19 @@ export function Pricing() {
               )}
 
               <div>
-                <h3 className={`text-lg sm:text-xl font-black ${p.featured ? "text-white" : "text-white"}`}>
+                <h3 className={`text-lg sm:text-xl font-black ${p.featured ? "text-white" : "text-foreground"}`}>
                   {p.name}
                 </h3>
-                <p className={`mt-2.5 text-xs sm:text-sm leading-relaxed ${p.featured ? "text-white/80" : "text-[#8e8eb2]"}`}>
+                <p className={`mt-2.5 text-xs sm:text-sm leading-relaxed ${p.featured ? "text-white/80" : "text-foreground/70 dark:text-[#8e8eb2]"}`}>
                   {p.desc}
                 </p>
                 
                 {/* Price Display */}
                 <div className="mt-8 flex items-baseline gap-1">
-                  <span className={`text-4xl sm:text-5xl font-black tracking-tight ${p.featured ? "text-white" : "text-white"}`}>
+                  <span className={`text-4xl sm:text-5xl font-black tracking-tight ${p.featured ? "text-white" : "text-foreground"}`}>
                     {p.price}
                   </span>
-                  <span className={`text-xs sm:text-sm font-semibold ml-1.5 rtl:mr-1.5 rtl:ml-0 ${p.featured ? "text-white/70" : "text-[#8e8eb2]"}`}>
+                  <span className={`text-xs sm:text-sm font-semibold ml-1.5 rtl:mr-1.5 rtl:ml-0 ${p.featured ? "text-white/70" : "text-foreground/60 dark:text-[#8e8eb2]"}`}>
                     / {language === "ar" ? "شهرياً" : "month"}
                   </span>
                 </div>
@@ -160,11 +160,11 @@ export function Pricing() {
                   {p.features.map((f, fIdx) => (
                     <li key={fIdx} className="flex items-start gap-3 text-xs sm:text-sm">
                       <div className={`mt-0.5 shrink-0 rounded-full p-0.5 flex items-center justify-center ${
-                        p.featured ? "bg-white/20 text-white" : "bg-[#7B61FF]/20 text-[#00FFCC]"
+                        p.featured ? "bg-white/20 text-white" : "bg-[#7B61FF]/20 text-[#7B61FF] dark:text-[#00FFCC]"
                       }`}>
                         <Check size={12} className="stroke-[3.5px]" />
                       </div>
-                      <span className={p.featured ? "text-white" : "text-[#d0d0eb]"}>{f}</span>
+                      <span className={p.featured ? "text-white" : "text-foreground/80 dark:text-[#d0d0eb]"}>{f}</span>
                     </li>
                   ))}
                 </ul>

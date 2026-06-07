@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { useTheme } from "@/components/theme-provider";
 import { Apple, Sun, Moon } from "lucide-react";
-import { login } from "@/lib/api";
+import { login, startSocialAuth } from "@/lib/api";
 
 const SLIDES = 3;
 
@@ -43,11 +43,16 @@ export default function WelcomePage() {
     setError("");
     setLoading(true);
     try {
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem("authToken", `mock-social-jwt-token-${provider}`);
-        window.sessionStorage.setItem("userRole", "company");
+      if (provider === "google") {
+        const res = await startSocialAuth("google", "login");
+        window.location.href = res.authUrl;
+      } else {
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("authToken", `mock-social-jwt-token-apple`);
+          window.sessionStorage.setItem("userRole", "company");
+        }
+        router.push("/dashboard");
       }
-      router.push("/dashboard");
     } catch (err) {
       setError((err as Error)?.message || "Failed to start social login");
       setLoading(false);

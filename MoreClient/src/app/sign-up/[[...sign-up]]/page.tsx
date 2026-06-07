@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { Apple } from "lucide-react";
-import { register } from "@/lib/api";
+import { register, startSocialAuth } from "@/lib/api";
 
 export default function SignUpPage() {
   const { t } = useLanguage();
@@ -47,11 +47,16 @@ export default function SignUpPage() {
     setError("");
     setLoading(true);
     try {
-      if (typeof window !== "undefined") {
-        window.localStorage.setItem("authToken", `mock-social-jwt-token-${provider}`);
-        window.sessionStorage.setItem("userRole", "company");
+      if (provider === "google") {
+        const res = await startSocialAuth("google", "signup");
+        window.location.href = res.authUrl;
+      } else {
+        if (typeof window !== "undefined") {
+          window.localStorage.setItem("authToken", `mock-social-jwt-token-apple`);
+          window.sessionStorage.setItem("userRole", "company");
+        }
+        router.push("/dashboard");
       }
-      router.push("/dashboard");
     } catch (err) {
       setError((err as Error)?.message || "Failed to start social signup");
       setLoading(false);

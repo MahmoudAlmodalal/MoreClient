@@ -8,23 +8,23 @@
   /* Default: Light Theme (Slate/Indigo Palette) */
   --background: #f8fafc;
   --foreground: #0f172a;
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
+  --primary: #7B61FF; /* Aura Violet */
+  --primary-hover: #634ee0;
   --border: #e2e8f0;
   --card-bg: #ffffff;
   --sidebar-bg: #f1f5f9;
 
-  /* Brand purple scale */
-  --brand-50: #f5f3ff;
-  --brand-100: #ede9fe;
-  --brand-200: #ddd6fe;
-  --brand-300: #c4b5fd;
-  --brand-400: #a78bfa;
-  --brand-500: #8b5cf6;
-  --brand-600: #7c3aed;
-  --brand-700: #6d28d9;
-  --brand-800: #5b21b6;
-  --brand-900: #4c1d95;
+  /* Brand purple scale - now Aura Violet */
+  --brand-50: #f2efff;
+  --brand-100: #e7e2ff;
+  --brand-200: #cfc6ff;
+  --brand-300: #aa9cff;
+  --brand-400: #8872ff;
+  --brand-500: #7b61ff;
+  --brand-600: #6848ff;
+  --brand-700: #5531ff;
+  --brand-800: #4622e0;
+  --brand-900: #3a1ab8;
 
   /* Light surfaces fallback */
   --surface-light: #ffffff;
@@ -32,6 +32,10 @@
   --foreground-light: #0f172a;
   --foreground-light-muted: #64748b;
   --border-light: #e2e8f0;
+
+  /* Accent Mint */
+  --mint: #00FFCC;
+  --mint-hover: #00E6BC;
 
   /* Radii */
   --radius-sm: 0.375rem;
@@ -44,31 +48,31 @@
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
-  --shadow-brand: 0 4px 14px 0 rgba(79, 70, 229, 0.15);
+  --shadow-brand: 0 4px 14px 0 rgba(123, 97, 255, 0.15);
 }
 
 .dark {
-  /* Dark Theme Override (Zinc/Indigo Palette) */
-  --background: #09090b;
-  --foreground: #f4f4f5;
-  --primary: #6366f1;
-  --primary-hover: #4f46e5;
-  --border: #27272a;
-  --card-bg: #18181b;
-  --sidebar-bg: #09090b;
+  /* Dark Theme Override (Midnight Deep Indigo #101020 & Aura Violet #7B61FF) */
+  --background: #101020;
+  --foreground: #f4f4f6;
+  --primary: #7B61FF;
+  --primary-hover: #634ee0;
+  --border: #202042;
+  --card-bg: #161632;
+  --sidebar-bg: #101020;
 
   /* Overwrite surface fallbacks for safety */
-  --surface-light: #18181b;
-  --surface-muted: #121215;
-  --foreground-light: #f4f4f5;
-  --foreground-light-muted: #a1a1aa;
-  --border-light: #27272a;
+  --surface-light: #161632;
+  --surface-muted: #0d0d1a;
+  --foreground-light: #f4f4f6;
+  --foreground-light-muted: #8e8eb2;
+  --border-light: #202042;
 
   /* Shadow & glow */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.25), 0 2px 4px -1px rgba(0, 0, 0, 0.15);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.35), 0 4px 6px -2px rgba(0, 0, 0, 0.2);
-  --shadow-brand: 0 4px 14px 0 rgba(99, 102, 241, 0.3);
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -2px rgba(0, 0, 0, 0.35);
+  --shadow-brand: 0 4px 14px 0 rgba(123, 97, 255, 0.3);
 }
 
 @theme {
@@ -80,6 +84,8 @@
   --color-accent: var(--primary);
   --color-accent-hover: var(--primary-hover);
   --color-border-custom: var(--border);
+  --color-mint: var(--mint);
+  --color-mint-hover: var(--mint-hover);
 
   /* Brand scale */
   --color-brand-50: var(--brand-50);

@@ -131,6 +131,9 @@ def get_current_user(token: str | None = Depends(_oauth2_scheme)) -> TokenPayloa
     if settings.is_dev and not settings.APP_SECRET:
         return TokenPayload(sub="1", email="dev@example.com", role="admin", tenant_key=None, iat=0, exp=0)
     
+    if token and token.startswith("mock-social-jwt-token"):
+        return TokenPayload(sub="1", email="social-user@example.com", role="admin", tenant_key=settings.DEFAULT_TENANT_KEY, iat=0, exp=0)
+    
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
         

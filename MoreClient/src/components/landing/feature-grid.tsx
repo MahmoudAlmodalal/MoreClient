@@ -1,12 +1,12 @@
 "use client";
 
 import {
-  Bot,
-  Globe2,
-  BarChart3,
-  Database,
-  KeyRound,
-  Users,
+  Inbox,
+  BrainCircuit,
+  TrendingUp,
+  ShieldAlert,
+  Combine,
+  Users2,
 } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 
@@ -15,96 +15,110 @@ export function FeatureGrid() {
 
   const featuresAr = [
     {
-      title: "ردود ذكية مؤتمتة",
-      desc: "روبوت ذكاء اصطناعي تفاعلي يفهم أسئلة عملائك ويجيب عليها فوراً بناء على مستندات قاعدة المعرفة المرفوعة الخاصة بك.",
-      icon: Bot,
-      accent: "text-brand-600 dark:text-brand-400 bg-brand-500/10 border-brand-500/20",
+      title: "صندوق الوارد الموحد",
+      desc: "قناة مركزية موحدة لـ WhatsApp وSMS والبريد الإلكتروني للرد على الجميع في مكان واحد.",
+      icon: Inbox,
     },
     {
-      title: "قنوات تراسل موحدة",
-      desc: "اربط قنوات الواتساب والرسائل النصية والبريد الإلكتروني وتفاعل مع كافة المحادثات من واجهة موحدة.",
-      icon: Globe2,
-      accent: "text-sky-600 dark:text-sky-400 bg-sky-500/10 border-sky-500/20",
+      title: "ذكاء اصطناعي تفصيلي",
+      desc: "روبوتات ذكية تفهم سياق المحادثة ونبرة العميل وتتحدث بأسلوب بشري طبيعي.",
+      icon: BrainCircuit,
     },
     {
-      title: "تقارير وإحصائيات متكاملة",
-      desc: "لوحة إحصائيات متقدمة لحجم استهلاك الرسائل، سرعة استجابة عقد الـ API، وسجل اشتراكات العملاء.",
-      icon: BarChart3,
-      accent: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+      title: "التحليلات التنبؤية",
+      desc: "بيانات ورؤى مدعومة بالذكاء الاصطناعي لمساعدتك على اتخاذ القرارات وتوسيع حجم عملك.",
+      icon: TrendingUp,
     },
     {
-      title: "قواعد بيانات مخصصة",
-      desc: "تخزين آمن ومحمي بالكامل عبر تقسيم قواعد بيانات المشتركين على خوادم إقليمية لسرعة استجابة خارقة.",
-      icon: Database,
-      accent: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20",
+      title: "قاعدة بيانات معزولة",
+      desc: "أقصى درجات الأمان وحماية الخصوصية عبر بنية قواعد بيانات منفصلة لكل منشأة.",
+      icon: ShieldAlert,
     },
     {
-      title: "ربط برمجي مرن (Webhooks)",
-      desc: "مفاتيح وصول الـ API وربط فوري للتحديثات التلقائية لتكامل سلس مع متاجر سلة أو أنظمة الـ ERP الخاصة بك.",
-      icon: KeyRound,
-      accent: "text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
+      title: "تكاملات برمجية مرنة",
+      desc: "اربط المنصة بسهولة مع سلة (Salla)، وزيد (Zid)، وأنظمة المبيعات والـ ERP الخاصة بك.",
+      icon: Combine,
     },
     {
-      title: "إدارة الصلاحيات والفرق",
-      desc: "إضافة مدراء وموظفي دعم، وتحديد صلاحيات الوصول إلى القنوات المختلفة والتحكم في إعدادات عقد التشغيل.",
-      icon: Users,
-      accent: "text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20",
+      title: "إدارة صلاحيات الفريق",
+      desc: "تحكم كامل وتوزيع للأدوار والصلاحيات للموظفين ومدراء قنوات الدعم.",
+      icon: Users2,
     },
   ];
 
   const featuresEn = [
     {
-      title: "Smart Automated Replies",
-      desc: "An interactive AI chatbot that understands customer questions and replies instantly based on your uploaded knowledge base documents.",
-      icon: Bot,
-      accent: "text-brand-600 dark:text-brand-400 bg-brand-500/10 border-brand-500/20",
+      title: "Unified Inbox",
+      desc: "A single, centralized hub for managing WhatsApp, SMS, and Email conversations in one place.",
+      icon: Inbox,
     },
     {
-      title: "Unified Messaging Channels",
-      desc: "Connect WhatsApp, SMS, and Email channels and engage with all conversations from one unified interface.",
-      icon: Globe2,
-      accent: "text-sky-600 dark:text-sky-400 bg-sky-500/10 border-sky-500/20",
+      title: "Nuanced AI",
+      desc: "Conversational chatbots that understand context, tone, and provide human-like helpful answers.",
+      icon: BrainCircuit,
     },
     {
-      title: "Integrated Reports & Analytics",
-      desc: "Advanced statistics dashboard for message volume, API node latency, and client subscription tracking.",
-      icon: BarChart3,
-      accent: "text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+      title: "Predictive Analytics",
+      desc: "Data-driven AI insights and projections to scale support operations and grow your business.",
+      icon: TrendingUp,
     },
     {
-      title: "Dedicated Databases & Nodes",
-      desc: "Fully secure and isolated storage by partitioning tenant databases across regional sharding nodes.",
-      icon: Database,
-      accent: "text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20",
+      title: "Dedicated Data",
+      desc: "Maximum enterprise security and compliance with isolated, single-tenant databases.",
+      icon: ShieldAlert,
     },
     {
-      title: "Flexible API & Webhooks",
-      desc: "Access tokens and instant update webhooks for seamless integrations with Salla, Zid, or your local ERP system.",
-      icon: KeyRound,
-      accent: "text-cyan-600 dark:text-cyan-400 bg-cyan-500/10 border-cyan-500/20",
+      title: "Flexible Integrations",
+      desc: "Connect effortlessly to Salla, Zid, Custom APIs, and your local ERP systems via Webhooks.",
+      icon: Combine,
     },
     {
-      title: "Team & Permission Management",
-      desc: "Add admins and support agents, define access permissions for different channels, and manage deployment node settings.",
-      icon: Users,
-      accent: "text-rose-600 dark:text-rose-400 bg-rose-500/10 border-rose-500/20",
+      title: "Role-Based Access",
+      desc: "Full administrative control, team permissions, and structured role management for support agents.",
+      icon: Users2,
     },
   ];
 
   const features = language === "ar" ? featuresAr : featuresEn;
 
   return (
-    <section id="features" className="relative py-20 bg-background border-t border-border-custom">
+    <section id="features" className="relative py-24 bg-[#101020] border-t border-white/5">
+      {/* Decorative Aura Glow */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full bg-[#7B61FF]/5 blur-[120px] pointer-events-none" />
+
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
+        
+        {/* Integrated Who We Are / Inspiration block */}
+        <div className="max-w-4xl mx-auto mb-20 p-8 sm:p-10 rounded-2xl border border-white/10 bg-[#161632]/45 backdrop-blur-sm relative overflow-hidden text-center sm:text-start shadow-xl">
+          <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-[#00FFCC]/5 blur-3xl pointer-events-none" />
+          <div className="flex flex-col sm:flex-row gap-6 items-center">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-tr from-[#7B61FF] to-[#00FFCC] p-[1px] flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(0,255,204,0.2)]">
+              <div className="w-full h-full bg-[#161632] rounded-[11px] flex items-center justify-center text-[#00FFCC] text-lg font-bold">
+                M
+              </div>
+            </div>
+            <div className="space-y-3">
+              <h3 className="text-sm font-bold tracking-widest text-[#00FFCC] uppercase">
+                {language === "ar" ? "رؤيتنا وقيمنا" : "Our Brand Promise"}
+              </h3>
+              <p className="text-sm sm:text-base leading-relaxed text-white/90 font-medium">
+                {language === "ar"
+                  ? "نحن نبني علاقات، لا مجرد برمجيات. MORE Response هو نظام أتمتة من الجيل القادم تم تصميمه لمساعدة الشركات والمتاجر الإلكترونية والعيادات على جسر الفجوة مع عملائهم. من خلال الدمج بين قنوات الواتساب المباشرة والرسائل النصية والبريد الإلكتروني مع بنية خوادم مخصصة لكل عميل، نضمن بقاء بيانات عملائك آمنة، سريعة، ومحلية."
+                  : "We build relationships, not just software. MORE Response is a next-generation automation platform crafted to help companies, e-commerce stores, and clinics bridge the gap to their customers. By combining direct WhatsApp, SMS, and Email channels with single-tenant architecture, we ensure your client data remains secure, fast, and local."}
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Section Header */}
-        <div className="text-center mb-14">
-          <h2 className="text-3xl font-bold text-foreground sm:text-4xl">
-            {language === "ar" ? "مميزات خارقة لنمو أعمالك" : "Supercharged Features for Business Growth"}
+        <div className="text-center mb-16">
+          <h2 className="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+            {language === "ar" ? "بُنيت للمؤسسات، صُممت لك." : "Built for Enterprise, Designed for You."}
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-sm sm:text-base text-text-muted">
+          <p className="mx-auto mt-4 max-w-2xl text-sm sm:text-base text-[#8e8eb2]">
             {language === "ar"
-              ? "كل ما تحتاجه للتحكم الشامل ببيانات وقنوات تواصل عملائك في لوحة تحكم واحدة"
-              : "Everything you need for unified control over customer data and messaging channels in a single dashboard"}
+              ? "كل ما يحتاجه فريقك للإدارة والتوسع، في عرض واحد."
+              : "Everything your team needs to manage and scale, in one single view."}
           </p>
         </div>
 
@@ -115,13 +129,22 @@ export function FeatureGrid() {
             return (
               <div
                 key={f.title}
-                className="rounded-2xl border border-border-custom bg-card p-6 text-start transition-all duration-300 hover:border-accent hover:shadow-md hover:-translate-y-1"
+                className="group relative rounded-2xl border border-white/5 bg-[#161632]/80 p-7 text-start transition-all duration-300 hover:border-[#7B61FF]/40 hover:-translate-y-1 hover:shadow-[0_15px_30px_rgba(0,0,0,0.3)] overflow-hidden"
               >
-                <div className={`mb-4 inline-flex h-11 w-11 items-center justify-center rounded-xl border ${f.accent}`}>
+                {/* Subtle corner violet light on hover */}
+                <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-[#7B61FF] to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                
+                {/* Icon Container with Glow Mint Accent */}
+                <div className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-xl bg-white/[0.03] text-[#00FFCC] group-hover:text-white group-hover:bg-[#7B61FF] border border-white/5 transition-all duration-300">
                   <Icon size={20} aria-hidden="true" />
                 </div>
-                <h3 className="text-lg font-bold text-foreground mb-2">{f.title}</h3>
-                <p className="text-xs sm:text-sm leading-relaxed text-text-muted">{f.desc}</p>
+                
+                <h3 className="text-base sm:text-lg font-bold text-white mb-2.5 transition-colors group-hover:text-[#00FFCC]">
+                  {f.title}
+                </h3>
+                <p className="text-xs sm:text-sm leading-relaxed text-[#8e8eb2] group-hover:text-white/80 transition-colors">
+                  {f.desc}
+                </p>
               </div>
             );
           })}

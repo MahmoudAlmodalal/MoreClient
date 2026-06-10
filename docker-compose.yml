@@ -1,33 +1,42 @@
+
 version: '3.8'
 
 services:
   backend:
     build:
-      context: ./artifacts/api-server
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: backend.Dockerfile
     ports:
-      - "8080:8080"
-    environment:
-      DATABASE_URL: sqlite+aiosqlite:///./test.db
-      PORT: 8080
-      NODE_ENV: development
-      LOG_LEVEL: info
-      OPENAI_API_KEY: your_openai_api_key_here
-      JWT_SECRET: any_random_string_for_security
-      ADMIN_API_KEY: admin_secret_key
+      - "8000:8000"
     volumes:
-      - ./artifacts/api-server/test.db:/app/test.db
-    command: bash -c "python init_db.py && uvicorn main:app --host 0.0.0.0 --port 8080"
+      - ./backend_data:/app/backend/backend_data
+      - ./chroma_store:/app/backend/chroma_store
+    environment:
+      # Set environment variables for the backend
+      # These should ideally be managed via .env file or Docker secrets in production
+      ENV: production
+      DATABASE_URL: sqlite:///./backend_data/backend.db
+      CHROMA_DIR: ./chroma_store
+      FRONTEND_URL: http://localhost:5001
+      BACKEND_PUBLIC_URL: http://localhost:8000
+      # Add other necessary environment variables like APP_SECRET, ADMIN_API_KEY, etc.
+      # APP_SECRET: your_app_secret
+      # ADMIN_API_KEY: your_admin_api_key
+    depends_on:
+      - frontend
 
   frontend:
     build:
       context: .
-      dockerfile: artifacts/clientmore/Dockerfile
+      dockerfile: frontend.Dockerfile
     ports:
-      - "3000:3000"
+      - "5001:5001"
     environment:
-      PORT: 3000
-      BASE_PATH: /
+      # Set environment variables for the frontend
+      NEXT_PUBLIC_API_URL: http://localhost:8000
     depends_on:
       - backend
-    command: pnpm --filter clientmore run dev
+
+volumes:
+  backend_data:
+  chroma_store:

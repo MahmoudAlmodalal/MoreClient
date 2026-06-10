@@ -1,0 +1,213 @@
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────────────────────────────────
+   clientMORE design tokens — single source of truth for the UI.
+   See DESIGN-SYSTEM.md for the full reference.
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Default: Light Theme (Slate/Indigo Palette) */
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --primary: #7B61FF; /* Aura Violet */
+  --primary-hover: #634ee0;
+  --border: #e2e8f0;
+  --card-bg: #ffffff;
+  --sidebar-bg: #f1f5f9;
+
+  /* Brand purple scale - now Aura Violet */
+  --brand-50: #f2efff;
+  --brand-100: #e7e2ff;
+  --brand-200: #cfc6ff;
+  --brand-300: #aa9cff;
+  --brand-400: #8872ff;
+  --brand-500: #7b61ff;
+  --brand-600: #6848ff;
+  --brand-700: #5531ff;
+  --brand-800: #4622e0;
+  --brand-900: #3a1ab8;
+
+  /* Light surfaces fallback */
+  --surface-light: #ffffff;
+  --surface-muted: #f8fafc;
+  --foreground-light: #0f172a;
+  --foreground-light-muted: #64748b;
+  --border-light: #e2e8f0;
+
+  /* Accent Mint */
+  --mint: #00FFCC;
+  --mint-hover: #00E6BC;
+
+  /* Radii */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+
+  /* Shadow & glow */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+  --shadow-brand: 0 4px 14px 0 rgba(123, 97, 255, 0.15);
+}
+
+.dark {
+  /* Dark Theme Override (Midnight Deep Indigo #101020 & Aura Violet #7B61FF) */
+  --background: #101020;
+  --foreground: #f4f4f6;
+  --primary: #7B61FF;
+  --primary-hover: #634ee0;
+  --border: #202042;
+  --card-bg: #161632;
+  --sidebar-bg: #101020;
+
+  /* Overwrite surface fallbacks for safety */
+  --surface-light: #161632;
+  --surface-muted: #0d0d1a;
+  --foreground-light: #f4f4f6;
+  --foreground-light-muted: #8e8eb2;
+  --border-light: #202042;
+
+  /* Shadow & glow */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -2px rgba(0, 0, 0, 0.35);
+  --shadow-brand: 0 4px 14px 0 rgba(123, 97, 255, 0.3);
+}
+
+@theme {
+  /* Semantic surfaces */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card-bg);
+  --color-sidebar: var(--sidebar-bg);
+  --color-accent: var(--primary);
+  --color-accent-hover: var(--primary-hover);
+  --color-border-custom: var(--border);
+  --color-mint: var(--mint);
+  --color-mint-hover: var(--mint-hover);
+
+  /* Brand scale */
+  --color-brand-50: var(--brand-50);
+  --color-brand-100: var(--brand-100);
+  --color-brand-200: var(--brand-200);
+  --color-brand-300: var(--brand-300);
+  --color-brand-400: var(--brand-400);
+  --color-brand-500: var(--brand-500);
+  --color-brand-600: var(--brand-600);
+  --color-brand-700: var(--brand-700);
+  --color-brand-800: var(--brand-800);
+  --color-brand-900: var(--brand-900);
+
+  /* Light surfaces */
+  --color-surface-light: var(--surface-light);
+  --color-surface-muted: var(--surface-muted);
+  --color-foreground-light: var(--foreground-light);
+  --color-border-light: var(--border-light);
+
+  /* Radii */
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-2xl: var(--radius-2xl);
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), sans-serif;
+  overflow-x: hidden;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+html[dir="rtl"] body {
+  font-family: var(--font-cairo), sans-serif;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* ─── Helper classes ──────────────────────────────────────────────────────── */
+
+.glass {
+  background: rgba(var(--card-bg), 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+}
+
+/* Reusable loading skeleton */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background-color: var(--border);
+  border-radius: 4px;
+}
+
+.skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background-image: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.1) 20%,
+    rgba(255, 255, 255, 0.2) 60%,
+    rgba(255, 255, 255, 0)
+  );
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+
+/* The shimmer sweep flips direction for RTL so it reads naturally start→end. */
+html[dir="rtl"] .skeleton::after {
+  transform: translateX(100%);
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+html[dir="rtl"] .skeleton::after {
+  animation-name: skeleton-shimmer-rtl;
+}
+
+@keyframes skeleton-shimmer-rtl {
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+/* Accessibility: honor the OS "reduce motion" preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .skeleton::after {
+    animation: none;
+  }
+}

@@ -1,0 +1,38 @@
+# Pinned to floors that resolve on Python 3.14 (the original ==1.*/==0.39.*
+# pins have no 3.14 wheels). Installed/verified versions noted in comments.
+fastapi>=0.115            # verified 0.135.3
+uvicorn[standard]>=0.32   # verified 0.44.0
+sqlalchemy>=2.0           # verified 2.0.49
+pydantic>=2              # verified 2.x
+pydantic-settings>=2
+python-dotenv>=1
+httpx>=0.27
+openai>=2                # verified 2.38.0 (v2 client; embeddings + chat.completions)
+anthropic>=0.39          # verified 0.104.1
+
+# RAG + ingestion
+chromadb>=0.5             # verified 1.5.9 (PersistentClient API)
+langchain-text-splitters>=0.2   # verified 1.1.2
+pymupdf>=1.24            # verified 1.27.2.3
+python-docx>=1.1         # verified 1.2.0
+langdetect==1.0.9
+python-multipart>=0.0.9
+pandas>=2.0.0
+openpyxl>=3.0.0
+
+# Channels
+python-telegram-bot>=21   # verified 22.7 (Telegram send done via raw Bot API/httpx)
+twilio>=9                 # verified 9.10.9
+
+# Security
+cryptography>=42         # Fernet encryption for at-rest channel secrets (core/crypto.py)
+slowapi>=0.1.9           # per-IP rate limiting (chat/upload/admin)
+PyJWT>=2.8
+passlib[bcrypt]>=1.7.4
+
+# System / ops
+psutil>=5.9              # backend/routers/admin.py health endpoint (process/system stats)
+
+# Demo tooling
+qrcode[pil]>=7            # QR code for the live Telegram bot link (backend/scripts/make_qr.py)
+pytest>=8

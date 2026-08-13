@@ -140,6 +140,7 @@ export default function PurchasesPage() {
           </div>
           <select
             data-testid="purchase-status-filter"
+            aria-label={copy.filter}
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value as PurchaseStatus)}
             className="rounded-lg border border-border-custom bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand-500"
@@ -197,6 +198,7 @@ export default function PurchasesPage() {
                     <td className="px-5 py-4">
                       <select
                         data-testid={`purchase-status-${order.id}`}
+                        aria-label={`${copy.status} ${order.productName || order.id}`}
                         value={order.status}
                         disabled={updatingId === order.id}
                         onChange={(event) => void handleStatusChange(order.id, event.target.value)}

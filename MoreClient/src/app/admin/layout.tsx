@@ -182,7 +182,7 @@ export default function SuperAdminLayout({
           <div className="mt-auto border-t border-border-custom pt-4 space-y-4">
             <button
               onClick={handleLogout}
-              className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-red-500 hover:bg-red-500/10 hover:text-red-600 transition-all duration-200 active:scale-98"
+              className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-red-700 dark:text-red-300 hover:bg-red-500/10 hover:text-red-700 transition-all duration-200 active:scale-98"
             >
               <LogOut className="h-5 w-5 shrink-0" />
               <span>{t("logout")}</span>

@@ -474,6 +474,7 @@ export default function SuperAdminPage() {
           {/* Select dropdown filters */}
           <div className="flex gap-3 w-full md:w-auto">
             <select
+              aria-label={isRtl ? "تصفية حسب الخطة" : "Filter by plan"}
               value={selectedPlanFilter}
               onChange={e => setSelectedPlanFilter(e.target.value)}
               className="bg-background border border-border-custom rounded-xl text-xs font-semibold text-foreground/80 px-3 py-2 focus:outline-none focus:border-brand-500"
@@ -485,6 +486,7 @@ export default function SuperAdminPage() {
             </select>
 
             <select
+              aria-label={isRtl ? "تصفية حسب الحالة" : "Filter by status"}
               value={selectedStatusFilter}
               onChange={e => setSelectedStatusFilter(e.target.value)}
               className="bg-background border border-border-custom rounded-xl text-xs font-semibold text-foreground/80 px-3 py-2 focus:outline-none focus:border-brand-500"
@@ -540,8 +542,8 @@ export default function SuperAdminPage() {
                       <td className="px-6 py-4">
                         <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-bold border ${
                           tenant.status === "active"
-                            ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20"
-                            : "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20"
+                            ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20"
+                            : "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/20"
                         }`}>
                           {tenant.status === "active" ? t("active") : t("inactive")}
                         </span>
@@ -569,8 +571,8 @@ export default function SuperAdminPage() {
                             onClick={() => handleToggleStatus(tenant.id)}
                             className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all border active:scale-95 cursor-pointer ${
                               tenant.status === "active"
-                                ? "border-red-500/20 bg-red-500/5 text-red-600 dark:text-red-400 hover:bg-red-500/10"
-                                : "border-emerald-500/20 bg-emerald-500/5 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
+                                ? "border-red-500/20 bg-red-500/5 text-red-700 dark:text-red-300 hover:bg-red-500/10"
+                                : "border-emerald-500/20 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500/10"
                             }`}
                           >
                             {tenant.status === "active" ? t("deactivateBtn") : t("activateBtn")}
@@ -579,6 +581,7 @@ export default function SuperAdminPage() {
                           <button
                             type="button"
                             data-testid={`tenant-edit-${tenant.tenantKey}`}
+                            aria-label={isRtl ? `تعديل ${tenant.name}` : `Edit ${tenant.name}`}
                             onClick={() => openEditModal(tenant)}
                             className="rounded-lg border border-border-custom bg-background p-1.5 text-text-muted hover:text-foreground hover:bg-foreground/5 transition-colors active:scale-95 cursor-pointer"
                           >

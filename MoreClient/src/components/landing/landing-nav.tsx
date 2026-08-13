@@ -58,24 +58,24 @@ export function LandingNav() {
   ];
 
   return (
-    <header
-      className={`sticky top-0 z-50 transition-all duration-300 border-b backdrop-blur-md ${
-        scrolled
-          ? "bg-background/95 border-border-custom py-2.5 shadow-lg"
-          : "bg-transparent border-transparent py-4"
-      }`}
-    >
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-5 sm:px-8">
+    <header className="sticky top-0 z-50 px-3 pt-3 sm:px-5">
+      <div
+        className={`mx-auto flex w-full max-w-6xl items-center justify-between rounded-2xl border px-4 py-2.5 backdrop-blur-xl transition-all duration-300 sm:px-5 ${
+          scrolled
+            ? "border-border-custom bg-background/90 shadow-[0_16px_38px_rgba(15,23,42,0.10)]"
+            : "border-border-custom/60 bg-background/65 shadow-[0_8px_28px_rgba(123,97,255,0.05)]"
+        }`}
+      >
         <a href={pathname === "/" ? "#hero" : "/#hero"} aria-label="More Response" className="flex items-center">
           <NavLogo />
         </a>
 
-        <nav className="hidden items-center gap-6 lg:flex">
+        <nav className="hidden items-center gap-1 rounded-xl border border-border-custom/70 bg-foreground/[0.025] p-1 lg:flex">
           {links.map((l) => (
             <a
               key={l.href}
               href={l.href}
-              className="text-xs font-semibold uppercase tracking-wider text-foreground/75 transition-all duration-200 hover:text-accent dark:hover:text-[#00FFCC] hover:scale-102"
+              className="rounded-lg px-3 py-2 text-xs font-semibold uppercase tracking-wider text-foreground/75 transition-all duration-200 hover:bg-brand-500/10 hover:text-accent dark:hover:text-[#00FFCC]"
             >
               {l.label}
             </a>
@@ -86,7 +86,7 @@ export function LandingNav() {
           {/* Language Switcher */}
           <button
             onClick={() => setLanguage(language === "ar" ? "en" : "ar")}
-            className="inline-flex items-center justify-center rounded-lg border border-border-custom px-2.5 py-1.5 text-xs font-bold text-foreground/80 hover:bg-foreground/5 hover:text-foreground transition-all cursor-pointer"
+            className="inline-flex items-center justify-center rounded-xl border border-border-custom bg-background/60 px-2.5 py-1.5 text-xs font-bold text-foreground/80 hover:bg-foreground/5 hover:text-foreground transition-all cursor-pointer"
             aria-label="Switch language"
           >
             {language === "ar" ? "EN" : "ع"}
@@ -95,7 +95,7 @@ export function LandingNav() {
           {/* Theme switcher */}
           <button
             onClick={toggleTheme}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-custom text-foreground/80 hover:bg-foreground/5 hover:text-foreground transition-all active:scale-95 cursor-pointer"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border-custom bg-background/60 text-foreground/80 hover:bg-foreground/5 hover:text-foreground transition-all active:scale-95 cursor-pointer"
             aria-label="Toggle theme"
           >
             {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
@@ -109,12 +109,12 @@ export function LandingNav() {
             {t("navLogin")}
           </a>
           
-          <Button href="/welcome" size="sm" className="hidden sm:inline-flex bg-[#7B61FF] hover:bg-[#6848ff] text-white hover:shadow-[0_0_15px_rgba(123,97,255,0.4)] border-none">
+          <Button href="/welcome" size="sm" className="hidden rounded-xl border-none bg-[#7B61FF] text-white shadow-[0_8px_18px_rgba(123,97,255,0.28)] hover:bg-[#6848ff] hover:shadow-[0_10px_22px_rgba(123,97,255,0.40)] sm:inline-flex">
             {t("navGetStarted")}
           </Button>
 
           <button
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border-custom text-foreground/80 transition-colors hover:bg-foreground/5 lg:hidden"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border-custom bg-background/60 text-foreground/80 transition-colors hover:bg-foreground/5 lg:hidden"
             aria-label="menu"
             onClick={() => setOpen((v) => !v)}
           >
@@ -124,7 +124,7 @@ export function LandingNav() {
       </div>
 
       {open ? (
-        <div className="border-t border-border-custom bg-background px-5 py-4 lg:hidden">
+        <div className="mx-auto mt-2 max-w-6xl rounded-2xl border border-border-custom bg-background/95 px-5 py-4 shadow-xl backdrop-blur-xl lg:hidden">
           <nav className="flex flex-col gap-3">
             {links.map((l) => (
               <a

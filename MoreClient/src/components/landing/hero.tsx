@@ -13,6 +13,10 @@ interface Message {
 
 export function Hero() {
   const { language } = useLanguage();
+  return <HeroContent key={language} language={language} />;
+}
+
+function HeroContent({ language }: { language: "ar" | "en" }) {
   const chatBodyRef = useRef<HTMLDivElement>(null);
 
   const initialMessagesAr: Message[] = [
@@ -35,17 +39,7 @@ export function Hero() {
 
   const [messages, setMessages] = useState<Message[]>(language === "ar" ? initialMessagesAr : initialMessagesEn);
   const [isTyping, setIsTyping] = useState(false);
-  const [prevLanguage, setPrevLanguage] = useState(language);
   const [hasSallaQuestionTriggered, setHasSallaQuestionTriggered] = useState(false);
-
-  useEffect(() => {
-    if (prevLanguage !== language) {
-      setPrevLanguage(language);
-      setMessages(language === "ar" ? initialMessagesAr : initialMessagesEn);
-      setHasSallaQuestionTriggered(false);
-      setIsTyping(false);
-    }
-  }, [language, prevLanguage]);
 
   useEffect(() => {
     if (chatBodyRef.current) {

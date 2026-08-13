@@ -212,14 +212,14 @@ export function Hero() {
 
           {/* High-Fidelity Chat Simulator Mockup */}
           <div className="relative z-10 flex w-full justify-center py-4 lg:col-span-5 lg:py-0">
-            <div className="hero-orbit absolute -right-1 top-0 hidden items-center gap-2 rounded-2xl border border-brand-500/20 bg-card/95 px-3 py-2 shadow-[0_14px_30px_rgba(15,23,42,0.10)] backdrop-blur-xl sm:flex">
+            <div className="hero-orbit absolute -right-1 top-0 z-20 hidden items-center gap-2 rounded-2xl border border-brand-500/20 bg-card/95 px-3 py-2 shadow-[0_14px_30px_rgba(15,23,42,0.10)] backdrop-blur-xl sm:flex">
               <span className="relative flex h-2.5 w-2.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00FFCC] opacity-70" />
                 <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#00D3AA]" />
               </span>
               <span className="text-xs font-bold text-foreground">{language === "ar" ? "الأتمتة نشطة" : "Automation active"}</span>
             </div>
-            <div className="hero-orbit-slow absolute -bottom-2 -left-2 hidden items-center gap-2 rounded-2xl border border-border-custom bg-card/95 px-3 py-2 shadow-[0_14px_30px_rgba(15,23,42,0.10)] backdrop-blur-xl sm:flex">
+            <div className="hero-orbit-slow absolute -bottom-2 -left-2 z-20 hidden items-center gap-2 rounded-2xl border border-border-custom bg-card/95 px-3 py-2 shadow-[0_14px_30px_rgba(15,23,42,0.10)] backdrop-blur-xl sm:flex">
               <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-500/12 text-brand-600 dark:text-brand-200">M</span>
               <span className="text-xs font-bold text-foreground">{language === "ar" ? "صندوق وارد موحّد" : "One unified inbox"}</span>
             </div>

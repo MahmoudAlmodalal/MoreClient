@@ -99,11 +99,25 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 _JWT_ALGORITHM = "HS256"
 _JWT_EXPIRE_DAYS = 7
+_DEV_JWT_SECRET = "clientmore-development-only-secret"
+
+
+def _jwt_secret() -> str:
+    """Return the configured signing secret, with a development-only fallback.
+
+    Production continues to fail closed when APP_SECRET is absent. The fallback
+    exists solely so the documented local frontend/backend flow can create a
+    browser session without requiring a manually supplied secret.
+    """
+    if settings.APP_SECRET:
+        return settings.APP_SECRET
+    if settings.is_dev:
+        return _DEV_JWT_SECRET
+    raise RuntimeError("Cannot sign or decode JWT: APP_SECRET is unset")
 
 
 def create_access_token(user_id: int, email: str, role: str, tenant_key: str | None) -> str:
-    if not settings.APP_SECRET:
-        raise RuntimeError("Cannot sign JWT: APP_SECRET is unset")
+    secret = _jwt_secret()
     expire = datetime.utcnow() + timedelta(days=_JWT_EXPIRE_DAYS)
     to_encode = {
         "sub": str(user_id),
@@ -113,14 +127,12 @@ def create_access_token(user_id: int, email: str, role: str, tenant_key: str | N
         "iat": int(datetime.utcnow().timestamp()),
         "exp": int(expire.timestamp())
     }
-    encoded_jwt = jwt.encode(to_encode, settings.APP_SECRET, algorithm=_JWT_ALGORITHM)
+    encoded_jwt = jwt.encode(to_encode, secret, algorithm=_JWT_ALGORITHM)
     return encoded_jwt
 
 
 def decode_access_token(token: str) -> TokenPayload:
-    if not settings.APP_SECRET:
-        raise RuntimeError("Cannot decode JWT: APP_SECRET is unset")
-    payload = jwt.decode(token, settings.APP_SECRET, algorithms=[_JWT_ALGORITHM])
+    payload = jwt.decode(token, _jwt_secret(), algorithms=[_JWT_ALGORITHM])
     return TokenPayload(**payload)
 
 
@@ -130,10 +142,7 @@ _oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login", auto_error=Fal
 def get_current_user(token: str | None = Depends(_oauth2_scheme)) -> TokenPayload:
     if settings.is_dev and not settings.APP_SECRET:
         return TokenPayload(sub="1", email="dev@example.com", role="admin", tenant_key=None, iat=0, exp=0)
-    
-    if token and token.startswith("mock-social-jwt-token"):
-        return TokenPayload(sub="1", email="social-user@example.com", role="admin", tenant_key=settings.DEFAULT_TENANT_KEY, iat=0, exp=0)
-    
+
     if not token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
         

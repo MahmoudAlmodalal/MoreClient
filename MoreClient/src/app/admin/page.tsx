@@ -12,6 +12,10 @@ import {
   toggleTenantStatus,
   ApiError,
   ADMIN_KEY_STORAGE,
+  fetchAdminKpis,
+  fetchAdminHealth,
+  type AdminKpis,
+  type AdminHealth,
 } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +28,7 @@ import {
   Globe,
   Copy,
   Check,
+  RefreshCw,
 } from "lucide-react";
 
 const fallbackOrigin = "http://localhost:5001";
@@ -69,6 +74,9 @@ export default function SuperAdminPage() {
 
   // Real data from backend
   const [tenants, setTenants] = useState<TenantOut[]>([]);
+  const [adminKpis, setAdminKpis] = useState<AdminKpis | null>(null);
+  const [adminHealth, setAdminHealth] = useState<AdminHealth | null>(null);
+  const [overviewError, setOverviewError] = useState<string | null>(null);
 
   // Modal States
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -99,18 +107,31 @@ export default function SuperAdminPage() {
     return false;
   }, []);
 
+  const loadOverview = useCallback(async () => {
+    const [list, kpis, health] = await Promise.all([
+      fetchTenants(),
+      fetchAdminKpis(),
+      fetchAdminHealth(),
+    ]);
+    setTenants(list);
+    setAdminKpis(kpis);
+    setAdminHealth(health);
+  }, []);
+
   const loadData = useCallback(async () => {
     try {
-      const list = await fetchTenants();
-      setTenants(list);
+      await loadOverview();
       setNeedsKey(false);
       setKeyError(null);
+      setOverviewError(null);
     } catch (err) {
-      handleAuthError(err);
+      if (!handleAuthError(err)) {
+        setOverviewError(err instanceof Error ? err.message : "Could not load admin overview.");
+      }
     } finally {
       setLoading(false);
     }
-  }, [handleAuthError]);
+  }, [handleAuthError, loadOverview]);
 
   useAsyncOnMount(loadData, [loadData]);
 
@@ -126,9 +147,9 @@ export default function SuperAdminPage() {
     setKeyError(null);
 
     try {
-      const list = await fetchTenants();
-      setTenants(list);
+      await loadOverview();
       setNeedsKey(false);
+      setOverviewError(null);
     } catch (err) {
       if (err instanceof ApiError && err.status === 401) {
         setKeyError(isRtl ? "مفتاح مشرف غير صالح" : "Invalid admin key.");
@@ -348,6 +369,87 @@ export default function SuperAdminPage() {
       </div>
 
       <div className="space-y-6">
+        {overviewError && (
+          <div className="flex items-start justify-between gap-4 rounded-xl border border-red-500/20 bg-red-500/5 px-4 py-3 text-sm text-red-700 dark:text-red-300">
+            <span>{overviewError}</span>
+            <button
+              type="button"
+              onClick={() => {
+                setLoading(true);
+                void loadData();
+              }}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-red-500/20 px-2.5 py-1.5 text-xs font-semibold hover:bg-red-500/10"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              {isRtl ? "إعادة المحاولة" : "Retry"}
+            </button>
+          </div>
+        )}
+
+        <section aria-label={isRtl ? "ملخص الإدارة" : "Admin overview"} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            {
+              label: isRtl ? "المستأجرون النشطون" : "Active tenants",
+              value: adminKpis?.activeTenants ?? "—",
+              detail: adminKpis ? `${adminKpis.totalTenants} ${isRtl ? "إجماليًا" : "total"}` : "",
+            },
+            {
+              label: isRtl ? "الإيراد الشهري المتكرر" : "Monthly recurring revenue",
+              value: adminKpis ? `$${adminKpis.totalMrr.toLocaleString()}` : "—",
+              detail: isRtl ? "حسب الخطط الحالية" : "From current plans",
+            },
+            {
+              label: isRtl ? "الرسائل العالمية" : "Global messages",
+              value: adminKpis?.globalMessages ?? "—",
+              detail: isRtl ? "هذا الشهر" : "This month",
+            },
+            {
+              label: isRtl ? "حالة الذكاء الاصطناعي" : "LLM provider",
+              value: adminHealth?.llmProviderStatus ?? "—",
+              detail: adminHealth ? `${adminHealth.dbLatencyMs}ms DB` : "",
+            },
+          ].map((card) => (
+            <div key={card.label} className="rounded-xl border border-border-custom bg-card p-4 shadow-sm">
+              <p className="text-xs font-medium text-text-muted">{card.label}</p>
+              <p className="mt-2 truncate text-2xl font-bold tracking-tight text-foreground">{card.value}</p>
+              <p className="mt-1 text-xs text-text-muted">{card.detail || (isRtl ? "بانتظار البيانات" : "Waiting for data")}</p>
+            </div>
+          ))}
+        </section>
+
+        <section className="rounded-xl border border-border-custom bg-card p-4 shadow-sm" aria-label={isRtl ? "صحة الخدمات" : "Service health"}>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="text-sm font-bold text-foreground">{isRtl ? "صحة المنصة" : "Platform health"}</h3>
+              <p className="mt-1 text-xs text-text-muted">{isRtl ? "حالة قاعدة البيانات والذاكرة ومحرك البحث المتجهي." : "Database, memory, CPU, and vector search status."}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setLoading(true);
+                void loadData();
+              }}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-border-custom bg-background px-3 py-2 text-xs font-semibold text-foreground hover:bg-foreground/5"
+            >
+              <RefreshCw className="h-3.5 w-3.5" />
+              {isRtl ? "تحديث البيانات" : "Refresh data"}
+            </button>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              [isRtl ? "قاعدة البيانات" : "Database", adminHealth?.dbLatencyMs != null ? `${adminHealth.dbLatencyMs}ms` : "—"],
+              [isRtl ? "ChromaDB" : "ChromaDB", adminHealth?.chromaStatus ?? "—"],
+              [isRtl ? "الذاكرة" : "Memory", adminHealth?.memoryUsagePercent != null ? `${adminHealth.memoryUsagePercent}%` : "—"],
+              [isRtl ? "المعالج" : "CPU", adminHealth?.cpuUsagePercent != null ? `${adminHealth.cpuUsagePercent}%` : "—"],
+            ].map(([label, value]) => (
+              <div key={label} className="rounded-lg border border-border-custom bg-background px-3 py-2.5">
+                <p className="text-[11px] font-medium text-text-muted">{label}</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">{value}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* Filters Row */}
         <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-card p-4 rounded-xl border border-border-custom shadow-sm">
           {/* Search Input */}

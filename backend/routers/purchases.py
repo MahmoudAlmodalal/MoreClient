@@ -14,6 +14,22 @@ _ALLOWED_STATUSES = {"pending", "confirmed", "forwarded", "completed", "cancelle
 _ACTIVE_STATES = {"collecting_product", "collecting_quantity", "collecting_address", "awaiting_confirmation"}
 
 
+def _scoped_purchase(
+    order_id: int,
+    db: Session,
+    tenant_key: str | None,
+) -> PurchaseOrder | None:
+    """Return an order only when it belongs to the caller's tenant.
+
+    Administrators receive ``tenant_key=None`` and can manage all orders. A
+    company user is always constrained through the linked conversation.
+    """
+    query = db.query(PurchaseOrder).filter(PurchaseOrder.id == order_id)
+    if tenant_key:
+        query = query.join(Conversation).filter(Conversation.tenant_key == tenant_key)
+    return query.first()
+
+
 @router.get("/api/purchases", response_model=list[PurchaseOrderOut])
 def list_purchases(
     status: str | None = None,
@@ -47,8 +63,12 @@ def list_active_purchases(
 
 
 @router.get("/api/purchases/{order_id}", response_model=PurchaseOrderOut)
-def get_purchase(order_id: int, db: Session = Depends(get_db)):
-    order = db.get(PurchaseOrder, order_id)
+def get_purchase(
+    order_id: int,
+    tenant_key: str | None = Depends(get_tenant_key),
+    db: Session = Depends(get_db),
+):
+    order = _scoped_purchase(order_id, db, tenant_key)
     if order is None:
         raise HTTPException(status_code=404, detail="Purchase order not found")
     return PurchaseOrderOut.model_validate(order)
@@ -58,11 +78,12 @@ def get_purchase(order_id: int, db: Session = Depends(get_db)):
 def update_purchase_status(
     order_id: int,
     payload: PurchaseStatusUpdate,
+    tenant_key: str | None = Depends(get_tenant_key),
     db: Session = Depends(get_db),
 ):
     if payload.status not in _ALLOWED_STATUSES:
         raise HTTPException(status_code=400, detail="Invalid purchase status")
-    order = db.get(PurchaseOrder, order_id)
+    order = _scoped_purchase(order_id, db, tenant_key)
     if order is None:
         raise HTTPException(status_code=404, detail="Purchase order not found")
     order.status = payload.status

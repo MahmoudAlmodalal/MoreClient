@@ -43,16 +43,8 @@ export default function WelcomePage() {
     setError("");
     setLoading(true);
     try {
-      if (provider === "google") {
-        const res = await startSocialAuth("google", "login");
-        window.location.href = res.authUrl;
-      } else {
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem("authToken", `mock-social-jwt-token-apple`);
-          window.sessionStorage.setItem("userRole", "company");
-        }
-        router.push("/dashboard");
-      }
+      const res = await startSocialAuth(provider, "login");
+      window.location.href = res.authUrl;
     } catch (err) {
       setError((err as Error)?.message || "Failed to start social login");
       setLoading(false);

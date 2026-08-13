@@ -401,3 +401,17 @@ export function fetchAdminKpis(): Promise<AdminKpis> {
 export function fetchAdminHealth(): Promise<AdminHealth> {
   return apiGet<AdminHealth>("/api/admin/health", adminKeyHeader());
 }
+
+// ─── Purchase order API functions ────────────────────────────────────────────
+
+export function fetchPurchases(status?: string): Promise<PurchaseOrderOut[]> {
+  const query = status && status !== "all" ? `?status=${encodeURIComponent(status)}` : "";
+  return apiGet<PurchaseOrderOut[]>(`/api/purchases${query}`);
+}
+
+export function updatePurchaseStatus(
+  orderId: number,
+  status: string,
+): Promise<PurchaseOrderOut> {
+  return apiSend<PurchaseOrderOut>(`/api/purchases/${orderId}/status`, "POST", { status });
+}

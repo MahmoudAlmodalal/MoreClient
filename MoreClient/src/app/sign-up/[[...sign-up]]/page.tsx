@@ -47,16 +47,8 @@ export default function SignUpPage() {
     setError("");
     setLoading(true);
     try {
-      if (provider === "google") {
-        const res = await startSocialAuth("google", "signup");
-        window.location.href = res.authUrl;
-      } else {
-        if (typeof window !== "undefined") {
-          window.localStorage.setItem("authToken", `mock-social-jwt-token-apple`);
-          window.sessionStorage.setItem("userRole", "company");
-        }
-        router.push("/dashboard");
-      }
+      const res = await startSocialAuth(provider, "signup");
+      window.location.href = res.authUrl;
     } catch (err) {
       setError((err as Error)?.message || "Failed to start social signup");
       setLoading(false);

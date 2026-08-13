@@ -29,6 +29,7 @@ cryptography>=42         # Fernet encryption for at-rest channel secrets (core/c
 slowapi>=0.1.9           # per-IP rate limiting (chat/upload/admin)
 PyJWT>=2.8
 passlib[bcrypt]>=1.7.4
+bcrypt>=4.0,<4.1           # passlib 1.7.x expects bcrypt's legacy version metadata
 
 # System / ops
 psutil>=5.9              # backend/routers/admin.py health endpoint (process/system stats)

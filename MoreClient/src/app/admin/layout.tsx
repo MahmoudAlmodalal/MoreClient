@@ -29,6 +29,7 @@ export default function SuperAdminLayout({
   const { language, setLanguage, t, isRtl, companyLogo } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isSessionValidated, setIsSessionValidated] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const role = useSessionRole();
@@ -40,19 +41,21 @@ export default function SuperAdminLayout({
       router.replace("/welcome");
       return;
     }
-    void restoreAuthSession().catch(() => {
-      logout();
-      router.replace("/welcome");
-    });
+
+    void restoreAuthSession()
+      .catch(() => {
+        logout();
+        router.replace("/welcome");
+      })
+      .finally(() => setIsSessionValidated(true));
   }, [router]);
 
   useEffect(() => {
-    if (role !== SESSION_ROLE_PENDING && role !== "admin") {
-      router.replace("/dashboard");
-    }
-  }, [role, router]);
+    if (!isSessionValidated || role === SESSION_ROLE_PENDING) return;
+    if (role !== "admin") router.replace("/dashboard");
+  }, [isSessionValidated, role, router]);
 
-  if (!isAuthorized) {
+  if (!isSessionValidated || !isAuthorized) {
     return (
       <div className="flex h-screen items-center justify-center bg-background text-foreground">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-accent border-t-transparent" />

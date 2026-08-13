@@ -81,6 +81,7 @@ export default function SuperAdminPage() {
   // Modal States
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [tenantPendingDeletion, setTenantPendingDeletion] = useState<TenantOut | null>(null);
   const [currentTenant, setCurrentTenant] = useState<TenantOut | null>(null);
   const [copiedTenantSnippet, setCopiedTenantSnippet] = useState<string | null>(null);
 
@@ -177,6 +178,7 @@ export default function SuperAdminPage() {
       });
 
       setTenants(prev => [...prev, created]);
+      await loadOverview();
       setIsCreateModalOpen(false);
 
       // Reset Create Form
@@ -215,6 +217,7 @@ export default function SuperAdminPage() {
       });
 
       setTenants(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+      await loadOverview();
       setIsEditModalOpen(false);
       triggerToast(isRtl ? "تم تحديث البيانات بنجاح" : "Subscription updated successfully.");
     } catch (err) {
@@ -228,6 +231,7 @@ export default function SuperAdminPage() {
     try {
       const updated = await toggleTenantStatus(id);
       setTenants(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+      await loadOverview();
       triggerToast(
         isRtl
           ? `تم ${updated.status === "active" ? "تفعيل" : "تعطيل"} الاشتراك`
@@ -241,15 +245,11 @@ export default function SuperAdminPage() {
   };
 
   const handleDeleteTenant = async (id: number) => {
-    const confirmMsg = isRtl
-      ? "هل أنت متأكد من حذف هذا الاشتراك نهائياً؟ لا يمكن التراجع عن هذا الإجراء."
-      : "Are you sure you want to permanently delete this subscription? This action cannot be undone.";
-
-    if (!window.confirm(confirmMsg)) return;
-
     try {
       await apiDeleteTenant(id);
       setTenants(prev => prev.filter(t => t.id !== id));
+      await loadOverview();
+      setTenantPendingDeletion(null);
       triggerToast(isRtl ? "تم حذف الاشتراك بنجاح" : "Subscription deleted successfully.");
     } catch (err) {
       if (!handleAuthError(err)) {
@@ -578,7 +578,9 @@ export default function SuperAdminPage() {
                           </button>
 
                           <button
-                            onClick={() => handleDeleteTenant(tenant.id)}
+                            type="button"
+                            aria-label={isRtl ? `حذف ${tenant.name}` : `Delete ${tenant.name}`}
+                            onClick={() => setTenantPendingDeletion(tenant)}
                             className="rounded-lg border border-red-500/10 bg-background p-1.5 text-red-600 dark:text-red-400 hover:bg-red-500/10 transition-colors active:scale-95 cursor-pointer"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -653,6 +655,40 @@ export default function SuperAdminPage() {
                 <Button type="submit" variant="primary">{t("createBtn")}</Button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {tenantPendingDeletion && (
+        <div
+          className="fixed inset-0 z-[110] flex items-center justify-center bg-black/40 backdrop-blur-xs p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="delete-tenant-title"
+        >
+          <div className="w-full max-w-md rounded-2xl border border-border-custom bg-card p-6 shadow-lg animate-in fade-in zoom-in-95 duration-200">
+            <h3 id="delete-tenant-title" className="text-xl font-bold text-foreground">
+              {isRtl ? "حذف الاشتراك؟" : "Delete subscription?"}
+            </h3>
+            <p className="mt-3 text-sm leading-6 text-text-muted">
+              {isRtl
+                ? `سيُحذف اشتراك ${tenantPendingDeletion.name} نهائياً. لا يمكن التراجع عن هذا الإجراء.`
+                : `${tenantPendingDeletion.name} will be permanently deleted. This action cannot be undone.`}
+            </p>
+            <div className="mt-6 flex justify-end gap-3">
+              <Button type="button" variant="ghost" onClick={() => setTenantPendingDeletion(null)}>
+                {t("cancel")}
+              </Button>
+              <Button
+                type="button"
+                variant="primary"
+                className="bg-red-600 hover:bg-red-700"
+                onClick={() => void handleDeleteTenant(tenantPendingDeletion.id)}
+              >
+                {isRtl ? "حذف نهائياً" : "Delete permanently"}
+              </Button>
+            </div>
           </div>
         </div>
       )}

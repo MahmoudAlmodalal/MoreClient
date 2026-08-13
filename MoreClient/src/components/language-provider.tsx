@@ -944,12 +944,13 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [subscriptionPlan, setSubscriptionPlan] = useState<"pro" | "ultra">("pro");
   const [usedMessages, setUsedMessages] = useState(328);
 
-  // Integration credentials mock state
-  const [telegramToken, setTelegramToken] = useState("1823908230:AAHfjkeF8392-Jdhfj388273hGDH");
-  const [isTelegramActive, setIsTelegramActive] = useState(true);
-  const [twilioSid, setTwilioSid] = useState("AC73827d89abfdce2738d829392e92c28");
-  const [twilioToken, setTwilioToken] = useState("8f39281e82b7c738e82d8d8c8b2938a");
-  const [twilioNumber, setTwilioNumber] = useState("+14155238886");
+  // Integration credentials start empty until the backend hydrates real, masked settings.
+  // Never ship provider credentials in client-side source or mock state.
+  const [telegramToken, setTelegramToken] = useState("");
+  const [isTelegramActive, setIsTelegramActive] = useState(false);
+  const [twilioSid, setTwilioSid] = useState("");
+  const [twilioToken, setTwilioToken] = useState("");
+  const [twilioNumber, setTwilioNumber] = useState("");
   const [isWhatsappActive, setIsWhatsappActive] = useState(false);
 
   const [botTone, setBotTone] = useState("professional");

@@ -26,7 +26,7 @@ import {
   Check,
 } from "lucide-react";
 
-const fallbackOrigin = "http://localhost:5000";
+const fallbackOrigin = "http://localhost:5001";
 const subscribeToClientReady = () => () => {};
 const getClientReady = () => true;
 const getServerReady = () => false;

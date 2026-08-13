@@ -19,7 +19,7 @@ import {
   ShoppingCart
 } from "lucide-react";
 
-const fallbackOrigin = "http://localhost:5000";
+const fallbackOrigin = "http://localhost:5001";
 const defaultTenantKey = process.env.NEXT_PUBLIC_DEFAULT_TENANT_KEY ?? "telnet";
 const subscribeOrigin = () => () => {};
 const getClientOrigin = () =>

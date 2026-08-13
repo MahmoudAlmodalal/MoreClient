@@ -27,8 +27,8 @@ router = APIRouter()
 @router.post("/api/learn", response_model=LearnResponse)
 def learn(
     body: LearnRequest,
+    db: Session = Depends(get_db),
     tenant_key_dep: str | None = Depends(get_tenant_key),
-    db: Session = Depends(get_db)
 ) -> LearnResponse:
     tenant_key = tenant_key_dep or (body.tenant_key or cfg.DEFAULT_TENANT_KEY).strip().lower() or cfg.DEFAULT_TENANT_KEY
     source_handoff: Handoff | None = None

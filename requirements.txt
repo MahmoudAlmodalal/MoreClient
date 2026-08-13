@@ -36,3 +36,4 @@ psutil>=5.9              # backend/routers/admin.py health endpoint (process/sys
 # Demo tooling
 qrcode[pil]>=7            # QR code for the live Telegram bot link (backend/scripts/make_qr.py)
 pytest>=8
+pytest-asyncio>=0.23

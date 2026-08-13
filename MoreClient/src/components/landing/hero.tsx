@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { ArrowRight, Send, RefreshCw } from "lucide-react";
+import { ArrowRight, Send, RefreshCw, Sparkles, BadgeCheck } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 
@@ -143,31 +143,28 @@ export function Hero() {
     setIsTyping(false);
   };
 
+  const capabilityPills = language === "ar"
+    ? ["واتساب، SMS، وبريد إلكتروني", "صندوق وارد موحّد", "سير عمل يناسبك"]
+    : ["WhatsApp, SMS & Email", "One unified inbox", "Workflows that fit you"];
+
   return (
-    <section id="hero" className="relative overflow-hidden pt-20 pb-24 sm:pt-28 sm:pb-36 bg-background text-foreground">
+    <section id="hero" className="relative overflow-hidden pb-20 pt-12 text-foreground sm:pb-28 sm:pt-16 lg:pb-32">
       {/* Decorative Aurora Violet Glows */}
-      <div className="absolute -top-40 -left-40 w-96 h-96 rounded-full bg-[#7B61FF]/10 blur-[150px] pointer-events-none" />
-      <div className="absolute top-1/2 -right-40 w-96 h-96 rounded-full bg-[#00FFCC]/5 blur-[150px] pointer-events-none" />
+      <div className="hero-orbit absolute -left-36 -top-32 h-[26rem] w-[26rem] rounded-full bg-[#7B61FF]/14 blur-[120px] pointer-events-none" />
+      <div className="hero-orbit-slow absolute right-[-12rem] top-36 h-[25rem] w-[25rem] rounded-full bg-[#00FFCC]/10 blur-[120px] pointer-events-none" />
+      <div className="hero-grid pointer-events-none absolute inset-0 -z-10 opacity-55 dark:opacity-40" />
 
-      {/* Grid overlay */}
-      <div 
-        className="pointer-events-none absolute inset-0 -z-10 opacity-5 dark:opacity-10"
-        style={{
-          backgroundImage: `
-            linear-gradient(to right, currentColor 1px, transparent 1px),
-            linear-gradient(to bottom, currentColor 1px, transparent 1px)
-          `,
-          backgroundSize: "40px 40px",
-          maskImage: "radial-gradient(ellipse at center, black, transparent 75%)",
-          WebkitMaskImage: "radial-gradient(ellipse at center, black, transparent 75%)"
-        }}
-      />
-
-      <div className="mx-auto max-w-6xl px-5 sm:px-8">
-        <div className="grid gap-14 lg:grid-cols-12 lg:items-center">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <div className="grid gap-12 lg:grid-cols-12 lg:items-center lg:gap-10">
           {/* Hero text */}
-          <div className="flex flex-col text-start lg:col-span-7 z-10">
-            <h1 className="text-4xl font-extrabold tracking-tight text-foreground sm:text-5xl md:text-6xl leading-[1.15]">
+          <div className="z-10 flex flex-col text-start lg:col-span-7">
+            <div className="inline-flex w-fit items-center gap-2 rounded-full border border-brand-500/20 bg-brand-500/8 px-3 py-1.5 text-xs font-bold tracking-wide text-brand-700 shadow-sm dark:text-brand-200">
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-brand-500 text-white shadow-[0_0_16px_rgba(123,97,255,0.35)]">
+                <Sparkles size={12} aria-hidden="true" />
+              </span>
+              {language === "ar" ? "أتمتة محادثات أكثر إنسانية" : "Human-first conversation automation"}
+            </div>
+            <h1 className="mt-5 text-4xl font-extrabold leading-[1.08] tracking-tight text-foreground sm:text-5xl md:text-6xl lg:text-[4.15rem]">
               {language === "ar" ? (
                 <>
                   أتمتة أعمالك. <br/>
@@ -185,11 +182,11 @@ export function Hero() {
                 ? "منصة الأتمتة الذكية الشبيهة بالبشر للواتساب والرسائل النصية والبريد الإلكتروني. ابنِ علاقات، لا مجرد تذاكر."
                 : "The intelligent, human-like automation platform for WhatsApp, SMS, and Email. Build relationships, not just tickets."}
             </p>
-            <div className="mt-8 flex flex-wrap gap-4">
+            <div className="mt-8 flex flex-wrap gap-3 sm:gap-4">
               <Button
                 href="/welcome"
                 size="lg"
-                className="bg-[#7B61FF] hover:bg-[#6848ff] text-white font-bold rounded-full px-8 py-4 shadow-[0_0_20px_rgba(123,97,255,0.4)] transition-all hover:scale-102 border-none active:scale-98"
+                className="rounded-2xl border-none bg-[#7B61FF] px-7 py-4 font-bold text-white shadow-[0_12px_28px_rgba(123,97,255,0.34)] transition-all hover:scale-[1.02] hover:bg-[#6848ff] hover:shadow-[0_16px_34px_rgba(123,97,255,0.42)] active:scale-[0.98] sm:px-8"
               >
                 {language === "ar" ? "جربه مجاناً" : "Try It Free"}
                 <ArrowRight size={18} className="ml-1.5 rtl:mr-1.5 rtl:ml-0" aria-hidden="true" />
@@ -198,16 +195,37 @@ export function Hero() {
                 href="#features"
                 variant="outline"
                 size="lg"
-                className="bg-transparent hover:bg-foreground/5 text-foreground font-semibold rounded-full px-8 py-4 border-border-custom hover:border-foreground/45 transition-all hover:scale-102 active:scale-98"
+                className="rounded-2xl border-border-custom bg-background/55 px-7 py-4 font-semibold text-foreground shadow-sm transition-all hover:scale-[1.02] hover:border-brand-500/40 hover:bg-brand-500/5 active:scale-[0.98] sm:px-8"
               >
                 {language === "ar" ? "استكشف المنصة" : "Explore Platform"}
               </Button>
             </div>
+            <div className="mt-8 flex flex-wrap gap-x-5 gap-y-3 border-t border-border-custom/70 pt-6">
+              {capabilityPills.map((item) => (
+                <span key={item} className="inline-flex items-center gap-2 text-xs font-semibold text-foreground/70 sm:text-sm">
+                  <BadgeCheck size={16} className="shrink-0 text-[#7B61FF] dark:text-[#00FFCC]" aria-hidden="true" />
+                  {item}
+                </span>
+              ))}
+            </div>
           </div>
 
           {/* High-Fidelity Chat Simulator Mockup */}
-          <div className="lg:col-span-5 flex justify-center z-10 w-full">
-            <div className="relative w-full max-w-[420px] rounded-2xl border border-border-custom bg-card shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] overflow-hidden flex flex-col backdrop-blur-md">
+          <div className="relative z-10 flex w-full justify-center py-4 lg:col-span-5 lg:py-0">
+            <div className="hero-orbit absolute -right-1 top-0 hidden items-center gap-2 rounded-2xl border border-brand-500/20 bg-card/95 px-3 py-2 shadow-[0_14px_30px_rgba(15,23,42,0.10)] backdrop-blur-xl sm:flex">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#00FFCC] opacity-70" />
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#00D3AA]" />
+              </span>
+              <span className="text-xs font-bold text-foreground">{language === "ar" ? "الأتمتة نشطة" : "Automation active"}</span>
+            </div>
+            <div className="hero-orbit-slow absolute -bottom-2 -left-2 hidden items-center gap-2 rounded-2xl border border-border-custom bg-card/95 px-3 py-2 shadow-[0_14px_30px_rgba(15,23,42,0.10)] backdrop-blur-xl sm:flex">
+              <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand-500/12 text-brand-600 dark:text-brand-200">M</span>
+              <span className="text-xs font-bold text-foreground">{language === "ar" ? "صندوق وارد موحّد" : "One unified inbox"}</span>
+            </div>
+            <div className="relative w-full max-w-[430px] overflow-hidden rounded-[1.75rem] border border-border-custom bg-card p-1.5 shadow-[0_28px_70px_rgba(15,23,42,0.16)] dark:shadow-[0_28px_70px_rgba(0,0,0,0.55)]">
+              <div className="absolute inset-0 rounded-[1.75rem] bg-gradient-to-br from-[#7B61FF]/12 via-transparent to-[#00FFCC]/12 pointer-events-none" />
+              <div className="relative flex flex-col overflow-hidden rounded-[1.35rem] border border-border-custom/80 bg-card">
               {/* Soft Aura Violet light behind chat */}
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-48 h-48 rounded-full bg-[#7B61FF]/10 blur-[60px] pointer-events-none -z-10" />
 
@@ -292,6 +310,7 @@ export function Hero() {
                 >
                   <Send size={15} className="rtl:rotate-180" />
                 </button>
+              </div>
               </div>
             </div>
           </div>

@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { useTheme } from "@/components/theme-provider";
 import { useSessionRole } from "@/lib/use-session-role";
-import { logout } from "@/lib/api";
+import { JWT_TOKEN_STORAGE, logout } from "@/lib/api";
 import { NotificationBell } from "@/components/notification-bell";
 import {
   LayoutDashboard,
@@ -24,6 +24,15 @@ import {
   Moon
 } from "lucide-react";
 
+const subscribeAuthSession = (onStoreChange: () => void) => {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener("storage", onStoreChange);
+  return () => window.removeEventListener("storage", onStoreChange);
+};
+const getClientAuthToken = () =>
+  typeof window === "undefined" ? null : window.localStorage.getItem(JWT_TOKEN_STORAGE);
+const getServerAuthToken = () => null;
+
 export default function DashboardLayout({
   children,
 }: {
@@ -34,7 +43,16 @@ export default function DashboardLayout({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
+  const authToken = useSyncExternalStore(
+    subscribeAuthSession,
+    getClientAuthToken,
+    getServerAuthToken,
+  );
   const isAdmin = useSessionRole() === "admin";
+
+  useEffect(() => {
+    if (!authToken) router.replace("/welcome");
+  }, [authToken, router]);
 
   const navigation = [
     { name: t("dashboard"), href: "/dashboard", icon: LayoutDashboard },
@@ -67,6 +85,14 @@ export default function DashboardLayout({
     logout();
     router.push("/welcome");
   };
+
+  if (!authToken) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background text-foreground" aria-live="polite">
+        <div className="h-7 w-7 animate-spin rounded-full border-2 border-accent border-t-transparent" aria-label="Redirecting to sign in" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground transition-colors duration-200">

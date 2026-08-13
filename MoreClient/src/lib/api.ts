@@ -41,6 +41,7 @@ export function adminKeyHeader(): Record<string, string> {
 }
 
 export const JWT_TOKEN_STORAGE = "authToken";
+export const TENANT_KEY_STORAGE = "tenantKey";
 
 export type AuthSessionOut = {
   token: string;
@@ -58,21 +59,26 @@ export function authHeader(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+function persistAuthSession(session: AuthSessionOut): void {
+  if (typeof window === "undefined") return;
+  window.localStorage.setItem(JWT_TOKEN_STORAGE, session.token);
+  if (session.tenantKey) {
+    window.localStorage.setItem(TENANT_KEY_STORAGE, session.tenantKey);
+  } else {
+    window.localStorage.removeItem(TENANT_KEY_STORAGE);
+  }
+  window.sessionStorage.setItem("userRole", session.role);
+}
+
 export async function login(email: string, password: string): Promise<AuthSessionOut> {
   const res = await apiSend<AuthSessionOut>("/api/auth/login", "POST", { email, password });
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(JWT_TOKEN_STORAGE, res.token);
-    window.sessionStorage.setItem("userRole", res.role);
-  }
+  persistAuthSession(res);
   return res;
 }
 
 export async function register(name: string, email: string, password: string, companyName: string): Promise<AuthSessionOut> {
   const res = await apiSend<AuthSessionOut>("/api/auth/register", "POST", { name, email, password, companyName });
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(JWT_TOKEN_STORAGE, res.token);
-    window.sessionStorage.setItem("userRole", res.role);
-  }
+  persistAuthSession(res);
   return res;
 }
 
@@ -97,16 +103,14 @@ export async function startSocialAuth(provider: "google" | "apple", mode: "login
 
 export async function completeSocialAuth(code: string, state: string): Promise<AuthSessionOut> {
   const res = await apiSend<AuthSessionOut>("/api/auth/social/callback", "POST", { code, state });
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(JWT_TOKEN_STORAGE, res.token);
-    window.sessionStorage.setItem("userRole", res.role);
-  }
+  persistAuthSession(res);
   return res;
 }
 
 export function logout(): void {
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(JWT_TOKEN_STORAGE);
+    window.localStorage.removeItem(TENANT_KEY_STORAGE);
     window.sessionStorage.removeItem("userRole");
   }
 }

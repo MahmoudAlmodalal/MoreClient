@@ -2,7 +2,7 @@
 
 import React, { useState, useSyncExternalStore } from "react";
 import { useLanguage } from "@/components/language-provider";
-import { apiSend, type SettingsOut } from "@/lib/api";
+import { apiSend, TENANT_KEY_STORAGE, type SettingsOut } from "@/lib/api";
 import { SubscriptionPlans } from "@/components/dashboard/subscription-plans";
 import {
   Bot,
@@ -25,6 +25,16 @@ const subscribeOrigin = () => () => {};
 const getClientOrigin = () =>
   typeof window === "undefined" ? fallbackOrigin : window.location.origin;
 const getServerOrigin = () => fallbackOrigin;
+const subscribeTenantKey = (onStoreChange: () => void) => {
+  if (typeof window === "undefined") return () => {};
+  window.addEventListener("storage", onStoreChange);
+  return () => window.removeEventListener("storage", onStoreChange);
+};
+const getClientTenantKey = () =>
+  typeof window === "undefined"
+    ? defaultTenantKey
+    : window.localStorage.getItem(TENANT_KEY_STORAGE) || defaultTenantKey;
+const getServerTenantKey = () => defaultTenantKey;
 
 export default function SettingsPage() {
   const {
@@ -86,10 +96,15 @@ export default function SettingsPage() {
     getClientOrigin,
     getServerOrigin
   );
+  const currentTenantKey = useSyncExternalStore(
+    subscribeTenantKey,
+    getClientTenantKey,
+    getServerTenantKey,
+  );
   const [copiedScript, setCopiedScript] = useState(false);
   const [copiedIframe, setCopiedIframe] = useState(false);
-  const widgetScriptSnippet = `<script src="${currentOrigin}/embed.js" data-tenant-key="${defaultTenantKey}"></script>`;
-  const widgetIframeSnippet = `<iframe src="${currentOrigin}/widget?tenantKey=${encodeURIComponent(defaultTenantKey)}" width="380" height="600" style="border:none; border-radius:12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></iframe>`;
+  const widgetScriptSnippet = `<script src="${currentOrigin}/embed.js" data-tenant-key="${currentTenantKey}"></script>`;
+  const widgetIframeSnippet = `<iframe src="${currentOrigin}/widget?tenantKey=${encodeURIComponent(currentTenantKey)}" width="380" height="600" style="border:none; border-radius:12px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></iframe>`;
 
   const copyToClipboard = (text: string, type: "script" | "iframe") => {
     navigator.clipboard.writeText(text);

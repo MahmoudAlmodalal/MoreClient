@@ -1,82 +1,87 @@
 @import "tailwindcss";
 
-/* ─────────────────────────────────────────────────────────────────────────
-   clientMORE design tokens — single source of truth for the UI.
-   See DESIGN-SYSTEM.md for the full reference.
-   ───────────────────────────────────────────────────────────────────────── */
+/*
+ * More Response marketing foundation.
+ * The landing page follows design.md: a calm, editorial B2B system with
+ * one primary accent and restrained surfaces.
+ */
 :root {
-  /* Default: Light Theme (Slate/Indigo Palette) */
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  --primary: #7B61FF; /* Aura Violet */
-  --primary-hover: #634ee0;
-  --border: #e2e8f0;
+  --background: #f7f7f5;
+  --foreground: #202124;
+  --primary: #3156d3;
+  --primary-hover: #2649be;
+  --border: #dfe1e0;
   --card-bg: #ffffff;
-  --sidebar-bg: #f1f5f9;
+  --sidebar-bg: #f0f1ef;
 
-  /* Brand purple scale - now Aura Violet */
-  --brand-50: #f2efff;
-  --brand-100: #e7e2ff;
-  --brand-200: #cfc6ff;
-  --brand-300: #aa9cff;
-  --brand-400: #8872ff;
-  --brand-500: #7b61ff;
-  --brand-600: #6848ff;
-  --brand-700: #5531ff;
-  --brand-800: #4622e0;
-  --brand-900: #3a1ab8;
+  --brand-50: #edf1ff;
+  --brand-100: #dce4ff;
+  --brand-200: #c2ceff;
+  --brand-300: #9eafff;
+  --brand-400: #758fff;
+  --brand-500: #3156d3;
+  --brand-600: #2948b8;
+  --brand-700: #213a95;
+  --brand-800: #1e317b;
+  --brand-900: #19265d;
 
-  /* Light surfaces fallback */
   --surface-light: #ffffff;
-  --surface-muted: #f8fafc;
-  --foreground-light: #0f172a;
-  --foreground-light-muted: #64748b;
-  --border-light: #e2e8f0;
+  --surface-muted: #f0f1ef;
+  --foreground-light: #202124;
+  --foreground-light-muted: #666b70;
+  --border-light: #dfe1e0;
 
-  /* Accent Mint */
-  --mint: #00FFCC;
-  --mint-hover: #00E6BC;
+  --mint: #1f7a55;
+  --mint-hover: #176244;
 
-  /* Radii */
   --radius-sm: 0.375rem;
   --radius-md: 0.5rem;
   --radius-lg: 0.75rem;
-  --radius-xl: 1rem;
-  --radius-2xl: 1.5rem;
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1rem;
 
-  /* Shadow & glow */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.04), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
-  --shadow-brand: 0 4px 14px 0 rgba(123, 97, 255, 0.15);
+  --shadow-sm: 0 1px 2px rgba(32, 33, 36, 0.05);
+  --shadow-md: 0 3px 8px rgba(32, 33, 36, 0.06);
+  --shadow-lg: 0 10px 24px rgba(32, 33, 36, 0.08);
+  --shadow-brand: 0 4px 12px rgba(49, 86, 211, 0.16);
 }
 
 .dark {
-  /* Dark Theme Override (Midnight Deep Indigo #101020 & Aura Violet #7B61FF) */
-  --background: #101020;
-  --foreground: #f4f4f6;
-  --primary: #7B61FF;
-  --primary-hover: #634ee0;
-  --border: #202042;
-  --card-bg: #161632;
-  --sidebar-bg: #101020;
+  --background: #121315;
+  --foreground: #f2f3f0;
+  --primary: #91a8ff;
+  --primary-hover: #b4c1ff;
+  --border: #2c3033;
+  --card-bg: #1a1c1f;
+  --sidebar-bg: #16181a;
 
-  /* Overwrite surface fallbacks for safety */
-  --surface-light: #161632;
-  --surface-muted: #0d0d1a;
-  --foreground-light: #f4f4f6;
-  --foreground-light-muted: #8e8eb2;
-  --border-light: #202042;
+  --brand-50: #1c2442;
+  --brand-100: #24305a;
+  --brand-200: #2d3d73;
+  --brand-300: #4259a5;
+  --brand-400: #6f87dc;
+  --brand-500: #91a8ff;
+  --brand-600: #a5b7ff;
+  --brand-700: #bdc9ff;
+  --brand-800: #d3dbff;
+  --brand-900: #eaedff;
 
-  /* Shadow & glow */
-  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -1px rgba(0, 0, 0, 0.25);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.6), 0 4px 6px -2px rgba(0, 0, 0, 0.35);
-  --shadow-brand: 0 4px 14px 0 rgba(123, 97, 255, 0.3);
+  --surface-light: #1a1c1f;
+  --surface-muted: #16181a;
+  --foreground-light: #f2f3f0;
+  --foreground-light-muted: #a5a8aa;
+  --border-light: #2c3033;
+
+  --mint: #6fc79c;
+  --mint-hover: #8dd8b2;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 3px 8px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 24px rgba(0, 0, 0, 0.35);
+  --shadow-brand: 0 4px 12px rgba(145, 168, 255, 0.16);
 }
 
 @theme {
-  /* Semantic surfaces */
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card-bg);
@@ -86,8 +91,8 @@
   --color-border-custom: var(--border);
   --color-mint: var(--mint);
   --color-mint-hover: var(--mint-hover);
+  --color-text-muted: var(--foreground-light-muted);
 
-  /* Brand scale */
   --color-brand-50: var(--brand-50);
   --color-brand-100: var(--brand-100);
   --color-brand-200: var(--brand-200);
@@ -99,13 +104,11 @@
   --color-brand-800: var(--brand-800);
   --color-brand-900: var(--brand-900);
 
-  /* Light surfaces */
   --color-surface-light: var(--surface-light);
   --color-surface-muted: var(--surface-muted);
   --color-foreground-light: var(--foreground-light);
   --color-border-light: var(--border-light);
 
-  /* Radii */
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
@@ -129,7 +132,11 @@ html[dir="rtl"] body {
   font-family: var(--font-cairo), sans-serif;
 }
 
-/* Custom Scrollbar */
+::selection {
+  background: var(--brand-200);
+  color: var(--foreground);
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -148,60 +155,11 @@ html[dir="rtl"] body {
   background: var(--primary);
 }
 
-/* ─── Helper classes ──────────────────────────────────────────────────────── */
-
 .glass {
-  background: rgba(var(--card-bg), 0.7);
-  backdrop-filter: blur(12px);
+  background: color-mix(in srgb, var(--card-bg) 92%, transparent);
   border: 1px solid var(--border);
 }
 
-/* Landing page atmosphere */
-.landing-shell {
-  position: relative;
-  isolation: isolate;
-  background:
-    radial-gradient(circle at 12% 5%, rgba(123, 97, 255, 0.12), transparent 25rem),
-    radial-gradient(circle at 88% 18%, rgba(0, 255, 204, 0.08), transparent 22rem),
-    var(--background);
-}
-
-.landing-shell::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  opacity: 0.45;
-  background-image: radial-gradient(var(--border) 0.65px, transparent 0.65px);
-  background-size: 18px 18px;
-  mask-image: linear-gradient(to bottom, black 0%, transparent 38%);
-  -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 38%);
-}
-
-.hero-grid {
-  background-image:
-    linear-gradient(to right, color-mix(in srgb, var(--foreground) 7%, transparent) 1px, transparent 1px),
-    linear-gradient(to bottom, color-mix(in srgb, var(--foreground) 7%, transparent) 1px, transparent 1px);
-  background-size: 44px 44px;
-  mask-image: radial-gradient(ellipse at center, black 10%, transparent 72%);
-  -webkit-mask-image: radial-gradient(ellipse at center, black 10%, transparent 72%);
-}
-
-.hero-orbit {
-  animation: hero-float 7s ease-in-out infinite;
-}
-
-.hero-orbit-slow {
-  animation: hero-float 9s ease-in-out -2.5s infinite;
-}
-
-@keyframes hero-float {
-  0%, 100% { transform: translate3d(0, 0, 0); }
-  50% { transform: translate3d(0, -10px, 0); }
-}
-
-/* Reusable loading skeleton */
 .skeleton {
   position: relative;
   overflow: hidden;
@@ -217,35 +175,25 @@ html[dir="rtl"] body {
   background-image: linear-gradient(
     90deg,
     rgba(255, 255, 255, 0) 0,
-    rgba(255, 255, 255, 0.1) 20%,
-    rgba(255, 255, 255, 0.2) 60%,
-    rgba(255, 255, 255, 0)
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0) 100%
   );
   animation: skeleton-shimmer 1.6s ease-in-out infinite;
 }
 
-/* The shimmer sweep flips direction for RTL so it reads naturally start→end. */
 html[dir="rtl"] .skeleton::after {
   transform: translateX(100%);
-}
-
-@keyframes skeleton-shimmer {
-  100% {
-    transform: translateX(100%);
-  }
-}
-
-html[dir="rtl"] .skeleton::after {
   animation-name: skeleton-shimmer-rtl;
 }
 
-@keyframes skeleton-shimmer-rtl {
-  100% {
-    transform: translateX(-100%);
-  }
+@keyframes skeleton-shimmer {
+  100% { transform: translateX(100%); }
 }
 
-/* Accessibility: honor the OS "reduce motion" preference */
+@keyframes skeleton-shimmer-rtl {
+  100% { transform: translateX(-100%); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -256,9 +204,7 @@ html[dir="rtl"] .skeleton::after {
     scroll-behavior: auto !important;
   }
 
-  .skeleton::after,
-  .hero-orbit,
-  .hero-orbit-slow {
+  .skeleton::after {
     animation: none;
   }
 }

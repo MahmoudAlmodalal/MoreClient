@@ -5,22 +5,14 @@ import { useLanguage } from "@/components/language-provider";
 
 function FooterLogo() {
   return (
-    <div className="flex items-center gap-2 select-none">
-      <div className="relative w-8 h-8 rounded-lg bg-gradient-to-tr from-[#7B61FF] to-[#00FFCC] p-[1.5px] flex items-center justify-center shadow-[0_0_15px_rgba(123,97,255,0.2)]">
-        <div className="w-full h-full bg-background rounded-[7px] flex items-center justify-center">
-          <svg className="w-4.5 h-4.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M4 17V8L12 14L20 8V17" stroke="url(#logoGradFooter)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-            <defs>
-              <linearGradient id="logoGradFooter" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#7B61FF" />
-                <stop offset="100%" stopColor="#00FFCC" />
-              </linearGradient>
-            </defs>
-          </svg>
-        </div>
+    <div className="flex items-center gap-2.5 select-none">
+      <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-border-custom bg-card text-accent shadow-sm">
+        <svg className="h-4.5 w-4.5" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M4 17V8L12 14L20 8V17" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
       </div>
-      <span className="font-outfit text-base sm:text-lg font-extrabold tracking-tight text-foreground flex items-center">
-        MORE<span className="text-accent dark:text-[#00FFCC] ml-1 font-medium text-xs tracking-wider bg-brand-500/10 px-1.5 py-0.5 rounded border border-brand-500/20">Response</span>
+      <span className="font-outfit text-base font-extrabold tracking-tight text-foreground sm:text-lg">
+        MORE <span className="font-medium text-foreground/65">Response</span>
       </span>
     </div>
   );
@@ -28,105 +20,65 @@ function FooterLogo() {
 
 export function LandingFooter() {
   const { language } = useLanguage();
+  const quickLinks = [
+    { href: "#hero", label: language === "ar" ? "الرئيسية" : "Home" },
+    { href: "#features", label: language === "ar" ? "المميزات" : "Features" },
+    { href: "#showcase", label: language === "ar" ? "المنصة" : "Showcase" },
+    { href: "#pricing", label: language === "ar" ? "خطط الأسعار" : "Pricing Plans" },
+  ];
+  const supportLinks = [
+    { href: "#faq", label: language === "ar" ? "الأسئلة الشائعة" : "FAQs" },
+    { href: "#", label: language === "ar" ? "توثيقات الـ API" : "API Docs" },
+    { href: "#", label: language === "ar" ? "مركز المساعدة" : "Help Center" },
+    { href: "#", label: language === "ar" ? "حالة النظام" : "System Status" },
+  ];
 
   return (
-    <footer className="border-t border-border-custom bg-card/30 py-14 text-start">
-      <div className="mx-auto max-w-6xl px-5 sm:px-8">
-        <div className="grid gap-10 md:grid-cols-[1.5fr_1fr_1fr_1fr] pb-10 border-b border-border-custom">
-          {/* Logo / Description */}
+    <footer className="bg-sidebar py-14 text-start sm:py-16">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <div className="grid gap-10 border-b border-border-custom pb-10 md:grid-cols-[1.5fr_1fr_1fr_1fr]">
           <div className="space-y-4">
             <FooterLogo />
-            <p className="max-w-xs text-xs sm:text-sm leading-relaxed text-text-muted">
+            <p className="max-w-xs text-sm leading-6 text-foreground/60">
               {language === "ar"
-                ? "المنصة الأولى لأتمتة خدمة وخطوط اتصالات العملاء للشركات والمؤسسات بذكاء مدمج وتكامل سحابي متفوق."
-                : "The leading platform for automating customer service and communication lines for businesses and institutions with integrated intelligence and superior cloud integration."}
+                ? "منصة عملية لإدارة محادثات العملاء وأتمتة التواصل عبر قنواتك الأساسية من مكان واحد."
+                : "A practical platform for managing customer conversations and automating communication across your core channels."}
             </p>
           </div>
 
-          {/* Col 1: Quick Links */}
           <div>
-            <h4 className="text-xs sm:text-sm font-bold text-foreground uppercase tracking-wider">
-              {language === "ar" ? "الروابط السريعة" : "Quick Links"}
-            </h4>
+            <h4 className="text-sm font-bold text-foreground">{language === "ar" ? "الروابط السريعة" : "Quick links"}</h4>
             <ul className="mt-4 space-y-2.5">
-              {[
-                { href: "#hero", label: language === "ar" ? "الرئيسية" : "Home" },
-                { href: "#features", label: language === "ar" ? "المميزات" : "Features" },
-                { href: "#showcase", label: language === "ar" ? "المنصة" : "Showcase" },
-                { href: "#pricing", label: language === "ar" ? "خطط الأسعار" : "Pricing Plans" },
-              ].map((l) => (
-                <li key={l.label}>
-                  <a href={l.href} className="text-xs sm:text-sm text-text-muted hover:text-accent dark:hover:text-[#00FFCC] transition-colors">
-                    {l.label}
-                  </a>
-                </li>
+              {quickLinks.map((link) => (
+                <li key={link.label}><a href={link.href} className="text-sm text-foreground/60 transition-colors hover:text-accent">{link.label}</a></li>
               ))}
             </ul>
           </div>
 
-          {/* Col 2: Support & Help */}
           <div>
-            <h4 className="text-xs sm:text-sm font-bold text-foreground uppercase tracking-wider">
-              {language === "ar" ? "الدعم والمساعدة" : "Support & Help"}
-            </h4>
+            <h4 className="text-sm font-bold text-foreground">{language === "ar" ? "الدعم والمساعدة" : "Support"}</h4>
             <ul className="mt-4 space-y-2.5">
-              {[
-                { href: "#faq", label: language === "ar" ? "الأسئلة الشائعة" : "FAQs" },
-                { href: "#", label: language === "ar" ? "توثيقات الـ API" : "API Docs" },
-                { href: "#", label: language === "ar" ? "مركز المساعدة" : "Help Center" },
-                { href: "#", label: language === "ar" ? "حالة النظام" : "System Status" },
-              ].map((l) => (
-                <li key={l.label}>
-                  <a href={l.href} className="text-xs sm:text-sm text-text-muted hover:text-accent dark:hover:text-[#00FFCC] transition-colors">
-                    {l.label}
-                  </a>
-                </li>
+              {supportLinks.map((link) => (
+                <li key={link.label}><a href={link.href} className="text-sm text-foreground/60 transition-colors hover:text-accent">{link.label}</a></li>
               ))}
             </ul>
           </div>
 
-          {/* Col 3: Contact info */}
           <div>
-            <h4 className="text-xs sm:text-sm font-bold text-foreground uppercase tracking-wider">
-              {language === "ar" ? "تواصل معنا" : "Contact Us"}
-            </h4>
-            <ul className="mt-4 space-y-3.5">
-              <li className="flex items-center gap-2.5 text-xs sm:text-sm text-text-muted">
-                <Mail size={14} className="text-[#7B61FF] dark:text-[#00FFCC] shrink-0" />
-                <a href="mailto:support@moreresponse.com" className="hover:text-accent dark:hover:text-[#00FFCC] transition-colors">
-                  support@moreresponse.com
-                </a>
-              </li>
-              <li className="flex items-center gap-2.5 text-xs sm:text-sm text-text-muted">
-                <Phone size={14} className="text-[#7B61FF] dark:text-[#00FFCC] shrink-0" />
-                <a href="tel:+962790000000" className="hover:text-accent dark:hover:text-[#00FFCC] transition-colors">
-                  +962 7 9000 0000
-                </a>
-              </li>
-              <li className="flex items-center gap-2.5 text-xs sm:text-sm text-text-muted">
-                <MapPin size={14} className="text-[#7B61FF] dark:text-[#00FFCC] shrink-0" />
-                <span>
-                  {language === "ar" ? "المنامة، مملكة البحرين" : "Manama, Kingdom of Bahrain"}
-                </span>
-              </li>
+            <h4 className="text-sm font-bold text-foreground">{language === "ar" ? "تواصل معنا" : "Contact"}</h4>
+            <ul className="mt-4 space-y-3 text-sm text-foreground/60">
+              <li className="flex items-center gap-2.5"><Mail size={14} className="shrink-0 text-accent" /><a href="mailto:support@moreresponse.com" className="hover:text-accent">support@moreresponse.com</a></li>
+              <li className="flex items-center gap-2.5"><Phone size={14} className="shrink-0 text-accent" /><a href="tel:+962790000000" className="hover:text-accent">+962 7 9000 0000</a></li>
+              <li className="flex items-center gap-2.5"><MapPin size={14} className="shrink-0 text-accent" /><span>{language === "ar" ? "المنامة، مملكة البحرين" : "Manama, Kingdom of Bahrain"}</span></li>
             </ul>
           </div>
         </div>
 
-        {/* Footer Bottom */}
-        <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between text-xs text-text-muted">
-          <span>
-            {language === "ar"
-              ? "حقوق الطبع والنشر © 2026 منصة More Response. جميع الحقوق محفوظة."
-              : "Copyright © 2026 More Response. All rights reserved."}
-          </span>
+        <div className="mt-8 flex flex-col gap-4 text-xs text-foreground/55 sm:flex-row sm:items-center sm:justify-between">
+          <span>{language === "ar" ? "حقوق الطبع والنشر © 2026 منصة More Response. جميع الحقوق محفوظة." : "Copyright © 2026 More Response. All rights reserved."}</span>
           <div className="flex gap-5">
-            <a href="#" className="hover:text-accent dark:hover:text-[#00FFCC] transition-colors">
-              {language === "ar" ? "شروط الخدمة" : "Terms of Service"}
-            </a>
-            <a href="#" className="hover:text-accent dark:hover:text-[#00FFCC] transition-colors">
-              {language === "ar" ? "سياسة الخصوصية" : "Privacy Policy"}
-            </a>
+            <a href="#" className="hover:text-accent">{language === "ar" ? "شروط الخدمة" : "Terms of Service"}</a>
+            <a href="#" className="hover:text-accent">{language === "ar" ? "سياسة الخصوصية" : "Privacy Policy"}</a>
           </div>
         </div>
       </div>

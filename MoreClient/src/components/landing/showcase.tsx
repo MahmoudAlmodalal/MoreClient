@@ -1,18 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { 
-  Home as HomeIcon, 
-  Layers, 
-  Users, 
-  FileText, 
-  BarChart3, 
-  Settings, 
-  Bell, 
-  Clock, 
+import {
+  Home as HomeIcon,
+  Layers,
+  Users,
+  FileText,
+  BarChart3,
+  Settings,
+  Bell,
+  Clock,
   Star,
   ArrowRight,
-  TrendingUp
+  TrendingUp,
 } from "lucide-react";
 import { useLanguage } from "@/components/language-provider";
 
@@ -20,213 +20,145 @@ export function Showcase() {
   const { language } = useLanguage();
   const [hoveredNode, setHoveredNode] = useState<string | null>(null);
 
-  // Nodes for the Customer Journeys Flowchart
   const nodesAr = [
-    { id: "home", label: "الرئيسية", desc: "الدخول: 1,850", info: "زيارات الموقع المباشرة", color: "from-blue-500 to-indigo-500" },
-    { id: "features", label: "المميزات", desc: "الاستبقاء: 78%", info: "تصفح الخصائص والمقارنات", color: "from-[#7B61FF] to-purple-500" },
-    { id: "signup", label: "التسجيل", desc: "التحويل: 42%", info: "إنشاء حسابات تجريبية جديدة", color: "from-amber-500 to-orange-500" },
-    { id: "active", label: "نشط الآن", desc: "الترقية: 15%", info: "الربط الفعلي بقنوات المحادثة", color: "from-[#00FFCC] to-emerald-500" }
+    { id: "home", label: "الرئيسية", desc: "الدخول: 1,850", info: "زيارات الموقع المباشرة" },
+    { id: "features", label: "المميزات", desc: "الاستبقاء: 78%", info: "تصفح الخصائص والمقارنات" },
+    { id: "signup", label: "التسجيل", desc: "التحويل: 42%", info: "إنشاء حسابات تجريبية جديدة" },
+    { id: "active", label: "نشط الآن", desc: "الترقية: 15%", info: "الربط الفعلي بقنوات المحادثة" },
   ];
 
   const nodesEn = [
-    { id: "home", label: "Home", desc: "Entry: 1,850", info: "Direct landing page visits", color: "from-blue-500 to-indigo-500" },
-    { id: "features", label: "Features", desc: "Retention: 78%", info: "Feature grid interactions", color: "from-[#7B61FF] to-purple-500" },
-    { id: "signup", label: "Sign Up", desc: "Conversion: 42%", info: "New trial account signups", color: "from-amber-500 to-orange-500" },
-    { id: "active", label: "Active", desc: "Upgrade: 15%", info: "Omnichannel bot deployment", color: "from-[#00FFCC] to-emerald-500" }
+    { id: "home", label: "Home", desc: "Entry: 1,850", info: "Direct landing page visits" },
+    { id: "features", label: "Features", desc: "Retention: 78%", info: "Feature grid interactions" },
+    { id: "signup", label: "Sign Up", desc: "Conversion: 42%", info: "New trial account signups" },
+    { id: "active", label: "Active", desc: "Upgrade: 15%", info: "Omnichannel bot deployment" },
   ];
 
   const nodes = language === "ar" ? nodesAr : nodesEn;
 
   return (
-    <section id="showcase" className="relative py-24 bg-background border-t border-border-custom overflow-hidden">
-      {/* Background radial highlight */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-[#7B61FF]/5 blur-[150px] pointer-events-none" />
-
-      <div className="mx-auto max-w-6xl px-5 sm:px-8">
-        
-        {/* Section Header */}
-        <div className="text-center mb-16">
-          <h2 className="text-3xl font-extrabold tracking-tight text-foreground sm:text-4xl">
-            {language === "ar" ? "جولة داخل لوحة التحكم" : "A Tour Inside"}
+    <section id="showcase" className="border-b border-border-custom bg-background py-20 sm:py-24">
+      <div className="mx-auto max-w-7xl px-5 sm:px-8">
+        <div className="mb-14 max-w-2xl text-start sm:mb-16">
+          <p className="text-xs font-bold tracking-[0.12em] text-accent">
+            {language === "ar" ? "عرض المنتج" : "PRODUCT OVERVIEW"}
+          </p>
+          <h2 className="mt-4 text-3xl font-extrabold tracking-[-0.03em] text-foreground sm:text-4xl">
+            {language === "ar" ? "رؤية أوضح لكل محادثة وقرار." : "A clearer view of every conversation and decision."}
           </h2>
-          <p className="mx-auto mt-4 max-w-2xl text-sm sm:text-base text-foreground/70 dark:text-[#8e8eb2]">
-            {language === "ar" 
-              ? "شاهد كيف تبدو لوحة الإدارة الذكية لمراقبة مسارات عملائك وتوزيع المهام."
-              : "Discover the responsive admin dashboard designed to monitor and optimize your customer operations in real-time."}
+          <p className="mt-4 max-w-xl text-sm leading-7 text-foreground/65 sm:text-base">
+            {language === "ar"
+              ? "راقب أداء القنوات، ترتيب أولويات الفريق، ومسار العميل من لوحة تحكم واحدة."
+              : "Monitor channel performance, team priorities, and customer journeys from one operating view."}
           </p>
         </div>
 
-        {/* Dashboard Mock Window */}
-        <div className="w-full rounded-2xl border border-border-custom bg-card shadow-[0_30px_70px_rgba(0,0,0,0.08)] dark:shadow-[0_30px_70px_rgba(0,0,0,0.6)] overflow-hidden flex flex-col md:flex-row relative">
-          
-          {/* Mock Sidebar */}
-          <div className="w-full md:w-16 bg-[#0f0f26] dark:bg-[#0f0f26] border-b md:border-b-0 md:border-r border-white/5 md:border-border-custom p-4 flex md:flex-col items-center justify-between md:justify-start gap-6 shrink-0">
-            <div className="w-8 h-8 rounded-lg bg-[#7B61FF]/15 flex items-center justify-center text-[#7B61FF] font-bold">
-              M
-            </div>
-            <div className="flex md:flex-col gap-4.5 md:mt-8 text-white/50 dark:text-[#8e8eb2]">
-              <HomeIcon size={18} className="text-[#7B61FF] cursor-pointer" />
-              <Layers size={18} className="hover:text-white transition-colors cursor-pointer" />
-              <Users size={18} className="hover:text-white transition-colors cursor-pointer" />
-              <FileText size={18} className="hover:text-white transition-colors cursor-pointer" />
-              <BarChart3 size={18} className="hover:text-white transition-colors cursor-pointer" />
-            </div>
-            <div className="md:mt-auto">
-              <Settings size={18} className="text-white/50 dark:text-[#8e8eb2] hover:text-white transition-colors cursor-pointer" />
-            </div>
-          </div>
-
-          {/* Mock Main Content Area */}
-          <div className="flex-1 p-5 sm:p-7 flex flex-col gap-6 text-start bg-foreground/[0.01]">
-            
-            {/* Dashboard Topbar */}
-            <div className="flex items-center justify-between border-b border-border-custom/50 pb-4">
-              <div>
-                <h3 className="text-base font-bold text-foreground tracking-tight flex items-center gap-2">
-                  {language === "ar" ? "لوحة الإدارة - MORE Response" : "MORE Response Dashboard"}
-                </h3>
-                <p className="text-[10px] text-foreground/50 dark:text-[#8e8eb2] mt-0.5">
-                  {language === "ar" ? "مزامنة البيانات الحية نشطة" : "Live data synchronization active"}
-                </p>
+        <div className="overflow-hidden rounded-xl border border-border-custom bg-card shadow-lg">
+          <div className="flex flex-col md:flex-row">
+            <aside className="flex w-full items-center justify-between border-b border-border-custom bg-sidebar px-5 py-4 md:w-16 md:flex-col md:justify-start md:gap-7 md:border-b-0 md:border-e md:px-0 md:py-5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-card text-xs font-bold text-accent shadow-sm">M</div>
+              <div className="flex gap-5 text-foreground/45 md:flex-col md:gap-5">
+                <HomeIcon size={18} className="text-accent" />
+                <Layers size={18} />
+                <Users size={18} />
+                <FileText size={18} />
+                <BarChart3 size={18} />
               </div>
-              <div className="flex items-center gap-4 text-foreground/60 dark:text-[#8e8eb2]">
-                <div className="relative">
-                  <Bell size={16} className="cursor-pointer" />
-                  <span className="absolute -top-1 -right-1 w-1.5 h-1.5 rounded-full bg-[#00FFCC]" />
-                </div>
-                <div className="w-7 h-7 rounded-full bg-[#7B61FF]/20 flex items-center justify-center text-[10px] text-foreground dark:text-white border border-[#7B61FF]/30 font-semibold cursor-pointer">
-                  S
-                </div>
-              </div>
-            </div>
+              <Settings size={18} className="text-foreground/45 md:mt-auto" />
+            </aside>
 
-            {/* KPI Cards Row */}
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
-              {/* Card 1: Active Conversions */}
-              <div className="rounded-xl border border-border-custom bg-background/80 p-4.5 relative overflow-hidden group hover:border-[#7B61FF]/30 transition-all duration-300">
-                <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-[#7B61FF]/10 to-transparent pointer-events-none" />
-                <span className="text-[10px] sm:text-xs font-medium text-foreground/60 dark:text-[#8e8eb2]">
-                  {language === "ar" ? "التحويلات النشطة" : "Active Conversions"}
-                </span>
-                <div className="mt-2 flex items-baseline justify-between">
-                  <span className="text-xl sm:text-2xl font-black text-foreground">1,425</span>
-                  <span className="text-[9px] font-bold text-[#00FFCC] bg-[#00FFCC]/10 dark:bg-[#00FFCC]/15 px-1.5 py-0.5 rounded flex items-center gap-0.5">
-                    <TrendingUp size={8} /> +12.4%
+            <div className="flex-1 p-5 text-start sm:p-7">
+              <div className="flex items-center justify-between border-b border-border-custom pb-4">
+                <div>
+                  <h3 className="text-base font-bold tracking-tight text-foreground">
+                    {language === "ar" ? "لوحة الإدارة - MORE Response" : "MORE Response Dashboard"}
+                  </h3>
+                  <p className="mt-1 text-[11px] text-foreground/55">
+                    {language === "ar" ? "آخر مزامنة قبل دقيقة" : "Last synced one minute ago"}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span className="hidden items-center gap-1.5 text-[11px] font-semibold text-mint sm:flex">
+                    <span className="h-1.5 w-1.5 rounded-full bg-mint" />
+                    {language === "ar" ? "النظام متصل" : "System connected"}
                   </span>
-                </div>
-                {/* SVG sparkline */}
-                <div className="mt-3.5 h-6 w-full opacity-60">
-                  <svg className="w-full h-full" viewBox="0 0 100 25" preserveAspectRatio="none">
-                    <path d="M0 20 Q15 5, 30 15 T60 8 T90 2 T100 12" fill="none" stroke="#7B61FF" strokeWidth="2" strokeLinecap="round" />
-                  </svg>
+                  <Bell size={16} className="text-foreground/55" />
+                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-brand-50 text-[10px] font-bold text-accent dark:bg-brand-50/40">S</div>
                 </div>
               </div>
 
-              {/* Card 2: Avg Resolution Time */}
-              <div className="rounded-xl border border-border-custom bg-background/80 p-4.5 relative overflow-hidden group hover:border-[#7B61FF]/30 transition-all duration-300">
-                <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-blue-500/10 to-transparent pointer-events-none" />
-                <span className="text-[10px] sm:text-xs font-medium text-foreground/60 dark:text-[#8e8eb2]">
-                  {language === "ar" ? "متوسط سرعة الاستجابة" : "Avg. Resolution Time"}
-                </span>
-                <div className="mt-2 flex items-baseline justify-between">
-                  <span className="text-xl sm:text-2xl font-black text-foreground">2 mins</span>
-                  <Clock size={16} className="text-[#7B61FF]" />
-                </div>
-                {/* SVG sparkline */}
-                <div className="mt-3.5 h-6 w-full opacity-60">
-                  <svg className="w-full h-full" viewBox="0 0 100 25" preserveAspectRatio="none">
-                    <path d="M0 15 Q25 22, 50 10 T90 18 T100 5" fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinecap="round" />
-                  </svg>
-                </div>
-              </div>
-
-              {/* Card 3: CSAT */}
-              <div className="rounded-xl border border-border-custom bg-background/80 p-4.5 relative overflow-hidden group hover:border-[#7B61FF]/30 transition-all duration-300">
-                <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-bl from-yellow-500/10 to-transparent pointer-events-none" />
-                <span className="text-[10px] sm:text-xs font-medium text-foreground/60 dark:text-[#8e8eb2]">
-                  {language === "ar" ? "معدل رضا العملاء" : "Customer Satisfaction"}
-                </span>
-                <div className="mt-2 flex items-baseline justify-between">
-                  <span className="text-xl sm:text-2xl font-black text-foreground">4.9 / 5</span>
-                  <div className="flex gap-0.5 text-yellow-500">
-                    <Star size={12} fill="currentColor" />
-                    <Star size={12} fill="currentColor" />
-                    <Star size={12} fill="currentColor" />
-                    <Star size={12} fill="currentColor" />
-                    <Star size={12} fill="currentColor" />
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border border-border-custom bg-background/45 p-4">
+                  <span className="text-xs font-medium text-foreground/55">{language === "ar" ? "التحويلات النشطة" : "Active Conversions"}</span>
+                  <div className="mt-3 flex items-baseline justify-between">
+                    <span className="text-2xl font-extrabold tracking-tight text-foreground">1,425</span>
+                    <span className="flex items-center gap-0.5 text-[10px] font-bold text-mint"><TrendingUp size={10} /> +12.4%</span>
                   </div>
-                </div>
-                {/* SVG sparkline */}
-                <div className="mt-3.5 h-6 w-full opacity-60">
-                  <svg className="w-full h-full" viewBox="0 0 100 25" preserveAspectRatio="none">
-                    <path d="M0 12 Q30 5, 60 10 T90 2 T100 3" fill="none" stroke="#eab308" strokeWidth="2" strokeLinecap="round" />
+                  <svg className="mt-4 h-7 w-full" viewBox="0 0 100 25" preserveAspectRatio="none" aria-hidden="true">
+                    <path d="M0 20 Q15 5, 30 15 T60 8 T90 2 T100 12" fill="none" stroke="currentColor" className="text-accent" strokeWidth="2" strokeLinecap="round" />
                   </svg>
                 </div>
-              </div>
-            </div>
 
-            {/* Customer Journeys Flowchart */}
-            <div className="rounded-xl border border-border-custom bg-background/80 p-5.5 relative">
-              <h4 className="text-xs sm:text-sm font-bold text-foreground mb-5 flex items-center justify-between">
-                {language === "ar" ? "مسارات المستخدمين والاحتفاظ" : "Customer Journeys Map"}
-                <span className="text-[10px] text-[#00FFCC] bg-[#7B61FF] dark:bg-[#7B61FF]/35 text-white px-2 py-0.5 rounded font-bold uppercase tracking-wider">
-                  {language === "ar" ? "الربط التفاعلي" : "Interactive Nodes"}
-                </span>
-              </h4>
+                <div className="rounded-lg border border-border-custom bg-background/45 p-4">
+                  <span className="text-xs font-medium text-foreground/55">{language === "ar" ? "متوسط سرعة الاستجابة" : "Avg. Resolution Time"}</span>
+                  <div className="mt-3 flex items-baseline justify-between">
+                    <span className="text-2xl font-extrabold tracking-tight text-foreground">2 mins</span>
+                    <Clock size={16} className="text-accent" />
+                  </div>
+                  <svg className="mt-4 h-7 w-full" viewBox="0 0 100 25" preserveAspectRatio="none" aria-hidden="true">
+                    <path d="M0 15 Q25 22, 50 10 T90 18 T100 5" fill="none" stroke="currentColor" className="text-accent" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                </div>
 
-              {/* Flowchart Layout */}
-              <div className="flex flex-col md:flex-row items-center justify-between gap-6 md:gap-4 relative py-4">
-                
-                {/* Flow Lines (Desktop) */}
-                <div className="absolute top-1/2 left-10 right-10 -translate-y-1/2 h-[1px] bg-gradient-to-r from-blue-500 via-[#7B61FF] to-[#00FFCC] opacity-20 hidden md:block -z-10" />
-
-                {nodes.map((node, index) => (
-                  <div key={node.id} className="flex flex-col md:flex-row items-center w-full md:w-auto relative">
-                    
-                    {/* Node Card */}
-                    <div 
-                      onMouseEnter={() => setHoveredNode(node.id)}
-                      onMouseLeave={() => setHoveredNode(null)}
-                      className={`w-full md:w-36 rounded-xl border p-3.5 text-center transition-all duration-300 relative cursor-pointer ${
-                        hoveredNode === node.id 
-                          ? "border-[#7B61FF] bg-[#7B61FF]/5 dark:bg-[#161632] scale-105 shadow-[0_0_15px_rgba(123,97,255,0.1)]" 
-                          : "border-border-custom bg-card/50"
-                      }`}
-                    >
-                      {/* Left vertical theme line */}
-                      <div className={`absolute top-0 bottom-0 left-0 w-1 rounded-l-xl bg-gradient-to-b ${node.color}`} />
-                      
-                      <div className="font-bold text-foreground text-xs sm:text-sm">{node.label}</div>
-                      <div className="text-[10px] text-foreground/60 dark:text-[#8e8eb2] mt-1 font-medium">{node.desc}</div>
-                      
-                      {/* Mini-tooltip info */}
-                      <div className={`absolute -bottom-12 left-1/2 -translate-x-1/2 w-44 bg-card border border-border-custom rounded-lg p-2 text-[10px] text-foreground shadow-xl transition-all duration-200 pointer-events-none z-30 ${
-                        hoveredNode === node.id ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-                      }`}>
-                        {node.info}
-                      </div>
+                <div className="rounded-lg border border-border-custom bg-background/45 p-4">
+                  <span className="text-xs font-medium text-foreground/55">{language === "ar" ? "معدل رضا العملاء" : "Customer Satisfaction"}</span>
+                  <div className="mt-3 flex items-baseline justify-between">
+                    <span className="text-2xl font-extrabold tracking-tight text-foreground">4.9 / 5</span>
+                    <div className="flex gap-0.5 text-accent" aria-label="Five star rating">
+                      {Array.from({ length: 5 }).map((_, index) => <Star key={index} size={12} fill="currentColor" />)}
                     </div>
-
-                    {/* Connecting Arrow */}
-                    {index < nodes.length - 1 && (
-                      <div className="my-1.5 md:my-0 md:mx-2 text-[#7B61FF] opacity-40">
-                        <ArrowRight className="rotate-90 md:rotate-0" size={16} />
-                      </div>
-                    )}
                   </div>
-                ))}
+                  <svg className="mt-4 h-7 w-full" viewBox="0 0 100 25" preserveAspectRatio="none" aria-hidden="true">
+                    <path d="M0 12 Q30 5, 60 10 T90 2 T100 3" fill="none" stroke="currentColor" className="text-accent" strokeWidth="2" strokeLinecap="round" />
+                  </svg>
+                </div>
+              </div>
+
+              <div className="relative mt-5 rounded-lg border border-border-custom bg-background/45 p-5">
+                <div className="flex items-center justify-between gap-4">
+                  <h4 className="text-sm font-bold text-foreground">{language === "ar" ? "مسارات المستخدمين والاحتفاظ" : "Customer journeys"}</h4>
+                  <span className="text-[11px] font-semibold text-foreground/55">{language === "ar" ? "تحديث مباشر" : "Live view"}</span>
+                </div>
+
+                <div className="relative mt-5 flex flex-col items-center gap-3 md:flex-row md:justify-between md:gap-2">
+                  <div className="absolute left-10 right-10 top-1/2 hidden h-px -translate-y-1/2 bg-border-custom md:block" />
+                  {nodes.map((node, index) => (
+                    <div key={node.id} className="relative flex w-full items-center md:w-auto">
+                      <div
+                        onMouseEnter={() => setHoveredNode(node.id)}
+                        onMouseLeave={() => setHoveredNode(null)}
+                        className={`relative w-full cursor-pointer rounded-lg border px-3 py-3 text-center transition-colors md:w-36 ${
+                          hoveredNode === node.id ? "border-accent bg-brand-50/50 dark:bg-brand-50/20" : "border-border-custom bg-card"
+                        }`}
+                      >
+                        <div className="text-xs font-bold text-foreground">{node.label}</div>
+                        <div className="mt-1 text-[10px] font-medium text-foreground/55">{node.desc}</div>
+                        <div className={`absolute -bottom-12 left-1/2 z-20 w-44 -translate-x-1/2 rounded-md border border-border-custom bg-card p-2 text-[10px] text-foreground shadow-md transition-all duration-150 pointer-events-none ${hoveredNode === node.id ? "translate-y-0 opacity-100" : "translate-y-1 opacity-0"}`}>
+                          {node.info}
+                        </div>
+                      </div>
+                      {index < nodes.length - 1 && <ArrowRight size={15} className="mx-auto my-1.5 shrink-0 rotate-90 text-foreground/35 md:mx-2 md:my-0 md:rotate-0" />}
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-
           </div>
         </div>
 
-        {/* Section Subtext */}
-        <div className="mt-8 text-center">
-          <p className="text-xs sm:text-sm text-foreground/60 dark:text-[#8e8eb2] italic">
-            {language === "ar" ? "لوحة تحكم أنيقة تناسب سرعة فريقك." : "A sleek dashboard to match your team’s speed."}
-          </p>
-        </div>
+        <p className="mt-6 text-center text-sm text-foreground/55">
+          {language === "ar" ? "واجهة واحدة تساعد فريقك على رؤية الصورة كاملة." : "One operating view to help your team see the full picture."}
+        </p>
       </div>
     </section>
   );

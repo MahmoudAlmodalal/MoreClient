@@ -59,6 +59,10 @@ export function authHeader(): Record<string, string> {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+function notifySessionChange(): void {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event("storage"));
+}
+
 function persistAuthSession(session: AuthSessionOut): void {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(JWT_TOKEN_STORAGE, session.token);
@@ -68,6 +72,7 @@ function persistAuthSession(session: AuthSessionOut): void {
     window.localStorage.removeItem(TENANT_KEY_STORAGE);
   }
   window.sessionStorage.setItem("userRole", session.role);
+  notifySessionChange();
 }
 
 export async function login(email: string, password: string): Promise<AuthSessionOut> {
@@ -80,6 +85,29 @@ export async function register(name: string, email: string, password: string, co
   const res = await apiSend<AuthSessionOut>("/api/auth/register", "POST", { name, email, password, companyName });
   persistAuthSession(res);
   return res;
+}
+
+export type CurrentUserOut = {
+  sub: string;
+  email: string;
+  role: "admin" | "company";
+  tenantKey: string | null;
+  iat: number;
+  exp: number;
+};
+
+export async function restoreAuthSession(): Promise<CurrentUserOut> {
+  const user = await apiGet<CurrentUserOut>("/api/auth/me");
+  if (typeof window !== "undefined") {
+    window.sessionStorage.setItem("userRole", user.role);
+    if (user.tenantKey) {
+      window.localStorage.setItem(TENANT_KEY_STORAGE, user.tenantKey);
+    } else {
+      window.localStorage.removeItem(TENANT_KEY_STORAGE);
+    }
+    notifySessionChange();
+  }
+  return user;
 }
 
 export type SocialAuthStartIn = {
@@ -112,6 +140,7 @@ export function logout(): void {
     window.localStorage.removeItem(JWT_TOKEN_STORAGE);
     window.localStorage.removeItem(TENANT_KEY_STORAGE);
     window.sessionStorage.removeItem("userRole");
+    notifySessionChange();
   }
 }
 

@@ -35,13 +35,18 @@ _UNAUTHORIZED = HTTPException(
 
 
 def _extract_key(authorization: str | None, x_admin_key: str | None) -> str | None:
-    """Pull the presented key from either supported header."""
+    """Pull the explicit admin key first, then fall back to a bearer token.
+
+    Browser requests may carry a company JWT globally and a separate
+    ``X-Admin-Key`` for the SuperAdmin console. The explicit console key must
+    therefore take precedence instead of being shadowed by the company JWT.
+    """
+    if x_admin_key:
+        return x_admin_key.strip()
     if authorization:
         scheme, _, token = authorization.partition(" ")
         if scheme.lower() == "bearer" and token:
             return token.strip()
-    if x_admin_key:
-        return x_admin_key.strip()
     return None
 
 

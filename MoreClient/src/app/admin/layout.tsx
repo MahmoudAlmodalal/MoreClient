@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { useTheme } from "@/components/theme-provider";
-import { useSessionRole } from "@/lib/use-session-role";
-import { logout } from "@/lib/api";
+import { SESSION_ROLE_PENDING, useSessionRole } from "@/lib/use-session-role";
+import { JWT_TOKEN_STORAGE, logout, restoreAuthSession } from "@/lib/api";
 import { NotificationBell } from "@/components/notification-bell";
 import {
   LayoutDashboard,
@@ -35,8 +35,20 @@ export default function SuperAdminLayout({
   const isAuthorized = role === "admin";
 
   useEffect(() => {
-    if (role !== "admin") {
-      router.push("/dashboard");
+    if (typeof window === "undefined") return;
+    if (!window.localStorage.getItem(JWT_TOKEN_STORAGE)) {
+      router.replace("/welcome");
+      return;
+    }
+    void restoreAuthSession().catch(() => {
+      logout();
+      router.replace("/welcome");
+    });
+  }, [router]);
+
+  useEffect(() => {
+    if (role !== SESSION_ROLE_PENDING && role !== "admin") {
+      router.replace("/dashboard");
     }
   }, [role, router]);
 

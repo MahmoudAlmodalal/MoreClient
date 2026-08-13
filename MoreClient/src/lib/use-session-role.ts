@@ -11,6 +11,7 @@ import { useSyncExternalStore } from "react";
  * real client value on hydration. The `storage` subscription propagates cross-tab logout.
  */
 const ROLE_KEY = "userRole";
+export const SESSION_ROLE_PENDING = "__session_role_pending__";
 
 function subscribe(onStoreChange: () => void): () => void {
   if (typeof window === "undefined") return () => {};
@@ -23,8 +24,10 @@ function getSnapshot(): string | null {
   return window.sessionStorage.getItem(ROLE_KEY);
 }
 
-function getServerSnapshot(): string | null {
-  return null;
+function getServerSnapshot(): string {
+  // A distinct sentinel prevents route guards from treating the SSR snapshot
+  // as an unauthenticated browser session before hydration completes.
+  return SESSION_ROLE_PENDING;
 }
 
 export function useSessionRole(): string | null {

@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useLanguage } from "@/components/language-provider";
 import { useTheme } from "@/components/theme-provider";
 import { useSessionRole } from "@/lib/use-session-role";
-import { JWT_TOKEN_STORAGE, logout } from "@/lib/api";
+import { JWT_TOKEN_STORAGE, logout, restoreAuthSession } from "@/lib/api";
 import { NotificationBell } from "@/components/notification-bell";
 import {
   LayoutDashboard,
@@ -55,6 +55,14 @@ export default function DashboardLayout({
 
   useEffect(() => {
     if (authToken === null) router.replace("/welcome");
+  }, [authToken, router]);
+
+  useEffect(() => {
+    if (!authToken || authToken === AUTH_SESSION_PENDING) return;
+    void restoreAuthSession().catch(() => {
+      logout();
+      router.replace("/welcome");
+    });
   }, [authToken, router]);
 
   const navigation = [

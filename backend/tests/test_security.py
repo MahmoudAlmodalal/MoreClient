@@ -24,6 +24,11 @@ def test_allows_x_admin_key_header(monkeypatch):
     assert require_admin(authorization=None, x_admin_key="secret") is None
 
 
+def test_explicit_admin_key_wins_over_company_bearer_token(monkeypatch):
+    monkeypatch.setattr(settings, "ADMIN_API_KEY", "secret")
+    assert require_admin(authorization="Bearer company-session-token", x_admin_key="secret") is None
+
+
 def test_rejects_wrong_key(monkeypatch):
     monkeypatch.setattr(settings, "ADMIN_API_KEY", "secret")
     with pytest.raises(HTTPException):

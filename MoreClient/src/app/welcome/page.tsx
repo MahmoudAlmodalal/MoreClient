@@ -131,12 +131,13 @@ export default function WelcomePage() {
               {t("welcomeSubtitle")}
             </p>
 
-            <form onSubmit={handleLoginSubmit} className="mt-8 space-y-4">
+            <form data-testid="login-form" onSubmit={handleLoginSubmit} className="mt-8 space-y-4">
               <div>
                 <label className="block text-xs font-bold text-text-muted uppercase tracking-wider mb-2">
                   {t("emailLabel")}
                 </label>
                 <input
+                  data-testid="login-email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -151,6 +152,7 @@ export default function WelcomePage() {
                   {t("passwordLabel")}
                 </label>
                 <input
+                  data-testid="login-password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -161,12 +163,13 @@ export default function WelcomePage() {
               </div>
 
               {error && (
-                <div className="text-xs text-red-600 dark:text-red-400 font-semibold bg-red-500/10 p-3 rounded-lg border border-red-500/20">
+                <div data-testid="login-error" className="text-xs text-red-600 dark:text-red-400 font-semibold bg-red-500/10 p-3 rounded-lg border border-red-500/20">
                   {error}
                 </div>
               )}
 
               <button
+                data-testid="login-submit"
                 type="submit"
                 disabled={loading}
                 className="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-3.5 px-6 rounded-xl flex items-center justify-center gap-3 transition-all duration-300 active:scale-98 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
@@ -194,6 +197,7 @@ export default function WelcomePage() {
 
               <div className="grid gap-3">
                 <button
+                  data-testid="login-google"
                   type="button"
                   onClick={() => handleSocialLogin("google")}
                   className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border-custom bg-card px-4 text-xs sm:text-sm font-semibold text-foreground/80 transition-colors hover:bg-foreground/5 active:scale-98"

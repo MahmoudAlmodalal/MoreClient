@@ -152,8 +152,15 @@ def list_files(
 
 
 @router.delete("/api/files/{file_id}")
-def delete_file(file_id: int, db: Session = Depends(get_db)) -> dict:
-    doc = db.get(Document, file_id)
+def delete_file(
+    file_id: int,
+    tenant_key: str | None = Depends(get_tenant_key),
+    db: Session = Depends(get_db),
+) -> dict:
+    query = db.query(Document).filter(Document.id == file_id)
+    if tenant_key:
+        query = query.filter(Document.tenant_key == tenant_key)
+    doc = query.first()
     if doc is None:
         raise HTTPException(status_code=404, detail="file not found")
     # keep Chroma + SQL consistent: delete vectors first so a Chroma failure leaves

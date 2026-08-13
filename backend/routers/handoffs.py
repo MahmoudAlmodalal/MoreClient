@@ -138,10 +138,28 @@ def list_handoffs(
     return [_build_handoff_out(h, db) for h in handoffs]
 
 
+def _scoped_handoff(
+    handoff_id: int,
+    tenant_key: str | None,
+    db: Session,
+) -> Handoff | None:
+    query = db.query(Handoff).filter(Handoff.id == handoff_id)
+    if tenant_key:
+        query = query.join(Conversation).filter(Conversation.tenant_key == tenant_key)
+    return query.first()
+
+
 @router.post("/api/handoffs/{handoff_id}/reply", response_model=HandoffOut)
-def reply_handoff(handoff_id: int, body: ReplyRequest, db: Session = Depends(get_db)):
+def reply_handoff(
+    handoff_id: int,
+    body: ReplyRequest,
+    db: Session = Depends(get_db),
+    tenant_key: str | None = Depends(get_tenant_key),
+):
     """Append an agent reply and deliver it to the original channel."""
-    handoff = db.get(Handoff, handoff_id)
+    if not isinstance(tenant_key, str):
+        tenant_key = None
+    handoff = _scoped_handoff(handoff_id, tenant_key, db)
     if handoff is None:
         raise HTTPException(status_code=404, detail="Handoff not found")
 
@@ -165,9 +183,15 @@ def reply_handoff(handoff_id: int, body: ReplyRequest, db: Session = Depends(get
 
 
 @router.post("/api/handoffs/{handoff_id}/resolve")
-def resolve_handoff(handoff_id: int, db: Session = Depends(get_db)):
+def resolve_handoff(
+    handoff_id: int,
+    db: Session = Depends(get_db),
+    tenant_key: str | None = Depends(get_tenant_key),
+):
     """Mark a handoff resolved and close its conversation."""
-    handoff = db.get(Handoff, handoff_id)
+    if not isinstance(tenant_key, str):
+        tenant_key = None
+    handoff = _scoped_handoff(handoff_id, tenant_key, db)
     if handoff is None:
         raise HTTPException(status_code=404, detail="Handoff not found")
 

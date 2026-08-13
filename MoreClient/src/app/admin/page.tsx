@@ -358,6 +358,7 @@ export default function SuperAdminPage() {
         </div>
         <div>
           <Button
+            data-testid="admin-provision-tenant"
             onClick={() => setIsCreateModalOpen(true)}
             variant="primary"
             className="flex items-center gap-1.5"
@@ -409,7 +410,11 @@ export default function SuperAdminPage() {
               detail: adminHealth ? `${adminHealth.dbLatencyMs}ms DB` : "",
             },
           ].map((card) => (
-            <div key={card.label} className="rounded-xl border border-border-custom bg-card p-4 shadow-sm">
+            <div
+              data-testid={card.label === (isRtl ? "المستأجرون النشطون" : "Active tenants") ? "admin-active-tenants-kpi" : card.label === (isRtl ? "الإيراد الشهري المتكرر" : "Monthly recurring revenue") ? "admin-mrr-kpi" : undefined}
+              key={card.label}
+              className="rounded-xl border border-border-custom bg-card p-4 shadow-sm"
+            >
               <p className="text-xs font-medium text-text-muted">{card.label}</p>
               <p className="mt-2 truncate text-2xl font-bold tracking-tight text-foreground">{card.value}</p>
               <p className="mt-1 text-xs text-text-muted">{card.detail || (isRtl ? "بانتظار البيانات" : "Waiting for data")}</p>
@@ -513,7 +518,7 @@ export default function SuperAdminPage() {
                 </thead>
                 <tbody className="divide-y divide-border-custom">
                   {filteredTenants.map(tenant => (
-                    <tr key={tenant.id} className="hover:bg-foreground/5 transition-colors">
+                    <tr data-testid={`tenant-row-${tenant.tenantKey}`} key={tenant.id} className="hover:bg-foreground/5 transition-colors">
                       <td className="px-6 py-4 font-bold text-foreground text-right rtl:text-right">
                         <div>{tenant.name}</div>
                         <div className="mt-1 font-mono text-[10px] font-semibold text-text-muted">
@@ -560,6 +565,7 @@ export default function SuperAdminPage() {
                       <td className="px-6 py-4 text-center">
                         <div className="flex items-center justify-center gap-2">
                           <button
+                            data-testid={`tenant-toggle-${tenant.tenantKey}`}
                             onClick={() => handleToggleStatus(tenant.id)}
                             className={`flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all border active:scale-95 cursor-pointer ${
                               tenant.status === "active"
@@ -571,6 +577,8 @@ export default function SuperAdminPage() {
                           </button>
 
                           <button
+                            type="button"
+                            data-testid={`tenant-edit-${tenant.tenantKey}`}
                             onClick={() => openEditModal(tenant)}
                             className="rounded-lg border border-border-custom bg-background p-1.5 text-text-muted hover:text-foreground hover:bg-foreground/5 transition-colors active:scale-95 cursor-pointer"
                           >
@@ -601,11 +609,12 @@ export default function SuperAdminPage() {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
           <div className="w-full max-w-lg rounded-2xl border border-border-custom bg-card p-6 shadow-lg animate-in fade-in zoom-in-95 duration-200">
             <h3 className="text-xl font-bold text-foreground mb-4">{t("createSubscription")}</h3>
-            <form onSubmit={handleCreateSubscription} className="space-y-4">
+            <form data-testid="admin-create-form" onSubmit={handleCreateSubscription} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-text-muted uppercase tracking-wider">{t("tenantNameCol")}</label>
                   <input
+                    data-testid="admin-create-name"
                     type="text"
                     required
                     value={newTenantName}
@@ -616,6 +625,7 @@ export default function SuperAdminPage() {
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-text-muted uppercase tracking-wider">{t("tenantEmailCol")}</label>
                   <input
+                    data-testid="admin-create-email"
                     type="email"
                     required
                     value={newTenantEmail}
@@ -629,6 +639,7 @@ export default function SuperAdminPage() {
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-text-muted uppercase tracking-wider">{t("tenantPlanCol")}</label>
                   <select
+                    data-testid="admin-create-plan"
                     value={newTenantPlan}
                     onChange={e => setNewTenantPlan(e.target.value as "pro" | "ultra" | "custom")}
                     className="w-full rounded-xl border border-border-custom bg-background p-2.5 text-sm text-foreground focus:border-brand-500 focus:outline-none"
@@ -641,6 +652,7 @@ export default function SuperAdminPage() {
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-text-muted uppercase tracking-wider">Message Limit</label>
                   <input
+                    data-testid="admin-create-limit"
                     type="number"
                     required
                     value={newTenantLimit}
@@ -700,13 +712,14 @@ export default function SuperAdminPage() {
             {/* Left: Form */}
             <div className="flex-1 p-6 border-b md:border-b-0 md:border-r border-border-custom">
               <h3 className="text-xl font-bold text-foreground mb-6">Manage Subscription</h3>
-              <form onSubmit={handleSaveEdit} className="space-y-5">
+              <form data-testid="admin-edit-form" onSubmit={handleSaveEdit} className="space-y-5">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-text-muted uppercase tracking-wider">{t("tenantNameCol")}</label>
-                  <input
-                    type="text"
-                    required
-                    value={editTenantName}
+                      <input
+                        data-testid="admin-edit-name"
+                        type="text"
+                        required
+                        value={editTenantName}
                     onChange={e => setEditTenantName(e.target.value)}
                     className="w-full rounded-xl border border-border-custom bg-background p-2.5 text-sm text-foreground focus:border-brand-500 focus:outline-none"
                   />
@@ -724,9 +737,10 @@ export default function SuperAdminPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1.5">
                     <label className="text-xs font-bold text-text-muted uppercase tracking-wider">{t("tenantPlanCol")}</label>
-                    <select
-                      value={editTenantPlan}
-                      onChange={e => setEditTenantPlan(e.target.value as "pro" | "ultra" | "custom")}
+                                          <select
+                        data-testid="admin-edit-plan"
+                        value={editTenantPlan}
+                        onChange={e => setEditTenantPlan(e.target.value as "pro" | "ultra" | "custom")}
                       className="w-full rounded-xl border border-border-custom bg-background p-2.5 text-sm text-foreground focus:border-brand-500 focus:outline-none"
                     >
                       <option value="pro">Pro Tier ($500)</option>

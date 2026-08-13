@@ -112,6 +112,7 @@ export default function PurchasesPage() {
           <p className="mt-1 max-w-2xl text-sm text-text-muted">{copy.subtitle}</p>
         </div>
         <button
+          data-testid="purchases-refresh"
           type="button"
           onClick={() => void loadOrders()}
           disabled={loading}
@@ -138,6 +139,7 @@ export default function PurchasesPage() {
             <span>{copy.filter}</span>
           </div>
           <select
+            data-testid="purchase-status-filter"
             value={statusFilter}
             onChange={(event) => setStatusFilter(event.target.value as PurchaseStatus)}
             className="rounded-lg border border-border-custom bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-brand-500"
@@ -176,7 +178,7 @@ export default function PurchasesPage() {
               </thead>
               <tbody className="divide-y divide-border-custom">
                 {orders.map((order) => (
-                  <tr key={order.id} className="align-top transition-colors hover:bg-foreground/5">
+                  <tr data-testid={`purchase-row-${order.id}`} key={order.id} className="align-top transition-colors hover:bg-foreground/5">
                     <td className="px-5 py-4 font-mono text-xs font-semibold text-text-muted">#{order.id}</td>
                     <td className="px-5 py-4">
                       <p className="font-semibold text-foreground">{order.productName || (isRtl ? "منتج غير محدد" : "Unnamed product")}</p>
@@ -194,6 +196,7 @@ export default function PurchasesPage() {
                     </td>
                     <td className="px-5 py-4">
                       <select
+                        data-testid={`purchase-status-${order.id}`}
                         value={order.status}
                         disabled={updatingId === order.id}
                         onChange={(event) => void handleStatusChange(order.id, event.target.value)}

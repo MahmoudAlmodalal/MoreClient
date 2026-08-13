@@ -336,7 +336,7 @@ export default function DashboardPage() {
             <TrendingUp className="h-5 w-5 text-brand-600 dark:text-brand-400" />
           </div>
           <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={256}>
               <BarChart
                 data={repeatedQuestionsData}
                 layout={isRtl ? "vertical" : "horizontal"}
@@ -378,8 +378,8 @@ export default function DashboardPage() {
             </div>
             <Clock className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
           </div>
-          <div className="h-48 w-full flex-1 relative">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="relative h-48 min-h-48 w-full">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={192}>
               <PieChart>
                 <Pie
                   data={sourceShareData}

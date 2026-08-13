@@ -24,6 +24,8 @@ import {
   Moon
 } from "lucide-react";
 
+const AUTH_SESSION_PENDING = "__auth_session_pending__";
+
 const subscribeAuthSession = (onStoreChange: () => void) => {
   if (typeof window === "undefined") return () => {};
   window.addEventListener("storage", onStoreChange);
@@ -31,7 +33,7 @@ const subscribeAuthSession = (onStoreChange: () => void) => {
 };
 const getClientAuthToken = () =>
   typeof window === "undefined" ? null : window.localStorage.getItem(JWT_TOKEN_STORAGE);
-const getServerAuthToken = () => null;
+const getServerAuthToken = () => AUTH_SESSION_PENDING;
 
 export default function DashboardLayout({
   children,
@@ -51,7 +53,7 @@ export default function DashboardLayout({
   const isAdmin = useSessionRole() === "admin";
 
   useEffect(() => {
-    if (!authToken) router.replace("/welcome");
+    if (authToken === null) router.replace("/welcome");
   }, [authToken, router]);
 
   const navigation = [
@@ -86,7 +88,7 @@ export default function DashboardLayout({
     router.push("/welcome");
   };
 
-  if (!authToken) {
+  if (!authToken || authToken === AUTH_SESSION_PENDING) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background text-foreground" aria-live="polite">
         <div className="h-7 w-7 animate-spin rounded-full border-2 border-accent border-t-transparent" aria-label="Redirecting to sign in" />
